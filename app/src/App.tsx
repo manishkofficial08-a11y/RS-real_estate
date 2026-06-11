@@ -10,6 +10,11 @@ import AIJobs from '@/pages/AIJobs';
 import SubscriptionsPage from '@/pages/Subscriptions';
 import Support from '@/pages/Support';
 import Settings from '@/pages/Settings';
+import AIBots from '@/pages/AIBots';
+import WhatsAppAutomation from '@/pages/WhatsAppAutomation';
+import EmailAutomation from '@/pages/EmailAutomation';
+import SalesDashboard from '@/pages/SalesDashboard';
+import CustomInternalTools from '@/pages/CustomInternalTools';
 
 export default function App() {
   return (
@@ -25,6 +30,11 @@ export default function App() {
         <Route path="subscriptions" element={<SubscriptionsPage />} />
         <Route path="support" element={<Support />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="ai-chatbots" element={<AIBots />} />
+        <Route path="whatsapp-automation" element={<WhatsAppAutomation />} />
+        <Route path="email-automation" element={<EmailAutomation />} />
+        <Route path="sales-dashboard" element={<SalesDashboard />} />
+        <Route path="custom-tools" element={<CustomInternalTools />} />
       </Route>
     </Routes>
   );
