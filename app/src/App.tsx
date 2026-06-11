@@ -1,0 +1,31 @@
+import { Routes, Route, Navigate } from 'react-router-dom';
+import './App.css';
+import Layout from '@/components/Layout';
+import Overview from '@/pages/Overview';
+import Companies from '@/pages/Companies';
+import Leads from '@/pages/Leads';
+import UsersPage from '@/pages/Users';
+import Analytics from '@/pages/Analytics';
+import AIJobs from '@/pages/AIJobs';
+import SubscriptionsPage from '@/pages/Subscriptions';
+import Support from '@/pages/Support';
+import Settings from '@/pages/Settings';
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/admin/overview" replace />} />
+      <Route path="/admin" element={<Layout />}>
+        <Route path="overview" element={<Overview />} />
+        <Route path="companies" element={<Companies />} />
+        <Route path="leads" element={<Leads />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="analytics" element={<Analytics />} />
+        <Route path="ai-jobs" element={<AIJobs />} />
+        <Route path="subscriptions" element={<SubscriptionsPage />} />
+        <Route path="support" element={<Support />} />
+        <Route path="settings" element={<Settings />} />
+      </Route>
+    </Routes>
+  );
+}
