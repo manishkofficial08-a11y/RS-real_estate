@@ -42,8 +42,8 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
     tenant = Tenant(
         id=str(uuid.uuid4()),
         name=data.business_name,
-        business_type=data.business_type,
-        plan=PlanType.free
+        business_type=data.business_type.value,
+        plan=PlanType.free.value
     )
     db.add(tenant)
     await db.flush()
@@ -54,7 +54,7 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
         email=data.email,
         full_name=data.full_name,
         password_hash=hash_password(data.password),
-        role=UserRole.client,
+        role=UserRole.client.value,
         tenant_id=tenant.id
     )
     db.add(user)
