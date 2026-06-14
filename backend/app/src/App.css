@@ -1,4 +1,0 @@
-/* Cube hover effect */
-.cube-scene:hover .cube {
-  transform: translateZ(-20px) rotateX(25deg) rotateY(-35deg) !important;
-}
