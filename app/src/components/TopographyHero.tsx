@@ -323,3 +323,4 @@ export default function TopographyHero() {
     </div>
   );
 }
+

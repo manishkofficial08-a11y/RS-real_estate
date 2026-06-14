@@ -206,3 +206,4 @@ export const analyticsData = {
     { month: 'Jun', value: 4120 },
   ],
 };
+

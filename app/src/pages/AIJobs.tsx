@@ -154,9 +154,10 @@ export default function AIJobs() {
       </div>
 
       <div className="flex items-center justify-between mt-8 pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
-        <span className="text-xs" style={{ color: '#55555C' }}>AI Growth OS v2.0</span>
+        <span className="text-xs" style={{ color: '#55555C' }}>MMe-AI v2.0</span>
         <span className="text-xs font-mono" style={{ color: '#55555C' }}>Last synced: 2 min ago</span>
       </div>
     </div>
   );
 }
+

@@ -360,7 +360,7 @@ export default function Overview() {
         style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}
       >
         <span className="text-xs" style={{ color: '#55555C' }}>
-          AI Growth OS v2.0
+          MMe-AI v2.0
         </span>
         <span className="text-xs font-mono" style={{ color: '#55555C' }}>
           Last synced: live backend
