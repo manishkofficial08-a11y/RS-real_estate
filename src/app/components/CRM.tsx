@@ -1,42 +1,99 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Users2, Plus, Search, Filter, Star, Phone, Mail,
-  MessageSquare, Clock, TrendingUp, ChevronRight,
-  MoreHorizontal, Tag, Calendar, ArrowRight, Brain
+  Plus,
+  Search,
+  Phone,
+  Mail,
+  MessageSquare,
+  Calendar,
+  Brain,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { getClientLeads, type ClientLead } from "../lib/clientApi";
 
-const leads = [
+type UiLead = {
+  id: string;
+  name: string;
+  company: string;
+  title: string;
+  score: number;
+  stage: "Prospecting" | "Discovery" | "Proposal" | "Negotiation" | "Closing";
+  value: string;
+  lastContact: string;
+  tags: string[];
+  avatar: string;
+  color: string;
+};
+
+const demoLeads: UiLead[] = [
   {
-    id: 1, name: "Sarah Chen", company: "TechVenture Co.", title: "CMO",
-    score: 94, stage: "Proposal", value: "$48,000", lastContact: "2 hr ago",
-    tags: ["Hot Lead", "Enterprise"], avatar: "SC", color: "#6366f1"
+    id: "demo-1",
+    name: "Sarah Chen",
+    company: "TechVenture Co.",
+    title: "CMO",
+    score: 94,
+    stage: "Proposal",
+    value: "$48,000",
+    lastContact: "2 hr ago",
+    tags: ["Hot Lead", "Enterprise"],
+    avatar: "SC",
+    color: "#6366f1",
   },
   {
-    id: 2, name: "Marcus Rodriguez", company: "GrowthLabs Inc.", title: "VP Marketing",
-    score: 87, stage: "Discovery", value: "$32,000", lastContact: "1 day ago",
-    tags: ["Warm", "Mid-Market"], avatar: "MR", color: "#8b5cf6"
+    id: "demo-2",
+    name: "Marcus Rodriguez",
+    company: "GrowthLabs Inc.",
+    title: "VP Marketing",
+    score: 87,
+    stage: "Discovery",
+    value: "$32,000",
+    lastContact: "1 day ago",
+    tags: ["Warm", "Mid-Market"],
+    avatar: "MR",
+    color: "#8b5cf6",
   },
   {
-    id: 3, name: "Emily Watson", company: "ScaleUp Agency", title: "CEO",
-    score: 76, stage: "Negotiation", value: "$85,000", lastContact: "3 hr ago",
-    tags: ["Hot Lead", "Agency"], avatar: "EW", color: "#06b6d4"
+    id: "demo-3",
+    name: "Emily Watson",
+    company: "ScaleUp Agency",
+    title: "CEO",
+    score: 76,
+    stage: "Negotiation",
+    value: "$85,000",
+    lastContact: "3 hr ago",
+    tags: ["Hot Lead", "Agency"],
+    avatar: "EW",
+    color: "#06b6d4",
   },
   {
-    id: 4, name: "David Kim", company: "DataSync Systems", title: "Director of Ops",
-    score: 68, stage: "Prospecting", value: "$22,000", lastContact: "5 days ago",
-    tags: ["Cold", "SMB"], avatar: "DK", color: "#10b981"
+    id: "demo-4",
+    name: "David Kim",
+    company: "DataSync Systems",
+    title: "Director of Ops",
+    score: 68,
+    stage: "Prospecting",
+    value: "$22,000",
+    lastContact: "5 days ago",
+    tags: ["Cold", "SMB"],
+    avatar: "DK",
+    color: "#10b981",
   },
   {
-    id: 5, name: "Priya Sharma", company: "MediaFlow Digital", title: "Head of Growth",
-    score: 91, stage: "Closing", value: "$120,000", lastContact: "30 min ago",
-    tags: ["Hot Lead", "Enterprise"], avatar: "PS", color: "#f59e0b"
+    id: "demo-5",
+    name: "Priya Sharma",
+    company: "MediaFlow Digital",
+    title: "Head of Growth",
+    score: 91,
+    stage: "Closing",
+    value: "$120,000",
+    lastContact: "30 min ago",
+    tags: ["Hot Lead", "Enterprise"],
+    avatar: "PS",
+    color: "#f59e0b",
   },
 ];
 
-const stages = ["All", "Prospecting", "Discovery", "Proposal", "Negotiation", "Closing"];
-
-const stageColors: Record<string, string> = {
+const stageColors: Record<UiLead["stage"], string> = {
   Prospecting: "#94a3b8",
   Discovery: "#6366f1",
   Proposal: "#8b5cf6",
@@ -44,21 +101,79 @@ const stageColors: Record<string, string> = {
   Closing: "#10b981",
 };
 
+function getAvatar(name: string) {
+  return (
+    name
+      .trim()
+      .split(" ")
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase() || "LD"
+  );
+}
+
+function mapStatusToStage(status: string): UiLead["stage"] {
+  const normalized = status.toLowerCase();
+
+  const stageMap: Record<string, UiLead["stage"]> = {
+    new: "Prospecting",
+    contacted: "Discovery",
+    qualified: "Proposal",
+    proposal: "Negotiation",
+    converted: "Closing",
+    lost: "Prospecting",
+  };
+
+  return stageMap[normalized] || "Prospecting";
+}
+
+function mapApiLeadToUiLead(lead: ClientLead, index: number): UiLead {
+  const colorList = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b"];
+  const stage = mapStatusToStage(lead.status || "new");
+
+  return {
+    id: lead.id,
+    name: lead.name,
+    company: lead.source || "Website Lead",
+    title: lead.email || lead.phone || "Real Estate Lead",
+    score: lead.score || 50,
+    stage,
+    value: "₹0",
+    lastContact: "Recently",
+    tags: [lead.status || "New", lead.source || "Website"],
+    avatar: getAvatar(lead.name),
+    color: colorList[index % colorList.length],
+  };
+}
+
 function ScoreRing({ score, color }: { score: number; color: string }) {
   const r = 16;
   const circ = 2 * Math.PI * r;
+
   return (
     <div className="relative w-10 h-10 flex-shrink-0">
       <svg viewBox="0 0 40 40" className="w-full h-full -rotate-90">
-        <circle cx="20" cy="20" r={r} fill="none" stroke="rgba(99,102,241,0.1)" strokeWidth="3" />
         <circle
-          cx="20" cy="20" r={r} fill="none"
+          cx="20"
+          cy="20"
+          r={r}
+          fill="none"
+          stroke="rgba(99,102,241,0.1)"
+          strokeWidth="3"
+        />
+        <circle
+          cx="20"
+          cy="20"
+          r={r}
+          fill="none"
           stroke={color}
           strokeWidth="3"
-          strokeDasharray={`${circ * score / 100} ${circ}`}
+          strokeDasharray={`${(circ * score) / 100} ${circ}`}
           strokeLinecap="round"
         />
       </svg>
+
       <div className="absolute inset-0 flex items-center justify-center">
         <span style={{ fontSize: "9px", fontWeight: 700, color }}>{score}</span>
       </div>
@@ -71,16 +186,59 @@ interface CRMProps {
 }
 
 export function CRM({ darkMode }: CRMProps) {
-  const [activeStage, setActiveStage] = useState("All");
-  const [selectedLead, setSelectedLead] = useState(leads[0]);
+  const [leads, setLeads] = useState<UiLead[]>(demoLeads);
+  const [selectedLead, setSelectedLead] = useState<UiLead>(demoLeads[0]);
+  const [activeStage, setActiveStage] = useState<"All" | UiLead["stage"]>("All");
   const [searchQ, setSearchQ] = useState("");
+  const [loadingLeads, setLoadingLeads] = useState(false);
+  const [leadError, setLeadError] = useState<string | null>(null);
 
-  const filtered = leads.filter(l => {
-    const matchStage = activeStage === "All" || l.stage === activeStage;
-    const matchSearch = l.name.toLowerCase().includes(searchQ.toLowerCase()) ||
-      l.company.toLowerCase().includes(searchQ.toLowerCase());
-    return matchStage && matchSearch;
-  });
+  useEffect(() => {
+    async function loadLeads() {
+      try {
+        setLoadingLeads(true);
+        setLeadError(null);
+
+        const apiLeads = await getClientLeads();
+        const mappedLeads = apiLeads.map(mapApiLeadToUiLead);
+
+        if (mappedLeads.length > 0) {
+          setLeads(mappedLeads);
+          setSelectedLead(mappedLeads[0]);
+        }
+      } catch (err) {
+        setLeadError(err instanceof Error ? err.message : "Failed to load leads");
+      } finally {
+        setLoadingLeads(false);
+      }
+    }
+
+    loadLeads();
+  }, []);
+
+  const filtered = useMemo(() => {
+    return leads.filter((lead) => {
+      const matchStage = activeStage === "All" || lead.stage === activeStage;
+      const query = searchQ.toLowerCase();
+
+      const matchSearch =
+        lead.name.toLowerCase().includes(query) ||
+        lead.company.toLowerCase().includes(query) ||
+        lead.title.toLowerCase().includes(query);
+
+      return matchStage && matchSearch;
+    });
+  }, [activeStage, leads, searchQ]);
+
+  const pipelineSummary = useMemo(() => {
+    return {
+      Prospecting: leads.filter((lead) => lead.stage === "Prospecting").length,
+      Discovery: leads.filter((lead) => lead.stage === "Discovery").length,
+      Proposal: leads.filter((lead) => lead.stage === "Proposal").length,
+      Negotiation: leads.filter((lead) => lead.stage === "Negotiation").length,
+      Closing: leads.filter((lead) => lead.stage === "Closing").length,
+    };
+  }, [leads]);
 
   const cardBase = {
     background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
@@ -92,55 +250,92 @@ export function CRM({ darkMode }: CRMProps) {
       <div className="p-6 pb-0 flex-shrink-0">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: darkMode ? "#e2e8f0" : "#0f172a" }}>CRM</h1>
-            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>342 leads · $1.2M pipeline value</p>
+            <h1
+              style={{
+                fontSize: "1.5rem",
+                fontWeight: 600,
+                color: darkMode ? "#e2e8f0" : "#0f172a",
+              }}
+            >
+              CRM
+            </h1>
+
+            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+              {loadingLeads
+                ? "Loading real leads..."
+                : leadError
+                  ? `Using demo leads · ${leadError}`
+                  : `${leads.length} leads · Real backend data`}
+            </p>
           </div>
+
           <button
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
-            style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#ffffff", boxShadow: "0 4px 14px rgba(99,102,241,0.3)" }}
+            style={{
+              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              color: "#ffffff",
+              boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
+            }}
           >
             <Plus size={14} /> Add Lead
           </button>
         </div>
 
-        {/* Pipeline summary */}
         <div className="grid grid-cols-5 gap-3 mb-5">
-          {Object.entries({
-            Prospecting: { count: 94, value: "$340K" },
-            Discovery: { count: 67, value: "$280K" },
-            Proposal: { count: 48, value: "$220K" },
-            Negotiation: { count: 31, value: "$190K" },
-            Closing: { count: 18, value: "$170K" },
-          }).map(([stage, data]) => (
-            <button
-              key={stage}
-              onClick={() => setActiveStage(stage === activeStage ? "All" : stage)}
-              className="p-3 rounded-xl border transition-all hover:border-primary/20"
-              style={{
-                background: activeStage === stage ? `${stageColors[stage]}12` : cardBase.background,
-                borderColor: activeStage === stage ? `${stageColors[stage]}30` : cardBase.borderColor,
-              }}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{stage}</span>
-                <div className="w-2 h-2 rounded-full" style={{ background: stageColors[stage] }} />
-              </div>
-              <div className="font-semibold" style={{ fontSize: "1.1rem", color: darkMode ? "#e2e8f0" : "#0f172a" }}>{data.count}</div>
-              <div className="text-xs mt-0.5" style={{ color: stageColors[stage] }}>{data.value}</div>
-            </button>
-          ))}
+          {Object.entries(pipelineSummary).map(([stage, count]) => {
+            const typedStage = stage as UiLead["stage"];
+
+            return (
+              <button
+                key={typedStage}
+                onClick={() => setActiveStage(typedStage === activeStage ? "All" : typedStage)}
+                className="p-3 rounded-xl border transition-all hover:border-primary/20"
+                style={{
+                  background:
+                    activeStage === typedStage
+                      ? `${stageColors[typedStage]}12`
+                      : cardBase.background,
+                  borderColor:
+                    activeStage === typedStage
+                      ? `${stageColors[typedStage]}30`
+                      : cardBase.borderColor,
+                }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                    {typedStage}
+                  </span>
+                  <div className="w-2 h-2 rounded-full" style={{ background: stageColors[typedStage] }} />
+                </div>
+
+                <div
+                  className="font-semibold"
+                  style={{ fontSize: "1.1rem", color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                >
+                  {count}
+                </div>
+
+                <div className="text-xs mt-0.5" style={{ color: stageColors[typedStage] }}>
+                  ₹0
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="flex-1 overflow-hidden flex gap-4 px-6 pb-6 min-h-0">
-        {/* Lead List */}
         <div className="flex flex-col w-80 flex-shrink-0 min-h-0">
-          {/* Search */}
           <div className="relative mb-3 flex-shrink-0">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }} />
+            <Search
+              size={13}
+              className="absolute left-3 top-1/2 -translate-y-1/2"
+              style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+            />
+
             <input
               value={searchQ}
-              onChange={e => setSearchQ(e.target.value)}
+              onChange={(event) => setSearchQ(event.target.value)}
               placeholder="Search leads..."
               className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm"
               style={{
@@ -152,52 +347,82 @@ export function CRM({ darkMode }: CRMProps) {
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-            {filtered.map((lead) => (
-              <motion.button
-                key={lead.id}
-                onClick={() => setSelectedLead(lead)}
-                className="w-full text-left p-3 rounded-xl border transition-all"
+            {filtered.length === 0 ? (
+              <div
+                className="rounded-xl border p-4 text-sm"
                 style={{
-                  background: selectedLead.id === lead.id
-                    ? darkMode ? `${lead.color}12` : `${lead.color}06`
-                    : cardBase.background,
-                  borderColor: selectedLead.id === lead.id
-                    ? `${lead.color}30`
-                    : cardBase.borderColor,
+                  ...cardBase,
+                  color: darkMode ? "#64748b" : "#64748b",
                 }}
-                whileHover={{ x: 2 }}
-                transition={{ duration: 0.15 }}
               >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0"
-                    style={{ background: `${lead.color}20`, color: lead.color }}
-                  >
-                    {lead.avatar}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium truncate" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{lead.name}</span>
-                      <ScoreRing score={lead.score} color={lead.color} />
+                No leads found.
+              </div>
+            ) : (
+              filtered.map((lead) => (
+                <motion.button
+                  key={lead.id}
+                  onClick={() => setSelectedLead(lead)}
+                  className="w-full text-left p-3 rounded-xl border transition-all"
+                  style={{
+                    background:
+                      selectedLead.id === lead.id
+                        ? darkMode
+                          ? `${lead.color}12`
+                          : `${lead.color}06`
+                        : cardBase.background,
+                    borderColor:
+                      selectedLead.id === lead.id ? `${lead.color}30` : cardBase.borderColor,
+                  }}
+                  whileHover={{ x: 2 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0"
+                      style={{ background: `${lead.color}20`, color: lead.color }}
+                    >
+                      {lead.avatar}
                     </div>
-                    <p className="text-xs truncate" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{lead.company}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span
-                        className="text-xs px-1.5 py-0.5 rounded"
-                        style={{ background: `${stageColors[lead.stage]}15`, color: stageColors[lead.stage] }}
-                      >
-                        {lead.stage}
-                      </span>
-                      <span className="text-xs" style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}>{lead.value}</span>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span
+                          className="text-sm font-medium truncate"
+                          style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                        >
+                          {lead.name}
+                        </span>
+
+                        <ScoreRing score={lead.score} color={lead.color} />
+                      </div>
+
+                      <p className="text-xs truncate" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                        {lead.company}
+                      </p>
+
+                      <div className="flex items-center gap-2 mt-1">
+                        <span
+                          className="text-xs px-1.5 py-0.5 rounded"
+                          style={{
+                            background: `${stageColors[lead.stage]}15`,
+                            color: stageColors[lead.stage],
+                          }}
+                        >
+                          {lead.stage}
+                        </span>
+
+                        <span className="text-xs" style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}>
+                          {lead.value}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.button>
-            ))}
+                </motion.button>
+              ))
+            )}
           </div>
         </div>
 
-        {/* Lead Detail */}
         <div className="flex-1 min-h-0 overflow-y-auto rounded-2xl border p-5" style={cardBase}>
           <div className="flex items-start gap-4 mb-6">
             <div
@@ -210,13 +435,20 @@ export function CRM({ darkMode }: CRMProps) {
             >
               {selectedLead.avatar}
             </div>
+
             <div className="flex-1">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{selectedLead.name}</h2>
-                  <p className="text-sm" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{selectedLead.title} · {selectedLead.company}</p>
+                  <h2 className="font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                    {selectedLead.name}
+                  </h2>
+
+                  <p className="text-sm" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                    {selectedLead.title} · {selectedLead.company}
+                  </p>
+
                   <div className="flex gap-2 mt-2">
-                    {selectedLead.tags.map(tag => (
+                    {selectedLead.tags.map((tag) => (
                       <span
                         key={tag}
                         className="text-xs px-2 py-0.5 rounded-full"
@@ -227,15 +459,22 @@ export function CRM({ darkMode }: CRMProps) {
                     ))}
                   </div>
                 </div>
+
                 <div className="text-right">
-                  <div className="font-bold" style={{ fontSize: "1.25rem", color: darkMode ? "#e2e8f0" : "#0f172a" }}>{selectedLead.value}</div>
-                  <p className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>deal value</p>
+                  <div
+                    className="font-bold"
+                    style={{ fontSize: "1.25rem", color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  >
+                    {selectedLead.value}
+                  </div>
+                  <p className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                    deal value
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex gap-2 mb-6">
             {[
               { icon: Phone, label: "Call" },
@@ -253,7 +492,6 @@ export function CRM({ darkMode }: CRMProps) {
             ))}
           </div>
 
-          {/* AI Score */}
           <div
             className="p-4 rounded-xl border mb-4"
             style={{
@@ -263,32 +501,52 @@ export function CRM({ darkMode }: CRMProps) {
           >
             <div className="flex items-center gap-2 mb-2">
               <Brain size={13} style={{ color: selectedLead.color }} />
-              <span className="text-xs font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>AI Lead Score Analysis</span>
-              <span className="text-sm font-bold ml-auto" style={{ color: selectedLead.color }}>{selectedLead.score}/100</span>
+
+              <span className="text-xs font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                AI Lead Score Analysis
+              </span>
+
+              <span className="text-sm font-bold ml-auto" style={{ color: selectedLead.color }}>
+                {selectedLead.score}/100
+              </span>
             </div>
+
             <p className="text-xs leading-relaxed" style={{ color: darkMode ? "#64748b" : "#64748b" }}>
-              {selectedLead.name} shows strong buying signals — opened 6 emails this week, visited pricing page 3×, and requested a demo. High conversion probability. Recommend scheduling follow-up within 24 hours.
+              {selectedLead.name} is currently marked as {selectedLead.stage}. Follow up quickly, verify budget and requirement, then move the lead toward the next pipeline stage.
             </p>
           </div>
 
-          {/* Timeline */}
           <div>
-            <h4 className="text-xs font-semibold mb-3" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>ACTIVITY TIMELINE</h4>
+            <h4 className="text-xs font-semibold mb-3" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+              ACTIVITY TIMELINE
+            </h4>
+
             <div className="space-y-3">
               {[
-                { time: "2 hr ago", event: "Opened proposal email — viewed for 4m 32s", type: "email" },
-                { time: "Yesterday", event: "Demo call completed — very positive, requested pricing", type: "call" },
-                { time: "2 days ago", event: "Visited pricing page 3 times", type: "web" },
-                { time: "4 days ago", event: "Downloaded case study: Enterprise ROI Report", type: "download" },
-              ].map((item, i) => (
-                <div key={i} className="flex gap-3">
+                { time: selectedLead.lastContact, event: "Lead imported from backend CRM data", type: "api" },
+                { time: "Today", event: "AI score calculated from lead status and source", type: "ai" },
+                { time: "Recently", event: "Recommended next action: call or email follow-up", type: "task" },
+                { time: "Recently", event: "Pipeline stage synchronized with backend status", type: "sync" },
+              ].map((item, index) => (
+                <div key={`${item.type}-${index}`} className="flex gap-3">
                   <div className="flex flex-col items-center">
                     <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: selectedLead.color }} />
-                    {i < 3 && <div className="w-px flex-1 mt-1" style={{ background: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)" }} />}
+                    {index < 3 && (
+                      <div
+                        className="w-px flex-1 mt-1"
+                        style={{ background: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)" }}
+                      />
+                    )}
                   </div>
+
                   <div className="pb-3">
-                    <p className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#475569" }}>{item.event}</p>
-                    <p className="text-xs mt-0.5" style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}>{item.time}</p>
+                    <p className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#475569" }}>
+                      {item.event}
+                    </p>
+
+                    <p className="text-xs mt-0.5" style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}>
+                      {item.time}
+                    </p>
                   </div>
                 </div>
               ))}

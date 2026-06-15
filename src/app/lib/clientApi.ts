@@ -78,3 +78,17 @@ export async function clientFetch<T>(
 
   return response.json();
 }
+export type ClientLead = {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  source: string;
+  status: string;
+  score: number;
+  notes?: string | null;
+};
+
+export async function getClientLeads(): Promise<ClientLead[]> {
+  return clientFetch<ClientLead[]>("/leads");
+}
