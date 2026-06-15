@@ -1,3 +1,4 @@
+import { Properties } from "./components/Properties";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Sidebar } from "./components/Sidebar";
@@ -20,6 +21,7 @@ const screenComponents: Record<string, React.ComponentType<{ darkMode: boolean; 
   "ai-studio": ({ darkMode }) => <AIStudio darkMode={darkMode} />,
   analytics: ({ darkMode }) => <Analytics darkMode={darkMode} />,
   crm: ({ darkMode }) => <CRM darkMode={darkMode} />,
+  properties: ({ darkMode }) => <Properties darkMode={darkMode} />,
   scheduler: ({ darkMode }) => <Scheduler darkMode={darkMode} />,
   reports: ({ darkMode }) => <Reports darkMode={darkMode} />,
   "ai-manager": ({ darkMode }) => <AIManager darkMode={darkMode} />,
@@ -33,6 +35,7 @@ const screenTitles: Record<string, string> = {
   scheduler: "Scheduler",
   analytics: "Analytics",
   crm: "CRM",
+  properties: "Properties",
   reports: "Reports",
   team: "Team",
   automation: "Automation",

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   LayoutDashboard, FileText, Image, Sparkles, Calendar,
-  BarChart3, Users2, FileBarChart, UserSquare2, Zap,
+  BarChart3, Users2, Building2, FileBarChart, UserSquare2, Zap,
   Puzzle, CreditCard, Settings, Bot, ChevronRight,
   Bell, Search, LogOut, Moon, Sun, Command
 } from "lucide-react";
@@ -15,6 +15,7 @@ const navItems = [
   { id: "scheduler", icon: Calendar, label: "Scheduler", badge: null },
   { id: "analytics", icon: BarChart3, label: "Analytics", badge: null },
   { id: "crm", icon: Users2, label: "CRM", badge: "3" },
+  { id: "properties", icon: Building2, label: "Properties", badge: null },
   { id: "reports", icon: FileBarChart, label: "Reports", badge: null },
   { id: "team", icon: UserSquare2, label: "Team", badge: null },
   { id: "automation", icon: Zap, label: "Automation", badge: null },

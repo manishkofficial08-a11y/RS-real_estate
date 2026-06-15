@@ -92,3 +92,45 @@ export type ClientLead = {
 export async function getClientLeads(): Promise<ClientLead[]> {
   return clientFetch<ClientLead[]>("/leads");
 }
+
+export type ClientProperty = {
+  id: string;
+  tenant_id: string;
+  title: string;
+  description?: string | null;
+  price: number;
+  location: string;
+  property_type: string;
+  status: string;
+  bedrooms: number;
+  bathrooms: number;
+  area_sqft?: number | null;
+  images: string[];
+  created_by: string;
+};
+
+export type CreateClientPropertyPayload = {
+  title: string;
+  description?: string;
+  price: number;
+  location: string;
+  property_type: string;
+  status: string;
+  bedrooms: number;
+  bathrooms: number;
+  area_sqft?: number;
+  images?: string[];
+};
+
+export async function getClientProperties(): Promise<ClientProperty[]> {
+  return clientFetch<ClientProperty[]>("/properties/");
+}
+
+export async function createClientProperty(
+  payload: CreateClientPropertyPayload
+): Promise<ClientProperty> {
+  return clientFetch<ClientProperty>("/properties/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
