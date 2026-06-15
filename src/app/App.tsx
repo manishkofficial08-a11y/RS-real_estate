@@ -12,6 +12,8 @@ import { Background3D } from "./components/Background3D";
 import { CommandPalette } from "./components/CommandPalette";
 import { GenericScreen } from "./components/GenericScreen";
 import { Bell, Search, Sparkles } from "lucide-react";
+import { ClientLogin } from "./components/ClientLogin";
+import { isClientLoggedIn } from "./lib/clientApi";
 
 const screenComponents: Record<string, React.ComponentType<{ darkMode: boolean; onNavigate?: (s: string) => void }>> = {
   dashboard: ({ darkMode, onNavigate }) => <Dashboard darkMode={darkMode} onNavigate={onNavigate!} />,
@@ -43,6 +45,7 @@ const screenTitles: Record<string, string> = {
 export default function App() {
   const [activeScreen, setActiveScreen] = useState("dashboard");
   const [darkMode, setDarkMode] = useState(true);
+  const [clientLoggedIn, setClientLoggedIn] = useState(isClientLoggedIn());
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -61,6 +64,15 @@ export default function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
+  if (!clientLoggedIn) {
+  return (
+    <ClientLogin
+      darkMode={darkMode}
+      onLoginSuccess={() => setClientLoggedIn(true)}
+    />
+  );
+}
 
   const ScreenComponent = screenComponents[activeScreen];
 
