@@ -6,6 +6,13 @@ import ParticleOverlay from './ParticleOverlay';
 
 export default function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('founder_sidebar_collapsed') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('founder_sidebar_collapsed', String(isSidebarCollapsed));
+  }, [isSidebarCollapsed]);
 
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
@@ -17,6 +24,10 @@ export default function Layout() {
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
   }, []);
+
+  const desktopLayoutClass = isSidebarCollapsed
+    ? 'lg:ml-[84px] lg:w-[calc(100%-84px)]'
+    : 'lg:ml-[240px] lg:w-[calc(100%-240px)]';
 
   return (
     <div className="min-h-screen" style={{ background: '#0A0A0F' }}>
@@ -43,12 +54,17 @@ export default function Layout() {
         />
       )}
 
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <Sidebar
+        isOpen={isSidebarOpen}
+        isCollapsed={isSidebarCollapsed && !isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+      />
 
       <ParticleOverlay />
 
       <main
-        className="relative min-h-screen w-full transition-all duration-300 lg:ml-[240px] lg:w-[calc(100%-240px)]"
+        className={`relative min-h-screen w-full transition-all duration-300 ${desktopLayoutClass}`}
         style={{ background: '#0A0A0F' }}
       >
         <Outlet />
@@ -56,4 +72,3 @@ export default function Layout() {
     </div>
   );
 }
-

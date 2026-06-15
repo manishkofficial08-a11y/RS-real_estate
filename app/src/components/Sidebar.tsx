@@ -10,12 +10,16 @@ import {
   Ticket,
   Settings,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import CubeLogo from './CubeLogo';
 
 type SidebarProps = {
   isOpen: boolean;
+  isCollapsed: boolean;
   onClose: () => void;
+  onToggleCollapse: () => void;
 };
 
 const navItems = [
@@ -30,7 +34,7 @@ const navItems = [
   { label: 'Settings', icon: Settings, path: '/admin/settings' },
 ];
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -42,41 +46,61 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <aside
       className={[
-        'fixed left-0 top-0 z-50 flex h-screen flex-col transition-transform duration-300',
+        'fixed left-0 top-0 z-50 flex h-screen flex-col transition-all duration-300',
         isOpen ? 'translate-x-0' : '-translate-x-full',
         'lg:translate-x-0',
       ].join(' ')}
       style={{
-        width: 240,
+        width: isCollapsed ? 84 : 240,
         background: 'rgba(255, 255, 255, 0.02)',
         borderRight: '1px solid rgba(255, 255, 255, 0.06)',
         backdropFilter: 'blur(24px)',
       }}
       aria-label="Founder dashboard navigation"
     >
-      <div className="flex items-center justify-between gap-3 px-5 py-6">
-        <div className="flex items-center gap-3">
+      <button
+        type="button"
+        className="absolute -right-3 top-7 z-[60] hidden h-7 w-7 items-center justify-center rounded-full lg:flex"
+        style={{
+          background: 'rgba(10, 10, 15, 0.96)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          color: '#8A8A93',
+        }}
+        onClick={onToggleCollapse}
+        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {isCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+      </button>
+
+      <div className={`flex items-center gap-3 px-5 py-6 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+        <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
           <CubeLogo />
-          <span
-            className="font-display text-base font-medium tracking-[-0.02em]"
-            style={{ color: '#F0EDE6' }}
-          >
-            MMe-AI
-          </span>
+
+          {!isCollapsed && (
+            <span
+              className="font-display text-base font-medium tracking-[-0.02em]"
+              style={{ color: '#F0EDE6' }}
+            >
+              AI Growth OS
+            </span>
+          )}
         </div>
 
-        <button
-          type="button"
-          className="flex h-8 w-8 items-center justify-center rounded-lg lg:hidden"
-          style={{
-            background: 'rgba(255, 255, 255, 0.06)',
-            color: '#F0EDE6',
-          }}
-          onClick={onClose}
-          aria-label="Close sidebar"
-        >
-          <X size={18} />
-        </button>
+        {!isCollapsed && (
+          <button
+            type="button"
+            className="flex h-8 w-8 items-center justify-center rounded-lg lg:hidden"
+            style={{
+              background: 'rgba(255, 255, 255, 0.06)',
+              color: '#F0EDE6',
+            }}
+            onClick={onClose}
+            aria-label="Close sidebar"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
@@ -89,11 +113,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               key={item.path}
               type="button"
               onClick={() => handleNavigate(item.path)}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all duration-200"
+              title={isCollapsed ? item.label : undefined}
+              className={[
+                'flex w-full items-center rounded-lg py-2.5 text-left transition-all duration-200',
+                isCollapsed ? 'justify-center px-2' : 'gap-3 px-3',
+              ].join(' ')}
               style={{
                 background: isActive ? 'rgba(107, 138, 255, 0.12)' : 'transparent',
                 color: isActive ? '#6B8AFF' : '#8A8A93',
-                borderLeft: isActive ? '2px solid #6B8AFF' : '2px solid transparent',
+                borderLeft: isActive && !isCollapsed ? '2px solid #6B8AFF' : '2px solid transparent',
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
@@ -109,22 +137,28 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               }}
               aria-current={isActive ? 'page' : undefined}
             >
-              <Icon size={16} strokeWidth={isActive ? 2 : 1.5} />
-              <span className="text-sm font-normal">{item.label}</span>
+              <Icon size={17} strokeWidth={isActive ? 2 : 1.5} />
+
+              {!isCollapsed && (
+                <span className="text-sm font-normal">{item.label}</span>
+              )}
             </button>
           );
         })}
       </nav>
 
       <div
-        className="mx-3 mb-4 flex items-center gap-3 rounded-xl p-3"
+        className={[
+          'mx-3 mb-4 flex items-center rounded-xl p-3',
+          isCollapsed ? 'justify-center' : 'gap-3',
+        ].join(' ')}
         style={{
           background: 'rgba(255, 255, 255, 0.03)',
           border: '1px solid rgba(255, 255, 255, 0.06)',
         }}
       >
         <div
-          className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium"
           style={{
             background: 'linear-gradient(135deg, #6B8AFF, #4A6BFF)',
             color: '#F0EDE6',
@@ -133,16 +167,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           F
         </div>
 
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium" style={{ color: '#F0EDE6' }}>
-            Founder
-          </p>
-          <p className="truncate text-xs" style={{ color: '#55555C' }}>
-            admin@aigrowth.os
-          </p>
-        </div>
+        {!isCollapsed && (
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium" style={{ color: '#F0EDE6' }}>
+              Founder
+            </p>
+            <p className="truncate text-xs" style={{ color: '#55555C' }}>
+              founder@aigrowthos.com
+            </p>
+          </div>
+        )}
       </div>
     </aside>
   );
 }
-
