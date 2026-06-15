@@ -14,7 +14,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { GenericScreen } from "./components/GenericScreen";
 import { Bell, Search, Sparkles } from "lucide-react";
 import { ClientLogin } from "./components/ClientLogin";
-import { isClientLoggedIn } from "./lib/clientApi";
+import { clearClientSession, isClientLoggedIn } from "./lib/clientApi";
 
 const screenComponents: Record<string, React.ComponentType<{ darkMode: boolean; onNavigate?: (s: string) => void }>> = {
   dashboard: ({ darkMode, onNavigate }) => <Dashboard darkMode={darkMode} onNavigate={onNavigate!} />,
@@ -149,10 +149,14 @@ export default function App() {
           activeScreen={activeScreen}
           onNavigate={setActiveScreen}
           darkMode={darkMode}
-          onToggleDark={() => setDarkMode(d => !d)}
+          onToggleDark={() => setDarkMode(!darkMode)}
           collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(c => !c)}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
           onCommandPalette={() => setCommandOpen(true)}
+          onLogout={() => {
+            clearClientSession();
+            setClientLoggedIn(false);
+          }}
         />
       </div>
 

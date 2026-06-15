@@ -33,9 +33,10 @@ interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   onCommandPalette: () => void;
+  onLogout: () => void;
 }
 
-export function Sidebar({ activeScreen, onNavigate, darkMode, onToggleDark, collapsed, onToggleCollapse, onCommandPalette }: SidebarProps) {
+export function Sidebar({ activeScreen, onNavigate, darkMode, onToggleDark, collapsed, onToggleCollapse, onCommandPalette, onLogout }: SidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   return (
@@ -250,9 +251,13 @@ export function Sidebar({ activeScreen, onNavigate, darkMode, onToggleDark, coll
             )}
           </AnimatePresence>
           {!collapsed && (
-            <button className="p-1 rounded-lg transition-all hover:bg-destructive/10" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-              <LogOut size={13} />
-            </button>
+<button
+  onClick={onLogout}
+  className="p-1 rounded-lg transition-all hover:bg-destructive/10"
+  style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+>
+  <LogOut size={13} />
+</button>
           )}
         </div>
       </div>
