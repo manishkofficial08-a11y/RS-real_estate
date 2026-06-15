@@ -1,18 +1,45 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/v1";
 
-function getFounderToken(): string {
-  const token = localStorage.getItem("founder_access_token");
+const FOUNDER_ACCESS_TOKEN_KEY = "founder_access_token";
+const FOUNDER_REFRESH_TOKEN_KEY = "founder_refresh_token";
 
-  if (!token) {
-    throw new Error("Founder access token missing. Please login again.");
+export function getFounderToken(): string | null {
+  return localStorage.getItem(FOUNDER_ACCESS_TOKEN_KEY);
+}
+
+export function isFounderLoggedIn(): boolean {
+  return Boolean(getFounderToken());
+}
+
+export function clearFounderSession() {
+  localStorage.removeItem(FOUNDER_ACCESS_TOKEN_KEY);
+  localStorage.removeItem(FOUNDER_REFRESH_TOKEN_KEY);
+}
+
+export function saveFounderSession(accessToken: string, refreshToken?: string) {
+  localStorage.setItem(FOUNDER_ACCESS_TOKEN_KEY, accessToken);
+
+  if (refreshToken) {
+    localStorage.setItem(FOUNDER_REFRESH_TOKEN_KEY, refreshToken);
   }
+}
 
-  return token;
+function redirectToFounderLogin() {
+  clearFounderSession();
+
+  if (!window.location.pathname.includes("/admin/login")) {
+    window.location.href = "/admin/login";
+  }
 }
 
 async function adminFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getFounderToken();
+
+  if (!token) {
+    redirectToFounderLogin();
+    throw new Error("Founder session missing. Please login again.");
+  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
@@ -23,12 +50,49 @@ async function adminFetch<T>(path: string, options: RequestInit = {}): Promise<T
     },
   });
 
+  if (response.status === 401 || response.status === 403) {
+    redirectToFounderLogin();
+    throw new Error("Founder session expired. Please login again.");
+  }
+
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(errorText || `Request failed: ${response.status}`);
   }
 
   return response.json();
+}
+
+export type FounderLoginResponse = {
+  access_token: string;
+  refresh_token?: string;
+  token_type: string;
+};
+
+export async function loginFounder(email: string, password: string): Promise<FounderLoginResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Invalid email or password");
+  }
+
+  const data = await response.json();
+
+  saveFounderSession(data.access_token, data.refresh_token);
+
+  return data;
+}
+
+export function logoutFounder() {
+  clearFounderSession();
+  window.location.href = "/admin/login";
 }
 
 export type AdminDashboardStats = {
