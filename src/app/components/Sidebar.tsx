@@ -52,10 +52,9 @@ interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   onCommandPalette: () => void;
-  onLogout: () => void;
   profile: ClientProfile | null;
+  onLogout: () => void;
 }
-
 export function Sidebar({
   activeScreen,
   onNavigate,
@@ -134,13 +133,13 @@ export function Sidebar({
                 className="text-sm font-semibold tracking-tight"
                 style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
               >
-                AI Growth OS
+                RS Real Estate OS
               </div>
               <div
                 className="text-xs"
                 style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
               >
-                Enterprise
+                MMe-AI Client Portal
               </div>
             </motion.div>
           )}
@@ -317,7 +316,7 @@ export function Sidebar({
               color: "#ffffff",
             }}
           >
-            JD
+            RS
           </div>
           <AnimatePresence>
             {!collapsed && (
@@ -331,13 +330,13 @@ export function Sidebar({
                   className="text-xs font-medium truncate"
                   style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
                 >
-                  Jane Doe
+                  Ram Kumar Sahu
                 </div>
                 <div
                   className="text-xs truncate"
                   style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
                 >
-                  jane@company.com
+                  manishkofficial08@gmail.com
                 </div>
               </motion.div>
             )}
