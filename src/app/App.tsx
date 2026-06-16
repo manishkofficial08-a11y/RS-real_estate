@@ -7,6 +7,7 @@ import { AIStudio } from "./components/AIStudio";
 import { Analytics } from "./components/Analytics";
 import { CRM } from "./components/CRM";
 import { Scheduler } from "./components/Scheduler";
+import { Settings } from "./components/Settings";
 import { Reports } from "./components/Reports";
 import { AIManager } from "./components/AIManager";
 import { Background3D } from "./components/Background3D";
@@ -35,6 +36,7 @@ const screenComponents: Record<
   scheduler: ({ darkMode }) => <Scheduler darkMode={darkMode} />,
   reports: ({ darkMode }) => <Reports darkMode={darkMode} />,
   "ai-manager": ({ darkMode }) => <AIManager darkMode={darkMode} />,
+  settings: ({ darkMode }) => <Settings darkMode={darkMode} />,
 };
 
 const screenTitles: Record<string, string> = {
