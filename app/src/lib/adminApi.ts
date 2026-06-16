@@ -253,3 +253,93 @@ export async function markAdminNotificationRead(
     method: "PUT",
   });
 }
+export type AdminAIJobStatus =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type AdminAIJobType =
+  | "caption"
+  | "hashtag"
+  | "scheduler"
+  | "publisher"
+  | "analytics"
+  | "recommendation"
+  | "report"
+  | "chat"
+  | "voice"
+  | "orchestrator"
+  | "other";
+
+export type AdminAIJobPriority = "low" | "normal" | "high" | "urgent";
+
+export type AdminAIJob = {
+  id: string;
+  tenant_id: string;
+  created_by_user_id?: string | null;
+  job_type: AdminAIJobType | string;
+  title: string;
+  description?: string | null;
+  status: AdminAIJobStatus | string;
+  priority: AdminAIJobPriority | string;
+  input_payload?: Record<string, unknown> | null;
+  output_payload?: Record<string, unknown> | null;
+  error_message?: string | null;
+  progress: number;
+  attempts: number;
+  max_attempts: number;
+  business_name?: string | null;
+  created_by_name?: string | null;
+  created_by_email?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  failed_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type UpdateAIJobPayload = {
+  status?: AdminAIJobStatus;
+  priority?: AdminAIJobPriority;
+  progress?: number;
+  output_payload?: Record<string, unknown> | null;
+  error_message?: string | null;
+};
+
+export async function getAIJobs(params?: {
+  status?: AdminAIJobStatus | "all";
+  job_type?: AdminAIJobType | "all";
+  tenant_id?: string;
+}): Promise<AdminAIJob[]> {
+  const searchParams = new URLSearchParams();
+
+  if (params?.status && params.status !== "all") {
+    searchParams.set("status_filter", params.status);
+  }
+
+  if (params?.job_type && params.job_type !== "all") {
+    searchParams.set("job_type_filter", params.job_type);
+  }
+
+  if (params?.tenant_id) {
+    searchParams.set("tenant_id_filter", params.tenant_id);
+  }
+
+  const query = searchParams.toString();
+
+  return adminFetch<AdminAIJob[]>(
+    `/ai-jobs/admin/jobs${query ? `?${query}` : ""}`,
+  );
+}
+
+export async function updateAIJob(
+  jobId: string,
+  payload: UpdateAIJobPayload,
+): Promise<AdminAIJob> {
+  return adminFetch<AdminAIJob>(`/ai-jobs/admin/jobs/${jobId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
