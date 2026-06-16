@@ -18,8 +18,12 @@ import { Bell, Search, Sparkles } from "lucide-react";
 import { ClientLogin } from "./components/ClientLogin";
 import {
   clearClientSession,
+  getClientNotificationUnreadCount,
+  getClientNotifications,
   getClientProfile,
   isClientLoggedIn,
+  markClientNotificationRead,
+  type ClientNotification,
   type ClientProfile,
 } from "./lib/clientApi";
 
@@ -70,6 +74,9 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<ClientNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -100,6 +107,46 @@ export default function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+  useEffect(() => {
+    if (!clientLoggedIn) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
+    let alive = true;
+
+    async function loadNotifications() {
+      try {
+        setNotificationsLoading(true);
+
+        const [items, count] = await Promise.all([
+          getClientNotifications(),
+          getClientNotificationUnreadCount(),
+        ]);
+
+        if (!alive) return;
+
+        setNotifications(items);
+        setUnreadCount(count.unread_count);
+      } catch (error) {
+        console.error("Failed to load client notifications", error);
+      } finally {
+        if (alive) {
+          setNotificationsLoading(false);
+        }
+      }
+    }
+
+    loadNotifications();
+
+    const intervalId = window.setInterval(loadNotifications, 30000);
+
+    return () => {
+      alive = false;
+      window.clearInterval(intervalId);
+    };
+  }, [clientLoggedIn]);
 
   if (!clientLoggedIn) {
     return (
@@ -111,24 +158,29 @@ export default function App() {
   }
 
   const ScreenComponent = screenComponents[activeScreen];
+  const handleNotificationClick = async (notification: ClientNotification) => {
+    try {
+      if (!notification.is_read) {
+        await markClientNotificationRead(notification.id);
 
-  const notifications = [
-    {
-      text: "New hot lead: Sarah Chen opened your proposal",
-      time: "2 min ago",
-      color: "#6366f1",
-    },
-    {
-      text: "Post scheduled for 3:00 PM reached 10K impressions",
-      time: "1 hr ago",
-      color: "#10b981",
-    },
-    {
-      text: "AI analysis complete: 3 optimization suggestions",
-      time: "3 hr ago",
-      color: "#8b5cf6",
-    },
-  ];
+        setNotifications((prev) =>
+          prev.map((item) =>
+            item.id === notification.id ? { ...item, is_read: true } : item,
+          ),
+        );
+
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+
+      if (notification.link === "/support") {
+        setActiveScreen("support");
+      }
+
+      setNotifOpen(false);
+    } catch (error) {
+      console.error("Failed to mark notification as read", error);
+    }
+  };
 
   return (
     <div
@@ -307,13 +359,18 @@ export default function App() {
                 style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
               >
                 <Bell size={16} />
-                <div
-                  className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-                  style={{
-                    background: "#ef4444",
-                    boxShadow: "0 0 6px #ef4444",
-                  }}
-                />
+                {unreadCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full text-[10px] font-semibold flex items-center justify-center"
+                    style={{
+                      background: "#ef4444",
+                      color: "#ffffff",
+                      boxShadow: "0 0 8px rgba(239,68,68,0.65)",
+                    }}
+                  >
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </button>
 
               <AnimatePresence>
@@ -360,7 +417,9 @@ export default function App() {
                           className="text-xs"
                           style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
                         >
-                          3 unread
+                          {notificationsLoading
+                            ? "Loading..."
+                            : `${unreadCount} unread`}
                         </p>
                       </div>
                       <div
@@ -371,38 +430,67 @@ export default function App() {
                             : "rgba(15,23,42,0.04)",
                         }}
                       >
-                        {notifications.map((n, i) => (
-                          <div
-                            key={i}
-                            className="flex gap-3 px-4 py-3 transition-all hover:bg-primary/5 cursor-pointer"
-                          >
-                            <div
-                              className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                        {notifications.length === 0 ? (
+                          <div className="px-4 py-6 text-center">
+                            <p
+                              className="text-xs"
                               style={{
-                                background: n.color,
-                                boxShadow: `0 0 6px ${n.color}`,
+                                color: darkMode ? "#64748b" : "#94a3b8",
                               }}
-                            />
-                            <div>
-                              <p
-                                className="text-xs"
-                                style={{
-                                  color: darkMode ? "#94a3b8" : "#475569",
-                                }}
-                              >
-                                {n.text}
-                              </p>
-                              <p
-                                className="text-xs mt-0.5"
-                                style={{
-                                  color: darkMode ? "#2d3748" : "#94a3b8",
-                                }}
-                              >
-                                {n.time}
-                              </p>
-                            </div>
+                            >
+                              No notifications yet
+                            </p>
                           </div>
-                        ))}
+                        ) : (
+                          notifications.map((notification) => (
+                            <button
+                              key={notification.id}
+                              type="button"
+                              onClick={() =>
+                                handleNotificationClick(notification)
+                              }
+                              className="w-full flex gap-3 px-4 py-3 text-left transition-all hover:bg-primary/5 cursor-pointer"
+                            >
+                              <div
+                                className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                                style={{
+                                  background: notification.is_read
+                                    ? "#64748b"
+                                    : "#ef4444",
+                                  boxShadow: notification.is_read
+                                    ? "none"
+                                    : "0 0 6px rgba(239,68,68,0.8)",
+                                }}
+                              />
+                              <div className="min-w-0">
+                                <p
+                                  className="text-xs font-medium"
+                                  style={{
+                                    color: darkMode ? "#e2e8f0" : "#0f172a",
+                                  }}
+                                >
+                                  {notification.title}
+                                </p>
+                                <p
+                                  className="text-xs mt-1 line-clamp-2"
+                                  style={{
+                                    color: darkMode ? "#94a3b8" : "#475569",
+                                  }}
+                                >
+                                  {notification.message}
+                                </p>
+                                <p
+                                  className="text-[11px] mt-1"
+                                  style={{
+                                    color: darkMode ? "#4a5568" : "#94a3b8",
+                                  }}
+                                >
+                                  {notification.is_read ? "Read" : "Unread"}
+                                </p>
+                              </div>
+                            </button>
+                          ))
+                        )}
                       </div>
                     </motion.div>
                   </>

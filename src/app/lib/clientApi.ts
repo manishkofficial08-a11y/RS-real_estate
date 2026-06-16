@@ -269,3 +269,36 @@ export async function createSupportTicket(
 export async function getMySupportTickets(): Promise<SupportTicket[]> {
   return clientFetch<SupportTicket[]>("/support/tickets/my");
 }
+export type ClientNotification = {
+  id: string;
+  tenant_id?: string | null;
+  recipient_user_id?: string | null;
+  audience: string;
+  type: string;
+  title: string;
+  message: string;
+  related_entity_type?: string | null;
+  related_entity_id?: string | null;
+  link?: string | null;
+  is_read: boolean;
+};
+
+export type ClientNotificationUnreadCount = {
+  unread_count: number;
+};
+
+export async function getClientNotifications(): Promise<ClientNotification[]> {
+  return clientFetch<ClientNotification[]>("/notifications/my");
+}
+
+export async function getClientNotificationUnreadCount(): Promise<ClientNotificationUnreadCount> {
+  return clientFetch<ClientNotificationUnreadCount>("/notifications/my/unread-count");
+}
+
+export async function markClientNotificationRead(
+  notificationId: string
+): Promise<ClientNotification> {
+  return clientFetch<ClientNotification>(`/notifications/my/${notificationId}/read`, {
+    method: "PUT",
+  });
+}
