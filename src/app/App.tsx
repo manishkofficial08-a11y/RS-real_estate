@@ -14,10 +14,20 @@ import { CommandPalette } from "./components/CommandPalette";
 import { GenericScreen } from "./components/GenericScreen";
 import { Bell, Search, Sparkles } from "lucide-react";
 import { ClientLogin } from "./components/ClientLogin";
-import { clearClientSession, isClientLoggedIn } from "./lib/clientApi";
+import {
+  clearClientSession,
+  getClientProfile,
+  isClientLoggedIn,
+  type ClientProfile,
+} from "./lib/clientApi";
 
-const screenComponents: Record<string, React.ComponentType<{ darkMode: boolean; onNavigate?: (s: string) => void }>> = {
-  dashboard: ({ darkMode, onNavigate }) => <Dashboard darkMode={darkMode} onNavigate={onNavigate!} />,
+const screenComponents: Record<
+  string,
+  React.ComponentType<{ darkMode: boolean; onNavigate?: (s: string) => void }>
+> = {
+  dashboard: ({ darkMode, onNavigate }) => (
+    <Dashboard darkMode={darkMode} onNavigate={onNavigate!} />
+  ),
   "ai-studio": ({ darkMode }) => <AIStudio darkMode={darkMode} />,
   analytics: ({ darkMode }) => <Analytics darkMode={darkMode} />,
   crm: ({ darkMode }) => <CRM darkMode={darkMode} />,
@@ -49,6 +59,9 @@ export default function App() {
   const [activeScreen, setActiveScreen] = useState("dashboard");
   const [darkMode, setDarkMode] = useState(true);
   const [clientLoggedIn, setClientLoggedIn] = useState(isClientLoggedIn());
+  const [clientProfile, setClientProfile] = useState<ClientProfile | null>(
+    null,
+  );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -56,6 +69,21 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    if (!clientLoggedIn) {
+      setClientProfile(null);
+      return;
+    }
+
+    getClientProfile()
+      .then(setClientProfile)
+      .catch(() => {
+        clearClientSession();
+        setClientLoggedIn(false);
+        setClientProfile(null);
+      });
+  }, [clientLoggedIn]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -69,29 +97,39 @@ export default function App() {
   }, []);
 
   if (!clientLoggedIn) {
-  return (
-    <ClientLogin
-      darkMode={darkMode}
-      onLoginSuccess={() => setClientLoggedIn(true)}
-    />
-  );
-}
+    return (
+      <ClientLogin
+        darkMode={darkMode}
+        onLoginSuccess={() => setClientLoggedIn(true)}
+      />
+    );
+  }
 
   const ScreenComponent = screenComponents[activeScreen];
 
   const notifications = [
-    { text: "New hot lead: Sarah Chen opened your proposal", time: "2 min ago", color: "#6366f1" },
-    { text: "Post scheduled for 3:00 PM reached 10K impressions", time: "1 hr ago", color: "#10b981" },
-    { text: "AI analysis complete: 3 optimization suggestions", time: "3 hr ago", color: "#8b5cf6" },
+    {
+      text: "New hot lead: Sarah Chen opened your proposal",
+      time: "2 min ago",
+      color: "#6366f1",
+    },
+    {
+      text: "Post scheduled for 3:00 PM reached 10K impressions",
+      time: "1 hr ago",
+      color: "#10b981",
+    },
+    {
+      text: "AI analysis complete: 3 optimization suggestions",
+      time: "3 hr ago",
+      color: "#8b5cf6",
+    },
   ];
 
   return (
     <div
       className="fixed inset-0 flex overflow-hidden"
       style={{
-        background: darkMode
-          ? "#02020f"
-          : "#f8fafc",
+        background: darkMode ? "#02020f" : "#f8fafc",
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
@@ -100,7 +138,10 @@ export default function App() {
 
       {/* 3D floating orbs — dark mode only */}
       {darkMode && (
-        <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
+        <div
+          className="fixed inset-0 pointer-events-none overflow-hidden"
+          style={{ zIndex: 0 }}
+        >
           <motion.div
             className="absolute rounded-full"
             style={{
@@ -108,7 +149,8 @@ export default function App() {
               height: 600,
               top: "-20%",
               left: "-10%",
-              background: "radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)",
+              background:
+                "radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)",
               filter: "blur(60px)",
             }}
             animate={{ scale: [1, 1.1, 1], opacity: [0.6, 1, 0.6] }}
@@ -121,11 +163,17 @@ export default function App() {
               height: 500,
               bottom: "-10%",
               right: "-5%",
-              background: "radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%)",
+              background:
+                "radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%)",
               filter: "blur(60px)",
             }}
             animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.9, 0.5] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+            transition={{
+              duration: 10,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 2,
+            }}
           />
           <motion.div
             className="absolute rounded-full"
@@ -134,11 +182,17 @@ export default function App() {
               height: 400,
               top: "30%",
               right: "20%",
-              background: "radial-gradient(circle, rgba(6,182,212,0.05) 0%, transparent 70%)",
+              background:
+                "radial-gradient(circle, rgba(6,182,212,0.05) 0%, transparent 70%)",
               filter: "blur(60px)",
             }}
             animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.8, 0.4] }}
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 4 }}
+            transition={{
+              duration: 12,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 4,
+            }}
           />
         </div>
       )}
@@ -153,8 +207,10 @@ export default function App() {
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
           onCommandPalette={() => setCommandOpen(true)}
+          profile={clientProfile}
           onLogout={() => {
             clearClientSession();
+            setClientProfile(null);
             setClientLoggedIn(false);
           }}
         />
@@ -166,16 +222,28 @@ export default function App() {
         <div
           className="flex items-center gap-4 px-5 py-3 border-b flex-shrink-0"
           style={{
-            background: darkMode ? "rgba(5,5,20,0.7)" : "rgba(255,255,255,0.85)",
-            borderColor: darkMode ? "rgba(99,102,241,0.1)" : "rgba(15,23,42,0.06)",
+            background: darkMode
+              ? "rgba(5,5,20,0.7)"
+              : "rgba(255,255,255,0.85)",
+            borderColor: darkMode
+              ? "rgba(99,102,241,0.1)"
+              : "rgba(15,23,42,0.06)",
             backdropFilter: "blur(20px)",
           }}
         >
           {/* Breadcrumb */}
           <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}>AI Growth OS</span>
+            <span
+              className="text-xs"
+              style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}
+            >
+              {clientProfile?.business_name || "RS Real Estate"}
+            </span>
             <span style={{ color: darkMode ? "#2d3748" : "#cbd5e1" }}>/</span>
-            <span className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+            <span
+              className="text-sm font-medium"
+              style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+            >
               {screenTitles[activeScreen] || activeScreen}
             </span>
           </div>
@@ -186,14 +254,28 @@ export default function App() {
               onClick={() => setCommandOpen(true)}
               className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs transition-all hover:border-primary/20"
               style={{
-                background: darkMode ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.03)",
-                borderColor: darkMode ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.06)",
+                background: darkMode
+                  ? "rgba(99,102,241,0.06)"
+                  : "rgba(99,102,241,0.03)",
+                borderColor: darkMode
+                  ? "rgba(99,102,241,0.1)"
+                  : "rgba(99,102,241,0.06)",
                 color: darkMode ? "#4a5568" : "#94a3b8",
               }}
             >
               <Search size={12} />
               <span>Search</span>
-              <kbd className="px-1.5 py-0.5 rounded text-xs" style={{ background: darkMode ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.06)", color: darkMode ? "#818cf8" : "#6366f1" }}>⌘K</kbd>
+              <kbd
+                className="px-1.5 py-0.5 rounded text-xs"
+                style={{
+                  background: darkMode
+                    ? "rgba(99,102,241,0.1)"
+                    : "rgba(99,102,241,0.06)",
+                  color: darkMode ? "#818cf8" : "#6366f1",
+                }}
+              >
+                ⌘K
+              </kbd>
             </button>
 
             {/* AI create button */}
@@ -215,18 +297,27 @@ export default function App() {
             {/* Notifications */}
             <div className="relative">
               <button
-                onClick={() => setNotifOpen(o => !o)}
+                onClick={() => setNotifOpen((o) => !o)}
                 className="relative p-2 rounded-xl transition-all hover:bg-primary/5"
                 style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
               >
                 <Bell size={16} />
-                <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: "#ef4444", boxShadow: "0 0 6px #ef4444" }} />
+                <div
+                  className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+                  style={{
+                    background: "#ef4444",
+                    boxShadow: "0 0 6px #ef4444",
+                  }}
+                />
               </button>
 
               <AnimatePresence>
                 {notifOpen && (
                   <>
-                    <div className="fixed inset-0 z-20" onClick={() => setNotifOpen(false)} />
+                    <div
+                      className="fixed inset-0 z-20"
+                      onClick={() => setNotifOpen(false)}
+                    />
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95, y: -5 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -234,23 +325,76 @@ export default function App() {
                       transition={{ duration: 0.15 }}
                       className="absolute right-0 top-full mt-2 w-80 rounded-2xl border z-30 overflow-hidden"
                       style={{
-                        background: darkMode ? "rgba(10,10,30,0.97)" : "#ffffff",
-                        borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(15,23,42,0.08)",
-                        boxShadow: darkMode ? "0 16px 48px rgba(0,0,0,0.5)" : "0 16px 48px rgba(0,0,0,0.12)",
+                        background: darkMode
+                          ? "rgba(10,10,30,0.97)"
+                          : "#ffffff",
+                        borderColor: darkMode
+                          ? "rgba(99,102,241,0.2)"
+                          : "rgba(15,23,42,0.08)",
+                        boxShadow: darkMode
+                          ? "0 16px 48px rgba(0,0,0,0.5)"
+                          : "0 16px 48px rgba(0,0,0,0.12)",
                         backdropFilter: "blur(24px)",
                       }}
                     >
-                      <div className="px-4 py-3 border-b" style={{ borderColor: darkMode ? "rgba(99,102,241,0.1)" : "rgba(15,23,42,0.06)" }}>
-                        <p className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>Notifications</p>
-                        <p className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>3 unread</p>
+                      <div
+                        className="px-4 py-3 border-b"
+                        style={{
+                          borderColor: darkMode
+                            ? "rgba(99,102,241,0.1)"
+                            : "rgba(15,23,42,0.06)",
+                        }}
+                      >
+                        <p
+                          className="text-sm font-semibold"
+                          style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                        >
+                          Notifications
+                        </p>
+                        <p
+                          className="text-xs"
+                          style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                        >
+                          3 unread
+                        </p>
                       </div>
-                      <div className="divide-y" style={{ borderColor: darkMode ? "rgba(99,102,241,0.06)" : "rgba(15,23,42,0.04)" }}>
+                      <div
+                        className="divide-y"
+                        style={{
+                          borderColor: darkMode
+                            ? "rgba(99,102,241,0.06)"
+                            : "rgba(15,23,42,0.04)",
+                        }}
+                      >
                         {notifications.map((n, i) => (
-                          <div key={i} className="flex gap-3 px-4 py-3 transition-all hover:bg-primary/5 cursor-pointer">
-                            <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: n.color, boxShadow: `0 0 6px ${n.color}` }} />
+                          <div
+                            key={i}
+                            className="flex gap-3 px-4 py-3 transition-all hover:bg-primary/5 cursor-pointer"
+                          >
+                            <div
+                              className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                              style={{
+                                background: n.color,
+                                boxShadow: `0 0 6px ${n.color}`,
+                              }}
+                            />
                             <div>
-                              <p className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#475569" }}>{n.text}</p>
-                              <p className="text-xs mt-0.5" style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}>{n.time}</p>
+                              <p
+                                className="text-xs"
+                                style={{
+                                  color: darkMode ? "#94a3b8" : "#475569",
+                                }}
+                              >
+                                {n.text}
+                              </p>
+                              <p
+                                className="text-xs mt-0.5"
+                                style={{
+                                  color: darkMode ? "#2d3748" : "#94a3b8",
+                                }}
+                              >
+                                {n.time}
+                              </p>
                             </div>
                           </div>
                         ))}
@@ -275,7 +419,10 @@ export default function App() {
               className="absolute inset-0"
             >
               {ScreenComponent ? (
-                <ScreenComponent darkMode={darkMode} onNavigate={setActiveScreen} />
+                <ScreenComponent
+                  darkMode={darkMode}
+                  onNavigate={setActiveScreen}
+                />
               ) : (
                 <GenericScreen screen={activeScreen} darkMode={darkMode} />
               )}
@@ -288,7 +435,10 @@ export default function App() {
       <CommandPalette
         open={commandOpen}
         onClose={() => setCommandOpen(false)}
-        onNavigate={(screen) => { setActiveScreen(screen); setCommandOpen(false); }}
+        onNavigate={(screen) => {
+          setActiveScreen(screen);
+          setCommandOpen(false);
+        }}
         darkMode={darkMode}
       />
     </div>

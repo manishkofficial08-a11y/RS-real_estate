@@ -5,6 +5,7 @@ from app.database.session import get_db
 from app.models.user import User, UserRole
 from app.models.tenant import Tenant, BusinessType, PlanType
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
+from app.core.dependencies import get_current_user
 from pydantic import BaseModel, EmailStr
 import uuid
 
@@ -29,6 +30,16 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+class ClientProfileResponse(BaseModel):
+    id: str
+    full_name: str
+    email: EmailStr
+    role: str
+    tenant_id: str | None = None
+    business_name: str | None = None
+    business_type: str | None = None
+    plan: str | None = None
 
 # Endpoints
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -106,3 +117,27 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
 @router.post("/logout")
 async def logout():
     return {"message": "Logged out successfully"}
+
+@router.get("/me", response_model=ClientProfileResponse)
+async def get_me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    tenant = None
+
+    if current_user.tenant_id:
+        result = await db.execute(
+            select(Tenant).where(Tenant.id == current_user.tenant_id)
+        )
+        tenant = result.scalar_one_or_none()
+
+    return ClientProfileResponse(
+        id=current_user.id,
+        full_name=current_user.full_name,
+        email=current_user.email,
+        role=current_user.role,
+        tenant_id=current_user.tenant_id,
+        business_name=tenant.name if tenant else None,
+        business_type=tenant.business_type if tenant else None,
+        plan=tenant.plan if tenant else None,
+    )

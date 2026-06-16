@@ -1,11 +1,30 @@
 import { useState } from "react";
 import {
-  LayoutDashboard, FileText, Image, Sparkles, Calendar,
-  BarChart3, Users2, Building2, FileBarChart, UserSquare2, Zap,
-  Puzzle, CreditCard, Settings, Bot, ChevronRight,
-  Bell, Search, LogOut, Moon, Sun, Command
+  LayoutDashboard,
+  FileText,
+  Image,
+  Sparkles,
+  Calendar,
+  BarChart3,
+  Users2,
+  Building2,
+  FileBarChart,
+  UserSquare2,
+  Zap,
+  Puzzle,
+  CreditCard,
+  Settings,
+  Bot,
+  ChevronRight,
+  Bell,
+  Search,
+  LogOut,
+  Moon,
+  Sun,
+  Command,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import type { ClientProfile } from "../lib/clientApi";
 
 const navItems = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", badge: null },
@@ -34,11 +53,32 @@ interface SidebarProps {
   onToggleCollapse: () => void;
   onCommandPalette: () => void;
   onLogout: () => void;
+  profile: ClientProfile | null;
 }
 
-export function Sidebar({ activeScreen, onNavigate, darkMode, onToggleDark, collapsed, onToggleCollapse, onCommandPalette, onLogout }: SidebarProps) {
+export function Sidebar({
+  activeScreen,
+  onNavigate,
+  darkMode,
+  onToggleDark,
+  collapsed,
+  onToggleCollapse,
+  onCommandPalette,
+  profile,
+  onLogout,
+}: SidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-
+  const businessName = profile?.business_name || "RS Real Estate OS";
+  const userName = profile?.full_name || "MMe-AI";
+  const userEmail = profile?.email || "client@rsrealestate.com";
+  const initials =
+    userName
+      .trim()
+      .split(" ")
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase() || "RS";
   return (
     <motion.aside
       animate={{ width: collapsed ? 72 : 240 }}
@@ -56,7 +96,8 @@ export function Sidebar({ activeScreen, onNavigate, darkMode, onToggleDark, coll
         <div
           className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
           style={{
-            background: "radial-gradient(ellipse at 50% -20%, rgba(99,102,241,0.15) 0%, transparent 70%)",
+            background:
+              "radial-gradient(ellipse at 50% -20%, rgba(99,102,241,0.15) 0%, transparent 70%)",
           }}
         />
       )}
@@ -66,11 +107,18 @@ export function Sidebar({ activeScreen, onNavigate, darkMode, onToggleDark, coll
         <div
           className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 relative overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)",
+            background:
+              "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)",
             boxShadow: "0 0 20px rgba(99,102,241,0.4)",
           }}
         >
-          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 60%)" }} />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 60%)",
+            }}
+          />
           <Sparkles size={14} className="text-white relative z-10" />
         </div>
         <AnimatePresence>
@@ -82,10 +130,16 @@ export function Sidebar({ activeScreen, onNavigate, darkMode, onToggleDark, coll
               transition={{ duration: 0.2 }}
               className="min-w-0"
             >
-              <div className="text-sm font-semibold tracking-tight" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+              <div
+                className="text-sm font-semibold tracking-tight"
+                style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+              >
                 AI Growth OS
               </div>
-              <div className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+              <div
+                className="text-xs"
+                style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+              >
                 Enterprise
               </div>
             </motion.div>
@@ -96,7 +150,10 @@ export function Sidebar({ activeScreen, onNavigate, darkMode, onToggleDark, coll
           className="ml-auto p-1 rounded-lg transition-all hover:bg-primary/10"
           style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
         >
-          <motion.div animate={{ rotate: collapsed ? 0 : 180 }} transition={{ duration: 0.3 }}>
+          <motion.div
+            animate={{ rotate: collapsed ? 0 : 180 }}
+            transition={{ duration: 0.3 }}
+          >
             <ChevronRight size={14} />
           </motion.div>
         </button>
@@ -109,15 +166,27 @@ export function Sidebar({ activeScreen, onNavigate, darkMode, onToggleDark, coll
             onClick={onCommandPalette}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all border"
             style={{
-              background: darkMode ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.04)",
-              borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)",
+              background: darkMode
+                ? "rgba(99,102,241,0.06)"
+                : "rgba(99,102,241,0.04)",
+              borderColor: darkMode
+                ? "rgba(99,102,241,0.12)"
+                : "rgba(99,102,241,0.08)",
               color: darkMode ? "#64748b" : "#94a3b8",
             }}
           >
             <Search size={12} />
             <span>Search...</span>
             <div className="ml-auto flex items-center gap-1">
-              <kbd className="px-1 py-0.5 rounded text-xs" style={{ background: darkMode ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.06)", color: darkMode ? "#818cf8" : "#6366f1" }}>
+              <kbd
+                className="px-1 py-0.5 rounded text-xs"
+                style={{
+                  background: darkMode
+                    ? "rgba(99,102,241,0.1)"
+                    : "rgba(99,102,241,0.06)",
+                  color: darkMode ? "#818cf8" : "#6366f1",
+                }}
+              >
                 ⌘K
               </kbd>
             </div>
@@ -165,14 +234,21 @@ export function Sidebar({ activeScreen, onNavigate, darkMode, onToggleDark, coll
                 className="relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors group"
                 style={{
                   color: isActive
-                    ? darkMode ? "#818cf8" : "#6366f1"
-                    : darkMode ? "#4a5568" : "#64748b",
+                    ? darkMode
+                      ? "#818cf8"
+                      : "#6366f1"
+                    : darkMode
+                      ? "#4a5568"
+                      : "#64748b",
                 }}
               >
                 <item.icon
                   size={16}
                   className="flex-shrink-0 transition-transform"
-                  style={{ transform: isHovered && !isActive ? "scale(1.1)" : "scale(1)" }}
+                  style={{
+                    transform:
+                      isHovered && !isActive ? "scale(1.1)" : "scale(1)",
+                  }}
                 />
                 <AnimatePresence>
                   {!collapsed && (
@@ -191,16 +267,22 @@ export function Sidebar({ activeScreen, onNavigate, darkMode, onToggleDark, coll
                   <span
                     className="text-xs px-1.5 py-0.5 rounded-full"
                     style={{
-                      background: item.badge === "New"
-                        ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
-                        : item.badge === "●"
-                          ? "transparent"
-                          : darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)",
-                      color: item.badge === "●"
-                        ? "#22c55e"
-                        : item.badge === "New"
-                          ? "#ffffff"
-                          : darkMode ? "#818cf8" : "#6366f1",
+                      background:
+                        item.badge === "New"
+                          ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                          : item.badge === "●"
+                            ? "transparent"
+                            : darkMode
+                              ? "rgba(99,102,241,0.2)"
+                              : "rgba(99,102,241,0.1)",
+                      color:
+                        item.badge === "●"
+                          ? "#22c55e"
+                          : item.badge === "New"
+                            ? "#ffffff"
+                            : darkMode
+                              ? "#818cf8"
+                              : "#6366f1",
                     }}
                   >
                     {item.badge}
@@ -220,7 +302,11 @@ export function Sidebar({ activeScreen, onNavigate, darkMode, onToggleDark, coll
           style={{ color: darkMode ? "#64748b" : "#94a3b8" }}
         >
           {darkMode ? <Sun size={15} /> : <Moon size={15} />}
-          {!collapsed && <span className="text-xs">{darkMode ? "Light mode" : "Dark mode"}</span>}
+          {!collapsed && (
+            <span className="text-xs">
+              {darkMode ? "Light mode" : "Dark mode"}
+            </span>
+          )}
         </button>
 
         <div className="flex items-center gap-3 px-3 py-2 rounded-xl">
@@ -241,23 +327,29 @@ export function Sidebar({ activeScreen, onNavigate, darkMode, onToggleDark, coll
                 exit={{ opacity: 0 }}
                 className="flex-1 min-w-0"
               >
-                <div className="text-xs font-medium truncate" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                <div
+                  className="text-xs font-medium truncate"
+                  style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                >
                   Jane Doe
                 </div>
-                <div className="text-xs truncate" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                <div
+                  className="text-xs truncate"
+                  style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                >
                   jane@company.com
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
           {!collapsed && (
-<button
-  onClick={onLogout}
-  className="p-1 rounded-lg transition-all hover:bg-destructive/10"
-  style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
->
-  <LogOut size={13} />
-</button>
+            <button
+              onClick={onLogout}
+              className="p-1 rounded-lg transition-all hover:bg-destructive/10"
+              style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+            >
+              <LogOut size={13} />
+            </button>
           )}
         </div>
       </div>

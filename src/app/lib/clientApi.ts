@@ -200,3 +200,17 @@ export async function restoreClientLead(leadId: string): Promise<ClientLead> {
     method: "PUT",
   });
 }
+export type ClientProfile = {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+  tenant_id?: string | null;
+  business_name?: string | null;
+  business_type?: string | null;
+  plan?: string | null;
+};
+
+export async function getClientProfile(): Promise<ClientProfile> {
+  return clientFetch<ClientProfile>("/auth/me");
+}
