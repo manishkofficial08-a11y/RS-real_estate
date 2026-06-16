@@ -84,6 +84,15 @@ def _dict_to_json(value: Optional[dict]) -> Optional[str]:
     return json.dumps(value)
 
 
+def _field_was_provided(data: BaseModel, field_name: str) -> bool:
+    fields_set = getattr(data, "model_fields_set", None)
+
+    if fields_set is None:
+        fields_set = getattr(data, "__fields_set__", set())
+
+    return field_name in fields_set
+
+
 def validate_ai_job_create(data: AIJobCreate):
     if not data.title.strip():
         raise HTTPException(
@@ -283,7 +292,7 @@ async def update_ai_job(
     if data.output_payload is not None:
         job.output_payload = _dict_to_json(data.output_payload)
 
-    if data.error_message is not None:
+    if _field_was_provided(data, "error_message"):
         job.error_message = data.error_message.strip() if data.error_message else None
 
     if data.progress is not None:
