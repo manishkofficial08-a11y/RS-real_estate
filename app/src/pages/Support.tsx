@@ -1,323 +1,552 @@
-﻿import { useState } from 'react';
-import { supportTickets } from '@/data/mock';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
-  AlertTriangle,
+  AlertCircle,
   CheckCircle2,
-  Clock3,
   Eye,
-  Inbox,
-  LifeBuoy,
-  MessageCircle,
-  MoreHorizontal,
-  Search,
-  ShieldAlert,
-  UserPlus,
-  Users,
+  Filter,
+  MessageSquare,
+  RefreshCw,
+  Send,
 } from 'lucide-react';
+import {
+  getSupportTickets,
+  updateSupportTicket,
+  type AdminSupportTicket,
+  type AdminSupportTicketPriority,
+  type AdminSupportTicketStatus,
+} from '@/lib/adminApi';
 
-const teamMembers = ['Alex Kim', 'Sam Lee', 'Jordan Patel', 'Morgan Chen'];
+const statusOptions: Array<{ label: string; value: AdminSupportTicketStatus | 'all' }> = [
+  { label: 'All Status', value: 'all' },
+  { label: 'Open', value: 'open' },
+  { label: 'In Progress', value: 'in_progress' },
+  { label: 'Resolved', value: 'resolved' },
+  { label: 'Closed', value: 'closed' },
+];
 
-const getPriorityColor = (priority: string) => {
-  if (priority === 'High') return '#FF5A5A';
-  if (priority === 'Medium') return '#FF8A5C';
-  return '#6B8AFF';
-};
+const priorityOptions: Array<{ label: string; value: AdminSupportTicketPriority | 'all' }> = [
+  { label: 'All Priority', value: 'all' },
+  { label: 'Low', value: 'low' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'High', value: 'high' },
+  { label: 'Urgent', value: 'urgent' },
+];
 
-const getStatusBadge = (status: string) => {
-  if (status === 'Open') return 'badge-blue';
-  if (status === 'Resolved') return 'badge-green';
-  return 'badge-neutral';
-};
+function formatLabel(value?: string | null) {
+  if (!value) return 'General';
+  return value
+    .replace(/[_-]/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return 'Not available';
+  return new Intl.DateTimeFormat('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
+function statusColor(status: string) {
+  if (status === 'open') return '#6B8AFF';
+  if (status === 'in_progress') return '#FF8A5C';
+  if (status === 'resolved') return '#4ADE80';
+  if (status === 'closed') return '#8A8A93';
+  return '#8A8A93';
+}
+
+function priorityColor(priority: string) {
+  if (priority === 'urgent') return '#FF5A5A';
+  if (priority === 'high') return '#FF8A5C';
+  if (priority === 'medium') return '#6B8AFF';
+  return '#4ADE80';
+}
 
 export default function Support() {
-  const [tickets, setTickets] = useState(supportTickets);
-  const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [tickets, setTickets] = useState<AdminSupportTicket[]>([]);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<AdminSupportTicketStatus | 'all'>('all');
+  const [priorityFilter, setPriorityFilter] = useState<AdminSupportTicketPriority | 'all'>('all');
+  const [reply, setReply] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<AdminSupportTicketStatus>('in_progress');
+  const [selectedPriority, setSelectedPriority] = useState<AdminSupportTicketPriority>('medium');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const openTickets = tickets.filter((ticket) => ticket.status === 'Open').length;
-  const pendingTickets = tickets.filter((ticket) => ticket.status === 'Pending').length;
-  const highPriorityTickets = tickets.filter((ticket) => ticket.priority === 'High').length;
-  const resolvedTickets = tickets.filter((ticket) => ticket.status === 'Resolved').length;
+  const loadTickets = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getSupportTickets({
+        status: statusFilter,
+        priority: priorityFilter,
+      });
 
-  const summaryCards = [
-    {
-      label: 'Open Tickets',
-      value: openTickets,
-      sub: 'Needs first response',
-      icon: Inbox,
-      color: '#FF8A5C',
-    },
-    {
-      label: 'Pending',
-      value: pendingTickets,
-      sub: 'Waiting on follow-up',
-      icon: Clock3,
-      color: '#6B8AFF',
-    },
-    {
-      label: 'High Priority',
-      value: highPriorityTickets,
-      sub: 'Founder attention needed',
-      icon: ShieldAlert,
-      color: '#FF5A5A',
-    },
-    {
-      label: 'Resolved',
-      value: resolvedTickets,
-      sub: 'Closed in current queue',
-      icon: CheckCircle2,
-      color: '#4ADE80',
-    },
-  ];
+      setTickets(data);
+      setSelectedTicketId((current) => current || data[0]?.id || null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load support tickets');
+      setTickets([]);
+      setSelectedTicketId(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [priorityFilter, statusFilter]);
 
-  const handleResolve = (id: string) => {
-    setTickets((prev) => prev.map((ticket) => ticket.id === id ? { ...ticket, status: 'Resolved' as const } : ticket));
-  };
+  useEffect(() => {
+    loadTickets();
+  }, [loadTickets]);
 
-  const handleAssign = (ticketId: string, member: string) => {
-    setTickets((prev) => prev.map((ticket) => ticket.id === ticketId ? { ...ticket, assignedTo: member } : ticket));
-    setAssigningId(null);
-  };
+  const selectedTicket = useMemo(
+    () => tickets.find((ticket) => ticket.id === selectedTicketId) || tickets[0],
+    [selectedTicketId, tickets],
+  );
+
+  useEffect(() => {
+    if (!selectedTicket) {
+      setReply('');
+      setSelectedStatus('in_progress');
+      setSelectedPriority('medium');
+      return;
+    }
+
+    setReply(selectedTicket.admin_reply || '');
+    setSelectedStatus((selectedTicket.status as AdminSupportTicketStatus) || 'in_progress');
+    setSelectedPriority((selectedTicket.priority as AdminSupportTicketPriority) || 'medium');
+  }, [selectedTicket]);
+
+  const summaryCards = useMemo(
+    () => [
+      {
+        label: 'Open Tickets',
+        value: tickets.filter((ticket) => ticket.status === 'open').length,
+        color: '#6B8AFF',
+      },
+      {
+        label: 'In Progress',
+        value: tickets.filter((ticket) => ticket.status === 'in_progress').length,
+        color: '#FF8A5C',
+      },
+      {
+        label: 'Resolved',
+        value: tickets.filter((ticket) => ticket.status === 'resolved').length,
+        color: '#4ADE80',
+      },
+      {
+        label: 'Urgent/High',
+        value: tickets.filter((ticket) => ['urgent', 'high'].includes(ticket.priority)).length,
+        color: '#FF5A5A',
+      },
+    ],
+    [tickets],
+  );
+
+  async function handleSaveReply(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedTicket) return;
+
+    try {
+      setSaving(true);
+      setError(null);
+      const updated = await updateSupportTicket(selectedTicket.id, {
+        status: selectedStatus,
+        priority: selectedPriority,
+        admin_reply: reply.trim() || null,
+      });
+
+      setTickets((prev) =>
+        prev.map((ticket) => (ticket.id === updated.id ? updated : ticket)),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update ticket');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleQuickResolve(ticket: AdminSupportTicket) {
+    try {
+      setSaving(true);
+      setError(null);
+      const updated = await updateSupportTicket(ticket.id, {
+        status: 'resolved',
+        priority: ticket.priority as AdminSupportTicketPriority,
+        admin_reply: ticket.admin_reply || 'Resolved by founder support.',
+      });
+
+      setTickets((prev) =>
+        prev.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      setSelectedTicketId(updated.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to resolve ticket');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="p-8">
+      <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1" style={{ background: 'rgba(74, 222, 128, 0.08)', border: '1px solid rgba(74, 222, 128, 0.16)' }}>
-            <LifeBuoy size={14} style={{ color: '#4ADE80' }} />
-            <span className="text-xs font-mono" style={{ color: '#4ADE80' }}>Customer Operations</span>
-          </div>
-          <h1 className="font-display text-hero font-medium tracking-[-0.03em]" style={{ color: '#F0EDE6' }}>
+          <h1
+            className="font-display text-hero font-medium tracking-[-0.03em]"
+            style={{ color: '#F0EDE6' }}
+          >
             Support
           </h1>
-          <p className="text-sm mt-1 max-w-2xl" style={{ color: '#8A8A93' }}>
-            Track client issues, assign owners, prioritize escalations, and resolve customer support tickets.
+          <p className="text-sm mt-1" style={{ color: '#8A8A93' }}>
+            Manage client support tickets, replies and status updates
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm transition-colors"
-            style={{ background: 'rgba(255, 255, 255, 0.04)', color: '#F0EDE6', border: '1px solid rgba(255, 255, 255, 0.08)' }}
-          >
-            <Users size={15} />
-            Team Queue
-          </button>
-          <button
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm transition-colors"
-            style={{ background: '#6B8AFF', color: '#FFFFFF' }}
-          >
-            <MessageCircle size={15} />
-            New Ticket
-          </button>
+        <button
+          onClick={loadTickets}
+          className="p-2.5 rounded-lg transition-colors"
+          style={{
+            color: '#8A8A93',
+            background: 'rgba(255, 255, 255, 0.04)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+          }}
+          title="Refresh tickets"
+        >
+          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+        </button>
+      </div>
+
+      {error && (
+        <div
+          className="mb-4 rounded-xl px-4 py-3 text-sm"
+          style={{
+            color: '#FF8A5C',
+            background: 'rgba(255, 138, 92, 0.08)',
+            border: '1px solid rgba(255, 138, 92, 0.18)',
+          }}
+        >
+          {error}
         </div>
-      </div>
+      )}
 
-      <div className="grid grid-cols-1 gap-5 mb-8 sm:grid-cols-2 xl:grid-cols-4">
-        {summaryCards.map((card) => {
-          const Icon = card.icon;
-
-          return (
-            <div key={card.label} className="surface-card p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-mono mb-2" style={{ color: '#8A8A93' }}>{card.label}</p>
-                  <p className="font-mono text-data font-medium" style={{ color: '#F0EDE6' }}>{card.value}</p>
-                  <p className="text-xs mt-2" style={{ color: '#55555C' }}>{card.sub}</p>
-                </div>
-                <div className="rounded-xl p-2.5" style={{ background: `${card.color}14`, color: card.color, border: `1px solid ${card.color}26` }}>
-                  <Icon size={18} />
-                </div>
-              </div>
+      <div className="grid grid-cols-4 gap-5 mb-6">
+        {summaryCards.map((card) => (
+          <div key={card.label} className="surface-card p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full" style={{ background: card.color }} />
+              <span className="text-xs font-mono" style={{ color: '#8A8A93' }}>
+                {card.label}
+              </span>
             </div>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 mb-8 xl:grid-cols-[1.7fr_1fr]">
-        <div className="surface-card overflow-hidden">
-          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-            <div>
-              <h2 className="text-base font-medium" style={{ color: '#F0EDE6' }}>Ticket Queue</h2>
-              <p className="text-xs mt-1" style={{ color: '#8A8A93' }}>Mock data for founder dashboard review</p>
-            </div>
-
-            <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-              <Search size={14} style={{ color: '#8A8A93' }} />
-              <span className="text-xs" style={{ color: '#55555C' }}>Search tickets</span>
-            </div>
+            <p className="font-mono text-data font-medium" style={{ color: '#F0EDE6' }}>
+              {loading ? '...' : card.value}
+            </p>
           </div>
+        ))}
+      </div>
 
-          {tickets.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px]">
-                <thead>
-                  <tr style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
-                    <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Ticket</th>
-                    <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Company</th>
-                    <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Issue</th>
-                    <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Priority</th>
-                    <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Status</th>
-                    <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Owner</th>
-                    <th className="text-right px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tickets.map((ticket, idx) => (
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex items-center gap-2 text-xs" style={{ color: '#8A8A93' }}>
+          <Filter size={14} />
+          Filters
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(event) =>
+            setStatusFilter(event.target.value as AdminSupportTicketStatus | 'all')
+          }
+          className="input-dark px-3 py-2 text-sm"
+        >
+          {statusOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={priorityFilter}
+          onChange={(event) =>
+            setPriorityFilter(event.target.value as AdminSupportTicketPriority | 'all')
+          }
+          className="input-dark px-3 py-2 text-sm"
+        >
+          {priorityOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6">
+        <div className="surface-card overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
+                <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Ticket</th>
+                <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Company</th>
+                <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Client</th>
+                <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Priority</th>
+                <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Status</th>
+                <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Created</th>
+                <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-10 text-center text-sm" style={{ color: '#8A8A93' }}>
+                    Loading support tickets from backend...
+                  </td>
+                </tr>
+              ) : tickets.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-10 text-center text-sm" style={{ color: '#8A8A93' }}>
+                    No support tickets found.
+                  </td>
+                </tr>
+              ) : (
+                tickets.map((ticket, idx) => {
+                  const isActive = selectedTicket?.id === ticket.id;
+
+                  return (
                     <tr
                       key={ticket.id}
                       className="transition-colors duration-200"
-                      style={{ borderBottom: idx < tickets.length - 1 ? '1px solid rgba(255, 255, 255, 0.04)' : 'none' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                      style={{
+                        borderBottom: idx < tickets.length - 1 ? '1px solid rgba(255, 255, 255, 0.04)' : 'none',
+                        background: isActive ? 'rgba(107, 138, 255, 0.06)' : 'transparent',
+                      }}
+                      onMouseEnter={(event) => {
+                        event.currentTarget.style.background = isActive
+                          ? 'rgba(107, 138, 255, 0.08)'
+                          : 'rgba(255, 255, 255, 0.03)';
+                      }}
+                      onMouseLeave={(event) => {
+                        event.currentTarget.style.background = isActive
+                          ? 'rgba(107, 138, 255, 0.06)'
+                          : 'transparent';
+                      }}
                     >
                       <td className="px-5 py-4">
                         <div>
-                          <span className="text-sm font-mono" style={{ color: '#6B8AFF' }}>{ticket.ticketId}</span>
-                          <p className="text-xs mt-1" style={{ color: '#55555C' }}>Created recently</p>
+                          <span className="text-sm font-medium" style={{ color: '#F0EDE6' }}>
+                            {ticket.subject}
+                          </span>
+                          <p className="text-xs mt-1" style={{ color: '#55555C' }}>
+                            #{ticket.id.slice(0, 8)} · {formatLabel(ticket.category)}
+                          </p>
                         </div>
                       </td>
                       <td className="px-5 py-4">
-                        <span className="text-sm font-medium" style={{ color: '#F0EDE6' }}>{ticket.company}</span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <p className="max-w-xs truncate text-sm" style={{ color: '#8A8A93' }}>{ticket.issue}</p>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="h-2 w-2 rounded-full"
-                            style={{ background: getPriorityColor(ticket.priority) }}
-                          />
-                          <span className="text-xs" style={{ color: '#8A8A93' }}>{ticket.priority}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className={`text-xs px-2.5 py-1 rounded-full ${getStatusBadge(ticket.status)}`}>
-                          {ticket.status}
+                        <span className="text-sm" style={{ color: '#F0EDE6' }}>
+                          {ticket.business_name || 'Unknown Company'}
                         </span>
                       </td>
-                      <td className="px-5 py-4 relative">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-mono" style={{ background: 'rgba(107, 138, 255, 0.1)', color: '#6B8AFF', border: '1px solid rgba(107, 138, 255, 0.18)' }}>
-                            {ticket.assignedTo.split(' ').map((part) => part[0]).join('').slice(0, 2)}
-                          </div>
-                          <span className="text-sm" style={{ color: '#8A8A93' }}>{ticket.assignedTo}</span>
-                          <button
-                            className="p-1 rounded transition-colors"
-                            style={{ color: assigningId === ticket.id ? '#6B8AFF' : '#55555C' }}
-                            onClick={() => setAssigningId(assigningId === ticket.id ? null : ticket.id)}
-                            title="Assign ticket"
-                          >
-                            <UserPlus size={13} />
-                          </button>
+                      <td className="px-5 py-4">
+                        <div>
+                          <span className="text-sm" style={{ color: '#8A8A93' }}>
+                            {ticket.created_by_name || 'Unknown User'}
+                          </span>
+                          <p className="text-xs mt-1" style={{ color: '#55555C' }}>
+                            {ticket.created_by_email || 'No email'}
+                          </p>
                         </div>
-
-                        {assigningId === ticket.id && (
-                          <div
-                            className="absolute top-full left-4 z-10 mt-2 min-w-[170px] overflow-hidden rounded-xl py-1"
-                            style={{ background: '#0F0F14', border: '1px solid rgba(255, 255, 255, 0.08)', boxShadow: '0 16px 48px rgba(0,0,0,0.45)' }}
-                          >
-                            <div className="px-3 py-2 text-[10px] font-mono uppercase tracking-wide" style={{ color: '#55555C', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                              Assign owner
-                            </div>
-                            {teamMembers.map((member) => (
-                              <button
-                                key={member}
-                                className="w-full text-left px-3 py-2 text-xs transition-colors"
-                                style={{ color: '#F0EDE6' }}
-                                onClick={() => handleAssign(ticket.id, member)}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(107, 138, 255, 0.08)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                              >
-                                {member}
-                              </button>
-                            ))}
-                          </div>
-                        )}
                       </td>
                       <td className="px-5 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button className="p-1.5 rounded-md transition-colors" style={{ color: '#8A8A93' }} title="View ticket">
-                            <Eye size={15} />
+                        <span
+                          className="text-xs px-2.5 py-1 rounded-full capitalize"
+                          style={{
+                            background: `${priorityColor(ticket.priority)}18`,
+                            color: priorityColor(ticket.priority),
+                          }}
+                        >
+                          {formatLabel(ticket.priority)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span
+                          className="text-xs px-2.5 py-1 rounded-full capitalize"
+                          style={{
+                            background: `${statusColor(ticket.status)}18`,
+                            color: statusColor(ticket.status),
+                          }}
+                        >
+                          {formatLabel(ticket.status)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="text-xs" style={{ color: '#8A8A93' }}>
+                          {formatDate(ticket.created_at)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="p-1.5 rounded-md transition-colors"
+                            style={{ color: '#8A8A93' }}
+                            title="View"
+                            onClick={() => setSelectedTicketId(ticket.id)}
+                            onMouseEnter={(event) => {
+                              event.currentTarget.style.color = '#6B8AFF';
+                              event.currentTarget.style.background = 'rgba(107, 138, 255, 0.08)';
+                            }}
+                            onMouseLeave={(event) => {
+                              event.currentTarget.style.color = '#8A8A93';
+                              event.currentTarget.style.background = 'transparent';
+                            }}
+                          >
+                            <Eye size={14} />
                           </button>
-                          {ticket.status !== 'Resolved' && (
+                          {ticket.status !== 'resolved' && ticket.status !== 'closed' && (
                             <button
-                              className="p-1.5 rounded-md transition-colors"
+                              className="p-1.5 rounded-md transition-colors disabled:opacity-60"
                               style={{ color: '#8A8A93' }}
-                              title="Resolve ticket"
-                              onClick={() => handleResolve(ticket.id)}
+                              title="Resolve"
+                              disabled={saving}
+                              onClick={() => handleQuickResolve(ticket)}
+                              onMouseEnter={(event) => {
+                                event.currentTarget.style.color = '#4ADE80';
+                                event.currentTarget.style.background = 'rgba(74, 222, 128, 0.08)';
+                              }}
+                              onMouseLeave={(event) => {
+                                event.currentTarget.style.color = '#8A8A93';
+                                event.currentTarget.style.background = 'transparent';
+                              }}
                             >
-                              <CheckCircle2 size={15} />
+                              <CheckCircle2 size={14} />
                             </button>
                           )}
-                          <button className="p-1.5 rounded-md transition-colors" style={{ color: '#8A8A93' }} title="More actions">
-                            <MoreHorizontal size={15} />
-                          </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <form onSubmit={handleSaveReply} className="surface-card p-5 h-fit">
+          {selectedTicket ? (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-semibold" style={{ color: '#F0EDE6' }}>
+                  {selectedTicket.subject}
+                </h2>
+                <p className="text-xs mt-1" style={{ color: '#55555C' }}>
+                  {selectedTicket.business_name || 'Unknown Company'} · {formatDate(selectedTicket.created_at)}
+                </p>
+              </div>
+
+              <div
+                className="rounded-xl p-4"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle size={14} style={{ color: '#FF8A5C' }} />
+                  <span className="text-sm font-medium" style={{ color: '#F0EDE6' }}>
+                    Client Message
+                  </span>
+                </div>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#8A8A93' }}>
+                  {selectedTicket.message}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-2 block text-xs font-mono" style={{ color: '#8A8A93' }}>
+                    STATUS
+                  </label>
+                  <select
+                    value={selectedStatus}
+                    onChange={(event) =>
+                      setSelectedStatus(event.target.value as AdminSupportTicketStatus)
+                    }
+                    className="input-dark w-full px-3 py-2 text-sm"
+                  >
+                    {statusOptions
+                      .filter((option) => option.value !== 'all')
+                      .map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-mono" style={{ color: '#8A8A93' }}>
+                    PRIORITY
+                  </label>
+                  <select
+                    value={selectedPriority}
+                    onChange={(event) =>
+                      setSelectedPriority(event.target.value as AdminSupportTicketPriority)
+                    }
+                    className="input-dark w-full px-3 py-2 text-sm"
+                  >
+                    {priorityOptions
+                      .filter((option) => option.value !== 'all')
+                      .map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 flex items-center gap-2 text-xs font-mono" style={{ color: '#8A8A93' }}>
+                  <MessageSquare size={13} />
+                  FOUNDER REPLY
+                </label>
+                <textarea
+                  value={reply}
+                  onChange={(event) => setReply(event.target.value)}
+                  className="input-dark min-h-36 w-full px-3 py-3 text-sm resize-none"
+                  placeholder="Write a clear update for the client..."
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-all disabled:opacity-60"
+                style={{
+                  background: 'linear-gradient(135deg, #6B8AFF, #4A6BFF)',
+                  color: '#FFFFFF',
+                }}
+              >
+                <Send size={14} />
+                {saving ? 'Saving...' : 'Save Reply and Status'}
+              </button>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-              <div className="mb-4 rounded-2xl p-4" style={{ background: 'rgba(255, 255, 255, 0.04)' }}>
-                <LifeBuoy size={28} style={{ color: '#8A8A93' }} />
-              </div>
-              <h3 className="text-base font-medium" style={{ color: '#F0EDE6' }}>No support tickets</h3>
-              <p className="mt-2 max-w-md text-sm" style={{ color: '#8A8A93' }}>
-                Support requests from client companies will appear here when the backend ticketing system is connected.
+            <div className="py-16 text-center">
+              <p className="text-sm" style={{ color: '#8A8A93' }}>
+                Select a support ticket to reply.
               </p>
             </div>
           )}
-        </div>
-
-        <div className="space-y-6">
-          <div className="surface-card p-5">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-medium" style={{ color: '#F0EDE6' }}>Support Health</h2>
-                <p className="text-xs mt-1" style={{ color: '#8A8A93' }}>Operational snapshot</p>
-              </div>
-              <AlertTriangle size={18} style={{ color: '#FF8A5C' }} />
-            </div>
-
-            <div className="space-y-4">
-              <div className="rounded-xl p-4" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs font-mono" style={{ color: '#8A8A93' }}>Resolution Load</span>
-                  <span className="text-xs font-mono" style={{ color: '#F0EDE6' }}>64%</span>
-                </div>
-                <div className="h-2 rounded-full" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
-                  <div className="h-2 rounded-full" style={{ width: '64%', background: '#6B8AFF' }} />
-                </div>
-              </div>
-
-              <div className="rounded-xl p-4" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs font-mono" style={{ color: '#8A8A93' }}>Escalation Risk</span>
-                  <span className="text-xs font-mono" style={{ color: '#F0EDE6' }}>Low</span>
-                </div>
-                <div className="h-2 rounded-full" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
-                  <div className="h-2 rounded-full" style={{ width: '32%', background: '#4ADE80' }} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="surface-card p-5">
-            <p className="text-xs font-mono mb-2" style={{ color: '#8A8A93' }}>Founder note</p>
-            <p className="text-sm leading-6" style={{ color: '#F0EDE6' }}>
-              Ticket actions are UI-only for now. Keep this page mock/static until support APIs are assigned.
-            </p>
-          </div>
-        </div>
+        </form>
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mt-8 pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
-        <span className="text-xs" style={{ color: '#55555C' }}>MMe-AI v2.0</span>
-        <span className="text-xs font-mono" style={{ color: '#55555C' }}>Last synced: 2 min ago</span>
+      <div
+        className="flex items-center justify-between mt-8 pt-4"
+        style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}
+      >
+        <span className="text-xs" style={{ color: '#55555C' }}>
+          AI Growth OS v2.0
+        </span>
+        <span className="text-xs font-mono" style={{ color: '#55555C' }}>
+          {loading ? 'Syncing...' : `Showing ${tickets.length} tickets from backend`}
+        </span>
       </div>
     </div>
   );
