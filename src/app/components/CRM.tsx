@@ -16,7 +16,9 @@ import { motion } from "motion/react";
 import {
   createClientLead,
   deleteClientLead,
+  getArchivedClientLeads,
   getClientLeads,
+  restoreClientLead,
   updateClientLead,
   type ClientLead,
   type CreateClientLeadPayload,
@@ -98,7 +100,9 @@ function getAvatar(name: string) {
 
 function formatLabel(value?: string | null) {
   if (!value) return "Website";
-  return value.replace(/[_-]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return value
+    .replace(/[_-]/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function mapStatusToStage(status: string): UiLead["stage"] {
@@ -133,7 +137,10 @@ function mapApiLeadToUiLead(lead: ClientLead, index: number): UiLead {
     stage,
     value: "₹0",
     lastContact: "Recently",
-    tags: [formatLabel(lead.status || "new"), formatLabel(lead.source || "website")],
+    tags: [
+      formatLabel(lead.status || "new"),
+      formatLabel(lead.source || "website"),
+    ],
     avatar: getAvatar(lead.name),
     color: colorList[index % colorList.length],
   };
@@ -179,8 +186,14 @@ interface CRMProps {
 
 export function CRM({ darkMode }: CRMProps) {
   const [leads, setLeads] = useState<UiLead[]>([]);
+  const [leadViewMode, setLeadViewMode] = useState<"active" | "archived">(
+    "active",
+  );
+  const [restoringLeadId, setRestoringLeadId] = useState<string | null>(null);
   const [selectedLead, setSelectedLead] = useState<UiLead | null>(null);
-  const [activeStage, setActiveStage] = useState<"All" | UiLead["stage"]>("All");
+  const [activeStage, setActiveStage] = useState<"All" | UiLead["stage"]>(
+    "All",
+  );
   const [searchQ, setSearchQ] = useState("");
   const [loadingLeads, setLoadingLeads] = useState(false);
   const [leadError, setLeadError] = useState<string | null>(null);
@@ -197,14 +210,19 @@ export function CRM({ darkMode }: CRMProps) {
       setLoadingLeads(true);
       setLeadError(null);
 
-      const apiLeads = await getClientLeads();
+      const apiLeads =
+        leadViewMode === "archived"
+          ? await getArchivedClientLeads()
+          : await getClientLeads();
       const mappedLeads = apiLeads.map(mapApiLeadToUiLead);
 
       setLeads(mappedLeads);
       setSelectedLead((current) => {
         if (!mappedLeads.length) return null;
         if (!current) return mappedLeads[0];
-        return mappedLeads.find((lead) => lead.id === current.id) || mappedLeads[0];
+        return (
+          mappedLeads.find((lead) => lead.id === current.id) || mappedLeads[0]
+        );
       });
     } catch (err) {
       setLeadError(err instanceof Error ? err.message : "Failed to load leads");
@@ -217,7 +235,7 @@ export function CRM({ darkMode }: CRMProps) {
 
   useEffect(() => {
     loadLeads();
-  }, []);
+  }, [leadViewMode]);
 
   function openCreateLeadModal() {
     setEditingLeadId(null);
@@ -285,8 +303,10 @@ export function CRM({ darkMode }: CRMProps) {
 
         setLeads((prev) =>
           prev.map((lead, index) =>
-            lead.id === editingLeadId ? mapApiLeadToUiLead(updatedLead, index) : lead
-          )
+            lead.id === editingLeadId
+              ? mapApiLeadToUiLead(updatedLead, index)
+              : lead,
+          ),
         );
 
         setSelectedLead(mappedLead);
@@ -311,7 +331,9 @@ export function CRM({ darkMode }: CRMProps) {
   async function handleDeleteLead() {
     if (!editingLeadId) return;
 
-    const confirmed = window.confirm("Archive this lead? It will be removed from active CRM.");
+    const confirmed = window.confirm(
+      "Archive this lead? It will be removed from active CRM.",
+    );
     if (!confirmed) return;
 
     try {
@@ -330,9 +352,33 @@ export function CRM({ darkMode }: CRMProps) {
       setEditingLeadId(null);
       setShowLeadModal(false);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Failed to archive lead");
+      setFormError(
+        err instanceof Error ? err.message : "Failed to archive lead",
+      );
     } finally {
       setDeletingLead(false);
+    }
+  }
+  async function handleRestoreLead(lead: UiLead) {
+    try {
+      setRestoringLeadId(lead.id);
+      setFormError(null);
+
+      await restoreClientLead(lead.id);
+
+      setLeads((prev) => {
+        const next = prev.filter((item) => item.id !== lead.id);
+        setSelectedLead(next[0] || null);
+        return next;
+      });
+
+      setLeadViewMode("active");
+    } catch (err) {
+      setLeadError(
+        err instanceof Error ? err.message : "Failed to restore lead",
+      );
+    } finally {
+      setRestoringLeadId(null);
     }
   }
 
@@ -381,7 +427,10 @@ export function CRM({ darkMode }: CRMProps) {
               CRM
             </h1>
 
-            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+            <p
+              className="text-sm mt-0.5"
+              style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+            >
               {loadingLeads
                 ? "Loading real leads..."
                 : leadError
@@ -390,17 +439,57 @@ export function CRM({ darkMode }: CRMProps) {
             </p>
           </div>
 
-          <button
-            onClick={openCreateLeadModal}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
-            style={{
-              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-              color: "#ffffff",
-              boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
-            }}
-          >
-            <Plus size={14} /> Add Lead
-          </button>
+          {leadViewMode === "active" && (
+            <button
+              onClick={openCreateLeadModal}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
+              style={{
+                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                color: "#ffffff",
+                boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
+              }}
+            >
+              <Plus size={14} /> Add Lead
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 mb-4">
+          {[
+            { label: "Active Leads", value: "active" },
+            { label: "Archived Leads", value: "archived" },
+          ].map((tab) => {
+            const isActive = leadViewMode === tab.value;
+
+            return (
+              <button
+                key={tab.value}
+                onClick={() => {
+                  setLeadViewMode(tab.value as "active" | "archived");
+                  setActiveStage("All");
+                  setSearchQ("");
+                }}
+                className="px-4 py-2 rounded-xl text-sm border transition-all"
+                style={{
+                  background: isActive
+                    ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                    : darkMode
+                      ? "rgba(99,102,241,0.04)"
+                      : "#ffffff",
+                  borderColor: isActive
+                    ? "rgba(99,102,241,0.35)"
+                    : cardBase.borderColor,
+                  color: isActive
+                    ? "#ffffff"
+                    : darkMode
+                      ? "#94a3b8"
+                      : "#64748b",
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         <div className="grid grid-cols-5 gap-3 mb-5">
@@ -410,7 +499,11 @@ export function CRM({ darkMode }: CRMProps) {
             return (
               <button
                 key={typedStage}
-                onClick={() => setActiveStage(typedStage === activeStage ? "All" : typedStage)}
+                onClick={() =>
+                  setActiveStage(
+                    typedStage === activeStage ? "All" : typedStage,
+                  )
+                }
                 className="p-3 rounded-xl border transition-all hover:border-primary/20"
                 style={{
                   background:
@@ -424,20 +517,32 @@ export function CRM({ darkMode }: CRMProps) {
                 }}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                  <span
+                    className="text-xs"
+                    style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                  >
                     {typedStage}
                   </span>
-                  <div className="w-2 h-2 rounded-full" style={{ background: stageColors[typedStage] }} />
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ background: stageColors[typedStage] }}
+                  />
                 </div>
 
                 <div
                   className="font-semibold"
-                  style={{ fontSize: "1.1rem", color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  style={{
+                    fontSize: "1.1rem",
+                    color: darkMode ? "#e2e8f0" : "#0f172a",
+                  }}
                 >
                   {count}
                 </div>
 
-                <div className="text-xs mt-0.5" style={{ color: stageColors[typedStage] }}>
+                <div
+                  className="text-xs mt-0.5"
+                  style={{ color: stageColors[typedStage] }}
+                >
                   Live
                 </div>
               </button>
@@ -452,7 +557,10 @@ export function CRM({ darkMode }: CRMProps) {
             borderColor: cardBase.borderColor,
           }}
         >
-          <Search size={14} style={{ color: darkMode ? "#4a5568" : "#94a3b8" }} />
+          <Search
+            size={14}
+            style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+          />
           <input
             value={searchQ}
             onChange={(e) => setSearchQ(e.target.value)}
@@ -508,10 +616,16 @@ export function CRM({ darkMode }: CRMProps) {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                  <p
+                    className="text-sm font-medium truncate"
+                    style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  >
                     {lead.name}
                   </p>
-                  <p className="text-xs truncate" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                  <p
+                    className="text-xs truncate"
+                    style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                  >
                     {lead.email || lead.phone || "Real Estate Lead"}
                   </p>
                 </div>
@@ -535,7 +649,9 @@ export function CRM({ darkMode }: CRMProps) {
                     key={tag}
                     className="text-xs px-2 py-1 rounded-full"
                     style={{
-                      background: darkMode ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.06)",
+                      background: darkMode
+                        ? "rgba(99,102,241,0.08)"
+                        : "rgba(99,102,241,0.06)",
                       color: darkMode ? "#94a3b8" : "#64748b",
                     }}
                   >
@@ -559,24 +675,41 @@ export function CRM({ darkMode }: CRMProps) {
               <div className="flex items-start gap-4 mb-6">
                 <div
                   className="w-14 h-14 rounded-2xl flex items-center justify-center text-sm font-semibold"
-                  style={{ background: `${selectedLead.color}18`, color: selectedLead.color }}
+                  style={{
+                    background: `${selectedLead.color}18`,
+                    color: selectedLead.color,
+                  }}
                 >
                   {selectedLead.avatar}
                 </div>
 
                 <div className="flex-1">
-                  <h2 className="text-lg font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                  <h2
+                    className="text-lg font-semibold"
+                    style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  >
                     {selectedLead.name}
                   </h2>
-                  <p className="text-sm" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-                    {selectedLead.email || selectedLead.phone || "No contact detail"}
+                  <p
+                    className="text-sm"
+                    style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                  >
+                    {selectedLead.email ||
+                      selectedLead.phone ||
+                      "No contact detail"}
                   </p>
-                  <p className="text-xs mt-1" style={{ color: selectedLead.color }}>
+                  <p
+                    className="text-xs mt-1"
+                    style={{ color: selectedLead.color }}
+                  >
                     {formatLabel(selectedLead.source)}
                   </p>
                 </div>
 
-                <ScoreRing score={selectedLead.score} color={selectedLead.color} />
+                <ScoreRing
+                  score={selectedLead.score}
+                  color={selectedLead.color}
+                />
               </div>
 
               <div className="grid grid-cols-3 gap-3 mb-6">
@@ -604,17 +737,25 @@ export function CRM({ darkMode }: CRMProps) {
                   className="rounded-xl border p-4"
                   style={{
                     borderColor: cardBase.borderColor,
-                    background: darkMode ? "rgba(99,102,241,0.03)" : "rgba(99,102,241,0.02)",
+                    background: darkMode
+                      ? "rgba(99,102,241,0.03)"
+                      : "rgba(99,102,241,0.02)",
                   }}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <Brain size={14} style={{ color: "#6366f1" }} />
-                    <span className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                    >
                       AI Insight
                     </span>
                   </div>
 
-                  <p className="text-xs leading-relaxed" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                  <p
+                    className="text-xs leading-relaxed"
+                    style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+                  >
                     {selectedLead.score >= 80
                       ? "High-priority lead. Contact within 24 hours and suggest matching properties."
                       : selectedLead.score >= 60
@@ -627,35 +768,62 @@ export function CRM({ darkMode }: CRMProps) {
                   className="rounded-xl border p-4"
                   style={{
                     borderColor: cardBase.borderColor,
-                    background: darkMode ? "rgba(99,102,241,0.03)" : "rgba(99,102,241,0.02)",
+                    background: darkMode
+                      ? "rgba(99,102,241,0.03)"
+                      : "rgba(99,102,241,0.02)",
                   }}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <Calendar size={14} style={{ color: "#10b981" }} />
-                    <span className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                    >
                       Lead Notes
                     </span>
                   </div>
 
-                  <p className="text-xs leading-relaxed" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                  <p
+                    className="text-xs leading-relaxed"
+                    style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+                  >
                     {selectedLead.notes || "No notes added yet."}
                   </p>
                 </div>
 
-                <button
-                  onClick={() => openEditLeadModal(selectedLead)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
-                  style={{
-                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                    color: "#ffffff",
-                  }}
-                >
-                  <Edit3 size={14} /> Edit Lead
-                </button>
+                {leadViewMode === "archived" ? (
+                  <button
+                    onClick={() => handleRestoreLead(selectedLead)}
+                    disabled={restoringLeadId === selectedLead.id}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-60"
+                    style={{
+                      background: "linear-gradient(135deg, #10b981, #06b6d4)",
+                      color: "#ffffff",
+                    }}
+                  >
+                    {restoringLeadId === selectedLead.id
+                      ? "Restoring..."
+                      : "Restore Lead"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => openEditLeadModal(selectedLead)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
+                    style={{
+                      background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                      color: "#ffffff",
+                    }}
+                  >
+                    <Edit3 size={14} /> Edit Lead
+                  </button>
+                )}
               </div>
             </>
           ) : (
-            <div className="h-full flex items-center justify-center text-sm" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+            <div
+              className="h-full flex items-center justify-center text-sm"
+              style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+            >
               Select a lead to view details.
             </div>
           )}
@@ -681,11 +849,19 @@ export function CRM({ darkMode }: CRMProps) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-lg font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                <h2
+                  className="text-lg font-semibold"
+                  style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                >
                   {editingLeadId ? "Edit Lead" : "Add New Lead"}
                 </h2>
-                <p className="text-xs mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-                  {editingLeadId ? "Update this lead directly in backend CRM." : "This lead will be saved directly in backend CRM."}
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                >
+                  {editingLeadId
+                    ? "Update this lead directly in backend CRM."
+                    : "This lead will be saved directly in backend CRM."}
                 </p>
               </div>
 
@@ -702,7 +878,9 @@ export function CRM({ darkMode }: CRMProps) {
               <div
                 className="rounded-xl border px-3 py-2 text-sm mb-4"
                 style={{
-                  background: darkMode ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.06)",
+                  background: darkMode
+                    ? "rgba(239,68,68,0.08)"
+                    : "rgba(239,68,68,0.06)",
                   borderColor: "rgba(239,68,68,0.25)",
                   color: "#ef4444",
                 }}
@@ -713,46 +891,73 @@ export function CRM({ darkMode }: CRMProps) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                <label
+                  className="text-xs"
+                  style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+                >
                   Name *
                 </label>
                 <input
                   value={leadForm.name}
-                  onChange={(e) => setLeadForm((prev) => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setLeadForm((prev) => ({ ...prev, name: e.target.value }))
+                  }
                   className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm"
-                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  style={{
+                    borderColor: cardBase.borderColor,
+                    color: darkMode ? "#e2e8f0" : "#0f172a",
+                  }}
                   placeholder="Lead name"
                 />
               </div>
 
               <div>
-                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                <label
+                  className="text-xs"
+                  style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+                >
                   Email
                 </label>
                 <input
                   value={leadForm.email}
-                  onChange={(e) => setLeadForm((prev) => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) =>
+                    setLeadForm((prev) => ({ ...prev, email: e.target.value }))
+                  }
                   className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm"
-                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  style={{
+                    borderColor: cardBase.borderColor,
+                    color: darkMode ? "#e2e8f0" : "#0f172a",
+                  }}
                   placeholder="email@test.com"
                 />
               </div>
 
               <div>
-                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                <label
+                  className="text-xs"
+                  style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+                >
                   Phone
                 </label>
                 <input
                   value={leadForm.phone}
-                  onChange={(e) => setLeadForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  onChange={(e) =>
+                    setLeadForm((prev) => ({ ...prev, phone: e.target.value }))
+                  }
                   className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm"
-                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  style={{
+                    borderColor: cardBase.borderColor,
+                    color: darkMode ? "#e2e8f0" : "#0f172a",
+                  }}
                   placeholder="9876543210"
                 />
               </div>
 
               <div>
-                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                <label
+                  className="text-xs"
+                  style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+                >
                   Score
                 </label>
                 <input
@@ -760,21 +965,37 @@ export function CRM({ darkMode }: CRMProps) {
                   min={0}
                   max={100}
                   value={leadForm.score}
-                  onChange={(e) => setLeadForm((prev) => ({ ...prev, score: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setLeadForm((prev) => ({
+                      ...prev,
+                      score: Number(e.target.value),
+                    }))
+                  }
                   className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm"
-                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  style={{
+                    borderColor: cardBase.borderColor,
+                    color: darkMode ? "#e2e8f0" : "#0f172a",
+                  }}
                 />
               </div>
 
               <div>
-                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                <label
+                  className="text-xs"
+                  style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+                >
                   Source
                 </label>
                 <select
                   value={leadForm.source}
-                  onChange={(e) => setLeadForm((prev) => ({ ...prev, source: e.target.value }))}
+                  onChange={(e) =>
+                    setLeadForm((prev) => ({ ...prev, source: e.target.value }))
+                  }
                   className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm"
-                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  style={{
+                    borderColor: cardBase.borderColor,
+                    color: darkMode ? "#e2e8f0" : "#0f172a",
+                  }}
                 >
                   {leadSources.map((source) => (
                     <option key={source.value} value={source.value}>
@@ -785,14 +1006,22 @@ export function CRM({ darkMode }: CRMProps) {
               </div>
 
               <div>
-                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                <label
+                  className="text-xs"
+                  style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+                >
                   Status
                 </label>
                 <select
                   value={leadForm.status}
-                  onChange={(e) => setLeadForm((prev) => ({ ...prev, status: e.target.value }))}
+                  onChange={(e) =>
+                    setLeadForm((prev) => ({ ...prev, status: e.target.value }))
+                  }
                   className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm"
-                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  style={{
+                    borderColor: cardBase.borderColor,
+                    color: darkMode ? "#e2e8f0" : "#0f172a",
+                  }}
                 >
                   {leadStatuses.map((status) => (
                     <option key={status.value} value={status.value}>
@@ -803,14 +1032,22 @@ export function CRM({ darkMode }: CRMProps) {
               </div>
 
               <div className="sm:col-span-2">
-                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                <label
+                  className="text-xs"
+                  style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+                >
                   Notes
                 </label>
                 <textarea
                   value={leadForm.notes}
-                  onChange={(e) => setLeadForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  onChange={(e) =>
+                    setLeadForm((prev) => ({ ...prev, notes: e.target.value }))
+                  }
                   className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm min-h-24 resize-none"
-                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  style={{
+                    borderColor: cardBase.borderColor,
+                    color: darkMode ? "#e2e8f0" : "#0f172a",
+                  }}
                   placeholder="Requirement, budget, preferred location..."
                 />
               </div>
@@ -839,7 +1076,10 @@ export function CRM({ darkMode }: CRMProps) {
                   onClick={closeLeadModal}
                   disabled={savingLead || deletingLead}
                   className="px-4 py-2 rounded-xl text-sm border"
-                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#94a3b8" : "#64748b" }}
+                  style={{
+                    borderColor: cardBase.borderColor,
+                    color: darkMode ? "#94a3b8" : "#64748b",
+                  }}
                 >
                   Cancel
                 </button>
@@ -854,7 +1094,11 @@ export function CRM({ darkMode }: CRMProps) {
                     opacity: savingLead ? 0.7 : 1,
                   }}
                 >
-                  {savingLead ? "Saving..." : editingLeadId ? "Update Lead" : "Create Lead"}
+                  {savingLead
+                    ? "Saving..."
+                    : editingLeadId
+                      ? "Update Lead"
+                      : "Create Lead"}
                 </button>
               </div>
             </div>

@@ -190,3 +190,13 @@ export async function deleteClientLead(leadId: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+export async function getArchivedClientLeads(): Promise<ClientLead[]> {
+  return clientFetch<ClientLead[]>("/leads/archived");
+}
+
+export async function restoreClientLead(leadId: string): Promise<ClientLead> {
+  return clientFetch<ClientLead>(`/leads/${leadId}/restore`, {
+    method: "PUT",
+  });
+}

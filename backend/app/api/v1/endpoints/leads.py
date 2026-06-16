@@ -64,6 +64,43 @@ class LeadResponse(BaseModel):
     class Config:
         from_attributes = True
 
+@router.get("/archived", response_model=List[LeadResponse])
+async def get_archived_leads(
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    result = await db.execute(
+        select(Lead).where(
+            Lead.tenant_id == tenant_id,
+            Lead.is_active == False
+        )
+    )
+    return result.scalars().all()
+
+
+@router.put("/{lead_id}/restore", response_model=LeadResponse)
+async def restore_lead(
+    lead_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    result = await db.execute(
+        select(Lead).where(
+            Lead.id == lead_id,
+            Lead.tenant_id == tenant_id
+        )
+    )
+    lead = result.scalar_one_or_none()
+
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    lead.is_active = True
+    await db.commit()
+    await db.refresh(lead)
+
+    return lead
+
 # Endpoints
 @router.get("/", response_model=List[LeadResponse])
 async def get_leads(
