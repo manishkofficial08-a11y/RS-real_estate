@@ -16,6 +16,8 @@ from app.models.support_ticket import (
     SupportTicketPriority,
     SupportTicketCategory,
 )
+from app.models.notification import NotificationAudience, NotificationType
+from app.api.v1.endpoints.notifications import create_notification
 
 
 router = APIRouter(prefix="/support", tags=["Support"])
@@ -158,11 +160,27 @@ async def create_support_ticket(
     )
 
     db.add(ticket)
+    await db.flush()
+
+    tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = tenant_result.scalar_one_or_none()
+
+    await create_notification(
+        db,
+        audience=NotificationAudience.admin.value,
+        notification_type=NotificationType.support_ticket_created.value,
+        title="New support ticket",
+        message=f"{tenant.name if tenant else 'A client'} created a support ticket: {ticket.subject}",
+        tenant_id=tenant_id,
+        related_entity_type="support_ticket",
+        related_entity_id=ticket.id,
+        link="/support",
+    )
+
     await db.commit()
     await db.refresh(ticket)
 
     return await enrich_ticket(ticket, db)
-
 
 @router.get("/tickets/my", response_model=List[SupportTicketResponse])
 async def get_my_support_tickets(
@@ -224,6 +242,8 @@ async def update_support_ticket(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Support ticket not found",
         )
+    previous_status = ticket.status
+    previous_admin_reply = ticket.admin_reply
 
     if data.status is not None:
         ticket.status = data.status
@@ -236,6 +256,39 @@ async def update_support_ticket(
 
     if data.assigned_admin_id is not None:
         ticket.assigned_admin_id = data.assigned_admin_id
+
+    reply_changed = (
+        data.admin_reply is not None
+        and (data.admin_reply.strip() or None) != previous_admin_reply
+    )
+    status_changed = data.status is not None and data.status != previous_status
+
+    if reply_changed:
+        await create_notification(
+            db,
+            audience=NotificationAudience.client.value,
+            notification_type=NotificationType.support_ticket_replied.value,
+            title="Admin replied to your ticket",
+            message=f"Your support ticket '{ticket.subject}' has a new admin reply.",
+            tenant_id=ticket.tenant_id,
+            recipient_user_id=ticket.created_by_user_id,
+            related_entity_type="support_ticket",
+            related_entity_id=ticket.id,
+            link="/support",
+        )
+    elif status_changed:
+        await create_notification(
+            db,
+            audience=NotificationAudience.client.value,
+            notification_type=NotificationType.support_ticket_status_updated.value,
+            title="Support ticket status updated",
+            message=f"Your support ticket '{ticket.subject}' is now {ticket.status.replace('_', ' ')}.",
+            tenant_id=ticket.tenant_id,
+            recipient_user_id=ticket.created_by_user_id,
+            related_entity_type="support_ticket",
+            related_entity_id=ticket.id,
+            link="/support",
+        )
 
     await db.commit()
     await db.refresh(ticket)

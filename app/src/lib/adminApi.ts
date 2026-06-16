@@ -220,3 +220,36 @@ export async function updateSupportTicket(
     body: JSON.stringify(payload),
   });
 }
+export type AdminNotification = {
+  id: string;
+  tenant_id?: string | null;
+  recipient_user_id?: string | null;
+  audience: string;
+  type: string;
+  title: string;
+  message: string;
+  related_entity_type?: string | null;
+  related_entity_id?: string | null;
+  link?: string | null;
+  is_read: boolean;
+};
+
+export type AdminNotificationUnreadCount = {
+  unread_count: number;
+};
+
+export async function getAdminNotifications(): Promise<AdminNotification[]> {
+  return adminFetch<AdminNotification[]>("/notifications/admin");
+}
+
+export async function getAdminNotificationUnreadCount(): Promise<AdminNotificationUnreadCount> {
+  return adminFetch<AdminNotificationUnreadCount>("/notifications/admin/unread-count");
+}
+
+export async function markAdminNotificationRead(
+  notificationId: string
+): Promise<AdminNotification> {
+  return adminFetch<AdminNotification>(`/notifications/admin/${notificationId}/read`, {
+    method: "PUT",
+  });
+}
