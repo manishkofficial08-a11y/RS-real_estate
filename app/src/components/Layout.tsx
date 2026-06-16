@@ -16,6 +16,7 @@ export default function Layout() {
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem("founder_sidebar_collapsed") === "true";
   });
@@ -31,45 +32,47 @@ export default function Layout() {
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsSidebarOpen(false);
+        setIsNotificationsOpen(false);
       }
     }
-    useEffect(() => {
-      let alive = true;
-
-      async function loadNotifications() {
-        try {
-          setNotificationsLoading(true);
-
-          const [items, count] = await Promise.all([
-            getAdminNotifications(),
-            getAdminNotificationUnreadCount(),
-          ]);
-
-          if (!alive) return;
-
-          setNotifications(items);
-          setUnreadCount(count.unread_count);
-        } catch (error) {
-          console.error("Failed to load admin notifications", error);
-        } finally {
-          if (alive) {
-            setNotificationsLoading(false);
-          }
-        }
-      }
-
-      loadNotifications();
-
-      const intervalId = window.setInterval(loadNotifications, 30000);
-
-      return () => {
-        alive = false;
-        window.clearInterval(intervalId);
-      };
-    }, []);
 
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadNotifications() {
+      try {
+        setNotificationsLoading(true);
+
+        const [items, count] = await Promise.all([
+          getAdminNotifications(),
+          getAdminNotificationUnreadCount(),
+        ]);
+
+        if (!alive) return;
+
+        setNotifications(items);
+        setUnreadCount(count.unread_count);
+      } catch (error) {
+        console.error("Failed to load admin notifications", error);
+      } finally {
+        if (alive) {
+          setNotificationsLoading(false);
+        }
+      }
+    }
+
+    loadNotifications();
+
+    const intervalId = window.setInterval(loadNotifications, 30000);
+
+    return () => {
+      alive = false;
+      window.clearInterval(intervalId);
+    };
   }, []);
 
   const desktopLayoutClass = isSidebarCollapsed
@@ -99,6 +102,7 @@ export default function Layout() {
       console.error("Failed to mark admin notification as read", error);
     }
   }
+
   return (
     <div className="min-h-screen" style={{ background: "#0A0A0F" }}>
       <button
