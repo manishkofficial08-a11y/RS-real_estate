@@ -13,6 +13,7 @@ import {
   Zap,
   Puzzle,
   CreditCard,
+  LifeBuoy,
   Settings,
   Bot,
   ChevronRight,
@@ -40,6 +41,7 @@ const navItems = [
   { id: "automation", icon: Zap, label: "Automation", badge: null },
   { id: "integrations", icon: Puzzle, label: "Integrations", badge: null },
   { id: "billing", icon: CreditCard, label: "Billing", badge: null },
+  { id: "support", icon: LifeBuoy, label: "Support", badge: null },
   { id: "settings", icon: Settings, label: "Settings", badge: null },
   { id: "ai-manager", icon: Bot, label: "AI Manager", badge: "●" },
 ];

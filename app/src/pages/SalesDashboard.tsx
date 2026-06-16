@@ -1,4 +1,4 @@
-import { TrendingUp, Target, DollarSign, UserCheck, Calendar, Award } from 'lucide-react';
+import { TrendingUp, Target, DollarSign, Calendar, Award } from 'lucide-react';
 
 export default function SalesDashboard() {
   const salesMetrics = [

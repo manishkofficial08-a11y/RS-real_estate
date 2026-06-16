@@ -1,4 +1,4 @@
-import { Share2, Plus, Link2, CheckCircle, AlertCircle, Upload, Settings } from 'lucide-react';
+import { Share2, Plus, CheckCircle, AlertCircle, Upload } from 'lucide-react';
 
 export default function CustomInternalTools() {
   const platforms = [
