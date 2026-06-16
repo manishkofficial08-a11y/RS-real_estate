@@ -134,3 +134,21 @@ export async function createClientProperty(
     body: JSON.stringify(payload),
   });
 }
+export type CreateClientLeadPayload = {
+  name: string;
+  email?: string;
+  phone?: string;
+  source: string;
+  status: string;
+  score: number;
+  notes?: string;
+};
+
+export async function createClientLead(
+  payload: CreateClientLeadPayload
+): Promise<ClientLead> {
+  return clientFetch<ClientLead>("/leads/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

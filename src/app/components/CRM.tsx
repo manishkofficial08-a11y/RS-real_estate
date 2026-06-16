@@ -1,15 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Plus,
-  Search,
-  Phone,
+  Brain,
+  Calendar,
   Mail,
   MessageSquare,
-  Calendar,
-  Brain,
+  Phone,
+  Plus,
+  Search,
+  X,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { getClientLeads, type ClientLead } from "../lib/clientApi";
+import {
+  createClientLead,
+  getClientLeads,
+  type ClientLead,
+  type CreateClientLeadPayload,
+} from "../lib/clientApi";
 
 type UiLead = {
   id: string;
@@ -25,73 +31,25 @@ type UiLead = {
   color: string;
 };
 
-const demoLeads: UiLead[] = [
-  {
-    id: "demo-1",
-    name: "Sarah Chen",
-    company: "TechVenture Co.",
-    title: "CMO",
-    score: 94,
-    stage: "Proposal",
-    value: "$48,000",
-    lastContact: "2 hr ago",
-    tags: ["Hot Lead", "Enterprise"],
-    avatar: "SC",
-    color: "#6366f1",
-  },
-  {
-    id: "demo-2",
-    name: "Marcus Rodriguez",
-    company: "GrowthLabs Inc.",
-    title: "VP Marketing",
-    score: 87,
-    stage: "Discovery",
-    value: "$32,000",
-    lastContact: "1 day ago",
-    tags: ["Warm", "Mid-Market"],
-    avatar: "MR",
-    color: "#8b5cf6",
-  },
-  {
-    id: "demo-3",
-    name: "Emily Watson",
-    company: "ScaleUp Agency",
-    title: "CEO",
-    score: 76,
-    stage: "Negotiation",
-    value: "$85,000",
-    lastContact: "3 hr ago",
-    tags: ["Hot Lead", "Agency"],
-    avatar: "EW",
-    color: "#06b6d4",
-  },
-  {
-    id: "demo-4",
-    name: "David Kim",
-    company: "DataSync Systems",
-    title: "Director of Ops",
-    score: 68,
-    stage: "Prospecting",
-    value: "$22,000",
-    lastContact: "5 days ago",
-    tags: ["Cold", "SMB"],
-    avatar: "DK",
-    color: "#10b981",
-  },
-  {
-    id: "demo-5",
-    name: "Priya Sharma",
-    company: "MediaFlow Digital",
-    title: "Head of Growth",
-    score: 91,
-    stage: "Closing",
-    value: "$120,000",
-    lastContact: "30 min ago",
-    tags: ["Hot Lead", "Enterprise"],
-    avatar: "PS",
-    color: "#f59e0b",
-  },
-];
+type LeadForm = {
+  name: string;
+  email: string;
+  phone: string;
+  source: string;
+  status: string;
+  score: number;
+  notes: string;
+};
+
+const emptyLeadForm: LeadForm = {
+  name: "",
+  email: "",
+  phone: "",
+  source: "website",
+  status: "new",
+  score: 50,
+  notes: "",
+};
 
 const stageColors: Record<UiLead["stage"], string> = {
   Prospecting: "#94a3b8",
@@ -100,6 +58,23 @@ const stageColors: Record<UiLead["stage"], string> = {
   Negotiation: "#f59e0b",
   Closing: "#10b981",
 };
+
+const leadSources = [
+  { label: "Website", value: "website" },
+  { label: "Instagram", value: "instagram" },
+  { label: "Facebook", value: "facebook" },
+  { label: "Referral", value: "referral" },
+  { label: "WhatsApp", value: "whatsapp" },
+  { label: "Other", value: "other" },
+];
+
+const leadStatuses = [
+  { label: "New", value: "new" },
+  { label: "Contacted", value: "contacted" },
+  { label: "Qualified", value: "qualified" },
+  { label: "Lost", value: "lost" },
+  { label: "Won", value: "won" },
+];
 
 function getAvatar(name: string) {
   return (
@@ -113,6 +88,10 @@ function getAvatar(name: string) {
   );
 }
 
+function formatLabel(value: string) {
+  return value.replace(/[_-]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function mapStatusToStage(status: string): UiLead["stage"] {
   const normalized = status.toLowerCase();
 
@@ -121,8 +100,9 @@ function mapStatusToStage(status: string): UiLead["stage"] {
     contacted: "Discovery",
     qualified: "Proposal",
     proposal: "Negotiation",
-    converted: "Closing",
     lost: "Prospecting",
+    won: "Closing",
+    converted: "Closing",
   };
 
   return stageMap[normalized] || "Prospecting";
@@ -135,13 +115,13 @@ function mapApiLeadToUiLead(lead: ClientLead, index: number): UiLead {
   return {
     id: lead.id,
     name: lead.name,
-    company: lead.source || "Website Lead",
+    company: formatLabel(lead.source || "website"),
     title: lead.email || lead.phone || "Real Estate Lead",
     score: lead.score || 50,
     stage,
     value: "₹0",
     lastContact: "Recently",
-    tags: [lead.status || "New", lead.source || "Website"],
+    tags: [formatLabel(lead.status || "New"), formatLabel(lead.source || "Website")],
     avatar: getAvatar(lead.name),
     color: colorList[index % colorList.length],
   };
@@ -186,35 +166,80 @@ interface CRMProps {
 }
 
 export function CRM({ darkMode }: CRMProps) {
-  const [leads, setLeads] = useState<UiLead[]>(demoLeads);
-  const [selectedLead, setSelectedLead] = useState<UiLead>(demoLeads[0]);
+  const [leads, setLeads] = useState<UiLead[]>([]);
+  const [selectedLead, setSelectedLead] = useState<UiLead | null>(null);
   const [activeStage, setActiveStage] = useState<"All" | UiLead["stage"]>("All");
   const [searchQ, setSearchQ] = useState("");
   const [loadingLeads, setLoadingLeads] = useState(false);
   const [leadError, setLeadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadLeads() {
-      try {
-        setLoadingLeads(true);
-        setLeadError(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [leadForm, setLeadForm] = useState<LeadForm>(emptyLeadForm);
+  const [creatingLead, setCreatingLead] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-        const apiLeads = await getClientLeads();
-        const mappedLeads = apiLeads.map(mapApiLeadToUiLead);
+  async function loadLeads() {
+    try {
+      setLoadingLeads(true);
+      setLeadError(null);
 
-        if (mappedLeads.length > 0) {
-          setLeads(mappedLeads);
-          setSelectedLead(mappedLeads[0]);
-        }
-      } catch (err) {
-        setLeadError(err instanceof Error ? err.message : "Failed to load leads");
-      } finally {
-        setLoadingLeads(false);
-      }
+      const apiLeads = await getClientLeads();
+      const mappedLeads = apiLeads.map(mapApiLeadToUiLead);
+
+      setLeads(mappedLeads);
+      setSelectedLead(mappedLeads[0] || null);
+    } catch (err) {
+      setLeadError(err instanceof Error ? err.message : "Failed to load leads");
+      setLeads([]);
+      setSelectedLead(null);
+    } finally {
+      setLoadingLeads(false);
     }
+  }
 
+  useEffect(() => {
     loadLeads();
   }, []);
+
+  async function handleCreateLead() {
+    try {
+      setFormError(null);
+
+      if (!leadForm.name.trim()) {
+        setFormError("Lead name is required.");
+        return;
+      }
+
+      if (!leadForm.email.trim() && !leadForm.phone.trim()) {
+        setFormError("Email ya phone me se ek required hai.");
+        return;
+      }
+
+      setCreatingLead(true);
+
+      const payload: CreateClientLeadPayload = {
+        name: leadForm.name.trim(),
+        email: leadForm.email.trim() || undefined,
+        phone: leadForm.phone.trim() || undefined,
+        source: leadForm.source,
+        status: leadForm.status,
+        score: Number(leadForm.score) || 50,
+        notes: leadForm.notes.trim() || undefined,
+      };
+
+      const createdLead = await createClientLead(payload);
+      const mappedLead = mapApiLeadToUiLead(createdLead, 0);
+
+      setLeads((prev) => [mappedLead, ...prev]);
+      setSelectedLead(mappedLead);
+      setLeadForm(emptyLeadForm);
+      setShowAddModal(false);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Failed to create lead");
+    } finally {
+      setCreatingLead(false);
+    }
+  }
 
   const filtered = useMemo(() => {
     return leads.filter((lead) => {
@@ -264,12 +289,13 @@ export function CRM({ darkMode }: CRMProps) {
               {loadingLeads
                 ? "Loading real leads..."
                 : leadError
-                  ? `Using demo leads · ${leadError}`
+                  ? `Backend error · ${leadError}`
                   : `${leads.length} leads · Real backend data`}
             </p>
           </div>
 
           <button
+            onClick={() => setShowAddModal(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
             style={{
               background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
@@ -316,244 +342,399 @@ export function CRM({ darkMode }: CRMProps) {
                 </div>
 
                 <div className="text-xs mt-0.5" style={{ color: stageColors[typedStage] }}>
-                  ₹0
+                  Live
                 </div>
               </button>
             );
           })}
         </div>
+
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-xl border mb-4"
+          style={{
+            background: darkMode ? "rgba(99,102,241,0.04)" : "#ffffff",
+            borderColor: cardBase.borderColor,
+          }}
+        >
+          <Search size={14} style={{ color: darkMode ? "#4a5568" : "#94a3b8" }} />
+          <input
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            placeholder="Search leads..."
+            className="flex-1 bg-transparent outline-none text-sm"
+            style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+          />
+        </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex gap-4 px-6 pb-6 min-h-0">
-        <div className="flex flex-col w-80 flex-shrink-0 min-h-0">
-          <div className="relative mb-3 flex-shrink-0">
-            <Search
-              size={13}
-              className="absolute left-3 top-1/2 -translate-y-1/2"
-              style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
-            />
-
-            <input
-              value={searchQ}
-              onChange={(event) => setSearchQ(event.target.value)}
-              placeholder="Search leads..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm"
-              style={{
-                background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                borderColor: cardBase.borderColor,
-                color: darkMode ? "#e2e8f0" : "#0f172a",
-              }}
-            />
-          </div>
-
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-            {filtered.length === 0 ? (
-              <div
-                className="rounded-xl border p-4 text-sm"
-                style={{
-                  ...cardBase,
-                  color: darkMode ? "#64748b" : "#64748b",
-                }}
-              >
-                No leads found.
-              </div>
-            ) : (
-              filtered.map((lead) => (
-                <motion.button
-                  key={lead.id}
-                  onClick={() => setSelectedLead(lead)}
-                  className="w-full text-left p-3 rounded-xl border transition-all"
-                  style={{
-                    background:
-                      selectedLead.id === lead.id
-                        ? darkMode
-                          ? `${lead.color}12`
-                          : `${lead.color}06`
-                        : cardBase.background,
-                    borderColor:
-                      selectedLead.id === lead.id ? `${lead.color}30` : cardBase.borderColor,
-                  }}
-                  whileHover={{ x: 2 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0"
-                      style={{ background: `${lead.color}20`, color: lead.color }}
-                    >
-                      {lead.avatar}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span
-                          className="text-sm font-medium truncate"
-                          style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
-                        >
-                          {lead.name}
-                        </span>
-
-                        <ScoreRing score={lead.score} color={lead.color} />
-                      </div>
-
-                      <p className="text-xs truncate" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-                        {lead.company}
-                      </p>
-
-                      <div className="flex items-center gap-2 mt-1">
-                        <span
-                          className="text-xs px-1.5 py-0.5 rounded"
-                          style={{
-                            background: `${stageColors[lead.stage]}15`,
-                            color: stageColors[lead.stage],
-                          }}
-                        >
-                          {lead.stage}
-                        </span>
-
-                        <span className="text-xs" style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}>
-                          {lead.value}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </motion.button>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto rounded-2xl border p-5" style={cardBase}>
-          <div className="flex items-start gap-4 mb-6">
+      <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2 gap-4 px-6 pb-6">
+        <div className="overflow-y-auto space-y-3 pr-1">
+          {filtered.length === 0 && (
             <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold flex-shrink-0"
+              className="rounded-2xl border p-6 text-sm"
               style={{
-                background: `linear-gradient(135deg, ${selectedLead.color}30, ${selectedLead.color}10)`,
-                color: selectedLead.color,
-                boxShadow: `0 0 24px ${selectedLead.color}20`,
+                background: cardBase.background,
+                borderColor: cardBase.borderColor,
+                color: darkMode ? "#94a3b8" : "#64748b",
               }}
             >
-              {selectedLead.avatar}
+              No leads found. Add a lead from the button above.
             </div>
+          )}
 
-            <div className="flex-1">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                    {selectedLead.name}
-                  </h2>
-
-                  <p className="text-sm" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-                    {selectedLead.title} · {selectedLead.company}
-                  </p>
-
-                  <div className="flex gap-2 mt-2">
-                    {selectedLead.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-xs px-2 py-0.5 rounded-full"
-                        style={{ background: `${selectedLead.color}15`, color: selectedLead.color }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+          {filtered.map((lead, index) => (
+            <motion.button
+              key={lead.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.04 }}
+              onClick={() => setSelectedLead(lead)}
+              className="w-full p-4 rounded-2xl border text-left transition-all hover:border-primary/30"
+              style={{
+                background:
+                  selectedLead?.id === lead.id
+                    ? darkMode
+                      ? "rgba(99,102,241,0.12)"
+                      : "rgba(99,102,241,0.06)"
+                    : cardBase.background,
+                borderColor:
+                  selectedLead?.id === lead.id
+                    ? "rgba(99,102,241,0.35)"
+                    : cardBase.borderColor,
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-semibold"
+                  style={{ background: `${lead.color}18`, color: lead.color }}
+                >
+                  {lead.avatar}
                 </div>
 
-                <div className="text-right">
-                  <div
-                    className="font-bold"
-                    style={{ fontSize: "1.25rem", color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                    {lead.name}
+                  </p>
+                  <p className="text-xs truncate" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                    {lead.title}
+                  </p>
+                </div>
+
+                <ScoreRing score={lead.score} color={lead.color} />
+              </div>
+
+              <div className="flex items-center gap-2 mt-3">
+                <span
+                  className="text-xs px-2 py-1 rounded-full"
+                  style={{
+                    background: `${stageColors[lead.stage]}15`,
+                    color: stageColors[lead.stage],
+                  }}
+                >
+                  {lead.stage}
+                </span>
+
+                {lead.tags.slice(0, 2).map((tag) => (
+                  <span
+                    key={tag}
+                    className="text-xs px-2 py-1 rounded-full"
+                    style={{
+                      background: darkMode ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.06)",
+                      color: darkMode ? "#94a3b8" : "#64748b",
+                    }}
                   >
-                    {selectedLead.value}
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </motion.button>
+          ))}
+        </div>
+
+        <div
+          className="rounded-2xl border p-5 overflow-y-auto"
+          style={{
+            background: cardBase.background,
+            borderColor: cardBase.borderColor,
+          }}
+        >
+          {selectedLead ? (
+            <>
+              <div className="flex items-start gap-4 mb-6">
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-sm font-semibold"
+                  style={{ background: `${selectedLead.color}18`, color: selectedLead.color }}
+                >
+                  {selectedLead.avatar}
+                </div>
+
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                    {selectedLead.name}
+                  </h2>
+                  <p className="text-sm" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                    {selectedLead.title}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: selectedLead.color }}>
+                    {selectedLead.company}
+                  </p>
+                </div>
+
+                <ScoreRing score={selectedLead.score} color={selectedLead.color} />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                {[
+                  { icon: Phone, label: "Call" },
+                  { icon: Mail, label: "Email" },
+                  { icon: MessageSquare, label: "Message" },
+                ].map((action) => (
+                  <button
+                    key={action.label}
+                    className="flex flex-col items-center gap-2 p-3 rounded-xl border transition-all hover:border-primary/30"
+                    style={{
+                      borderColor: cardBase.borderColor,
+                      color: darkMode ? "#94a3b8" : "#64748b",
+                    }}
+                  >
+                    <action.icon size={15} />
+                    <span className="text-xs">{action.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-4">
+                <div
+                  className="rounded-xl border p-4"
+                  style={{
+                    borderColor: cardBase.borderColor,
+                    background: darkMode ? "rgba(99,102,241,0.03)" : "rgba(99,102,241,0.02)",
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Brain size={14} style={{ color: "#6366f1" }} />
+                    <span className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                      AI Insight
+                    </span>
                   </div>
-                  <p className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-                    deal value
+
+                  <p className="text-xs leading-relaxed" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                    {selectedLead.score >= 80
+                      ? "High-priority lead. Contact within 24 hours and suggest matching properties."
+                      : selectedLead.score >= 60
+                        ? "Warm lead. Send property options and schedule a follow-up."
+                        : "Early-stage lead. Collect budget, location and property preference details."}
+                  </p>
+                </div>
+
+                <div
+                  className="rounded-xl border p-4"
+                  style={{
+                    borderColor: cardBase.borderColor,
+                    background: darkMode ? "rgba(99,102,241,0.03)" : "rgba(99,102,241,0.02)",
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar size={14} style={{ color: "#10b981" }} />
+                    <span className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                      Next Step
+                    </span>
+                  </div>
+
+                  <p className="text-xs leading-relaxed" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                    Schedule site visit or follow-up call based on the lead source and current stage.
                   </p>
                 </div>
               </div>
+            </>
+          ) : (
+            <div className="h-full flex items-center justify-center text-sm" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+              Select a lead to view details.
             </div>
-          </div>
-
-          <div className="flex gap-2 mb-6">
-            {[
-              { icon: Phone, label: "Call" },
-              { icon: Mail, label: "Email" },
-              { icon: MessageSquare, label: "Message" },
-              { icon: Calendar, label: "Schedule" },
-            ].map((action) => (
-              <button
-                key={action.label}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border text-xs transition-all hover:bg-primary/5"
-                style={{ borderColor: cardBase.borderColor, color: darkMode ? "#94a3b8" : "#475569" }}
-              >
-                <action.icon size={13} /> {action.label}
-              </button>
-            ))}
-          </div>
-
-          <div
-            className="p-4 rounded-xl border mb-4"
-            style={{
-              background: darkMode ? `${selectedLead.color}08` : `${selectedLead.color}04`,
-              borderColor: `${selectedLead.color}20`,
-            }}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Brain size={13} style={{ color: selectedLead.color }} />
-
-              <span className="text-xs font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                AI Lead Score Analysis
-              </span>
-
-              <span className="text-sm font-bold ml-auto" style={{ color: selectedLead.color }}>
-                {selectedLead.score}/100
-              </span>
-            </div>
-
-            <p className="text-xs leading-relaxed" style={{ color: darkMode ? "#64748b" : "#64748b" }}>
-              {selectedLead.name} is currently marked as {selectedLead.stage}. Follow up quickly, verify budget and requirement, then move the lead toward the next pipeline stage.
-            </p>
-          </div>
-
-          <div>
-            <h4 className="text-xs font-semibold mb-3" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-              ACTIVITY TIMELINE
-            </h4>
-
-            <div className="space-y-3">
-              {[
-                { time: selectedLead.lastContact, event: "Lead imported from backend CRM data", type: "api" },
-                { time: "Today", event: "AI score calculated from lead status and source", type: "ai" },
-                { time: "Recently", event: "Recommended next action: call or email follow-up", type: "task" },
-                { time: "Recently", event: "Pipeline stage synchronized with backend status", type: "sync" },
-              ].map((item, index) => (
-                <div key={`${item.type}-${index}`} className="flex gap-3">
-                  <div className="flex flex-col items-center">
-                    <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: selectedLead.color }} />
-                    {index < 3 && (
-                      <div
-                        className="w-px flex-1 mt-1"
-                        style={{ background: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)" }}
-                      />
-                    )}
-                  </div>
-
-                  <div className="pb-3">
-                    <p className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#475569" }}>
-                      {item.event}
-                    </p>
-
-                    <p className="text-xs mt-0.5" style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}>
-                      {item.time}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
       </div>
+
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0"
+            style={{ background: "rgba(0,0,0,0.45)" }}
+            onClick={() => !creatingLead && setShowAddModal(false)}
+          />
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative w-full max-w-2xl rounded-2xl border p-5"
+            style={{
+              background: darkMode ? "#0d0d28" : "#ffffff",
+              borderColor: cardBase.borderColor,
+            }}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-lg font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                  Add New Lead
+                </h2>
+                <p className="text-xs mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                  This lead will be saved directly in backend CRM.
+                </p>
+              </div>
+
+              <button
+                onClick={() => !creatingLead && setShowAddModal(false)}
+                className="p-2 rounded-xl"
+                style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {formError && (
+              <div
+                className="rounded-xl border px-3 py-2 text-sm mb-4"
+                style={{
+                  background: darkMode ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.06)",
+                  borderColor: "rgba(239,68,68,0.25)",
+                  color: "#ef4444",
+                }}
+              >
+                {formError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                  Name *
+                </label>
+                <input
+                  value={leadForm.name}
+                  onChange={(e) => setLeadForm((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm"
+                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  placeholder="Lead name"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                  Email
+                </label>
+                <input
+                  value={leadForm.email}
+                  onChange={(e) => setLeadForm((prev) => ({ ...prev, email: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm"
+                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  placeholder="email@test.com"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                  Phone
+                </label>
+                <input
+                  value={leadForm.phone}
+                  onChange={(e) => setLeadForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm"
+                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  placeholder="9876543210"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                  Score
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={leadForm.score}
+                  onChange={(e) => setLeadForm((prev) => ({ ...prev, score: Number(e.target.value) }))}
+                  className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm"
+                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                  Source
+                </label>
+                <select
+                  value={leadForm.source}
+                  onChange={(e) => setLeadForm((prev) => ({ ...prev, source: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm"
+                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                >
+                  {leadSources.map((source) => (
+                    <option key={source.value} value={source.value}>
+                      {source.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                  Status
+                </label>
+                <select
+                  value={leadForm.status}
+                  onChange={(e) => setLeadForm((prev) => ({ ...prev, status: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm"
+                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                >
+                  {leadStatuses.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                  Notes
+                </label>
+                <textarea
+                  value={leadForm.notes}
+                  onChange={(e) => setLeadForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-xl border bg-transparent outline-none text-sm min-h-24 resize-none"
+                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  placeholder="Requirement, budget, preferred location..."
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 mt-5">
+              <button
+                onClick={() => setShowAddModal(false)}
+                disabled={creatingLead}
+                className="px-4 py-2 rounded-xl text-sm border"
+                style={{ borderColor: cardBase.borderColor, color: darkMode ? "#94a3b8" : "#64748b" }}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleCreateLead}
+                disabled={creatingLead}
+                className="px-4 py-2 rounded-xl text-sm font-medium"
+                style={{
+                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  color: "#ffffff",
+                  opacity: creatingLead ? 0.7 : 1,
+                }}
+              >
+                {creatingLead ? "Creating..." : "Create Lead"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
