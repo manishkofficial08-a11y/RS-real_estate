@@ -214,3 +214,58 @@ export type ClientProfile = {
 export async function getClientProfile(): Promise<ClientProfile> {
   return clientFetch<ClientProfile>("/auth/me");
 }
+
+export type SupportTicketStatus =
+  | "open"
+  | "in_progress"
+  | "resolved"
+  | "closed";
+
+export type SupportTicketPriority = "low" | "medium" | "high" | "urgent";
+
+export type SupportTicketCategory =
+  | "general"
+  | "billing"
+  | "technical"
+  | "crm"
+  | "properties"
+  | "ai_agents"
+  | "other";
+
+export type SupportTicket = {
+  id: string;
+  tenant_id: string;
+  created_by_user_id: string;
+  subject: string;
+  category: SupportTicketCategory | string;
+  priority: SupportTicketPriority | string;
+  status: SupportTicketStatus | string;
+  message: string;
+  admin_reply?: string | null;
+  assigned_admin_id?: string | null;
+  created_by_name?: string | null;
+  created_by_email?: string | null;
+  business_name?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type CreateSupportTicketPayload = {
+  subject: string;
+  category: SupportTicketCategory;
+  priority: SupportTicketPriority;
+  message: string;
+};
+
+export async function createSupportTicket(
+  payload: CreateSupportTicketPayload,
+): Promise<SupportTicket> {
+  return clientFetch<SupportTicket>("/support/tickets", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getMySupportTickets(): Promise<SupportTicket[]> {
+  return clientFetch<SupportTicket[]>("/support/tickets/my");
+}

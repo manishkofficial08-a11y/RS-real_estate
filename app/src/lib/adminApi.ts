@@ -156,3 +156,67 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
 export async function getAdminLeads(): Promise<AdminLead[]> {
   return adminFetch<AdminLead[]>("/admin/leads");
 }
+
+export type AdminSupportTicketStatus =
+  | "open"
+  | "in_progress"
+  | "resolved"
+  | "closed";
+
+export type AdminSupportTicketPriority = "low" | "medium" | "high" | "urgent";
+
+export type AdminSupportTicket = {
+  id: string;
+  tenant_id: string;
+  created_by_user_id: string;
+  subject: string;
+  category: string;
+  priority: AdminSupportTicketPriority | string;
+  status: AdminSupportTicketStatus | string;
+  message: string;
+  admin_reply?: string | null;
+  assigned_admin_id?: string | null;
+  created_by_name?: string | null;
+  created_by_email?: string | null;
+  business_name?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type UpdateSupportTicketPayload = {
+  status?: AdminSupportTicketStatus;
+  priority?: AdminSupportTicketPriority;
+  admin_reply?: string | null;
+  assigned_admin_id?: string | null;
+};
+
+export async function getSupportTickets(params?: {
+  status?: AdminSupportTicketStatus | "all";
+  priority?: AdminSupportTicketPriority | "all";
+}): Promise<AdminSupportTicket[]> {
+  const searchParams = new URLSearchParams();
+
+  if (params?.status && params.status !== "all") {
+    searchParams.set("status_filter", params.status);
+  }
+
+  if (params?.priority && params.priority !== "all") {
+    searchParams.set("priority_filter", params.priority);
+  }
+
+  const query = searchParams.toString();
+
+  return adminFetch<AdminSupportTicket[]>(
+    `/support/admin/tickets${query ? `?${query}` : ""}`,
+  );
+}
+
+export async function updateSupportTicket(
+  ticketId: string,
+  payload: UpdateSupportTicketPayload,
+): Promise<AdminSupportTicket> {
+  return adminFetch<AdminSupportTicket>(`/support/admin/tickets/${ticketId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}

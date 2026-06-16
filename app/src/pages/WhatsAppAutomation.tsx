@@ -1,4 +1,4 @@
-import { MessageSquare, Plus, Send, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { MessageSquare, Plus } from 'lucide-react';
 
 export default function WhatsAppAutomation() {
   const campaigns = [
