@@ -1,18 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
+import type { ElementType } from "react";
 import {
   Brain,
   Calendar,
+  Edit3,
   Mail,
   MessageSquare,
   Phone,
   Plus,
   Search,
+  Trash2,
   X,
 } from "lucide-react";
 import { motion } from "motion/react";
 import {
   createClientLead,
+  deleteClientLead,
   getClientLeads,
+  updateClientLead,
   type ClientLead,
   type CreateClientLeadPayload,
 } from "../lib/clientApi";
@@ -20,8 +25,11 @@ import {
 type UiLead = {
   id: string;
   name: string;
-  company: string;
-  title: string;
+  email?: string | null;
+  phone?: string | null;
+  source: string;
+  status: string;
+  notes?: string | null;
   score: number;
   stage: "Prospecting" | "Discovery" | "Proposal" | "Negotiation" | "Closing";
   value: string;
@@ -88,7 +96,8 @@ function getAvatar(name: string) {
   );
 }
 
-function formatLabel(value: string) {
+function formatLabel(value?: string | null) {
+  if (!value) return "Website";
   return value.replace(/[_-]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
@@ -115,13 +124,16 @@ function mapApiLeadToUiLead(lead: ClientLead, index: number): UiLead {
   return {
     id: lead.id,
     name: lead.name,
-    company: formatLabel(lead.source || "website"),
-    title: lead.email || lead.phone || "Real Estate Lead",
+    email: lead.email,
+    phone: lead.phone,
+    source: lead.source || "website",
+    status: lead.status || "new",
+    notes: lead.notes,
     score: lead.score || 50,
     stage,
     value: "₹0",
     lastContact: "Recently",
-    tags: [formatLabel(lead.status || "New"), formatLabel(lead.source || "Website")],
+    tags: [formatLabel(lead.status || "new"), formatLabel(lead.source || "website")],
     avatar: getAvatar(lead.name),
     color: colorList[index % colorList.length],
   };
@@ -173,9 +185,11 @@ export function CRM({ darkMode }: CRMProps) {
   const [loadingLeads, setLoadingLeads] = useState(false);
   const [leadError, setLeadError] = useState<string | null>(null);
 
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showLeadModal, setShowLeadModal] = useState(false);
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [leadForm, setLeadForm] = useState<LeadForm>(emptyLeadForm);
-  const [creatingLead, setCreatingLead] = useState(false);
+  const [savingLead, setSavingLead] = useState(false);
+  const [deletingLead, setDeletingLead] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   async function loadLeads() {
@@ -187,7 +201,11 @@ export function CRM({ darkMode }: CRMProps) {
       const mappedLeads = apiLeads.map(mapApiLeadToUiLead);
 
       setLeads(mappedLeads);
-      setSelectedLead(mappedLeads[0] || null);
+      setSelectedLead((current) => {
+        if (!mappedLeads.length) return null;
+        if (!current) return mappedLeads[0];
+        return mappedLeads.find((lead) => lead.id === current.id) || mappedLeads[0];
+      });
     } catch (err) {
       setLeadError(err instanceof Error ? err.message : "Failed to load leads");
       setLeads([]);
@@ -201,43 +219,120 @@ export function CRM({ darkMode }: CRMProps) {
     loadLeads();
   }, []);
 
-  async function handleCreateLead() {
+  function openCreateLeadModal() {
+    setEditingLeadId(null);
+    setLeadForm(emptyLeadForm);
+    setFormError(null);
+    setShowLeadModal(true);
+  }
+
+  function openEditLeadModal(lead: UiLead) {
+    setEditingLeadId(lead.id);
+    setLeadForm({
+      name: lead.name || "",
+      email: lead.email || "",
+      phone: lead.phone || "",
+      source: lead.source || "website",
+      status: lead.status || "new",
+      score: lead.score || 50,
+      notes: lead.notes || "",
+    });
+    setFormError(null);
+    setShowLeadModal(true);
+  }
+
+  function closeLeadModal() {
+    if (savingLead || deletingLead) return;
+    setShowLeadModal(false);
+    setEditingLeadId(null);
+    setLeadForm(emptyLeadForm);
+    setFormError(null);
+  }
+
+  function buildPayload(): CreateClientLeadPayload {
+    return {
+      name: leadForm.name.trim(),
+      email: leadForm.email.trim() || undefined,
+      phone: leadForm.phone.trim() || undefined,
+      source: leadForm.source,
+      status: leadForm.status,
+      score: Math.max(0, Math.min(100, Number(leadForm.score) || 50)),
+      notes: leadForm.notes.trim() || undefined,
+    };
+  }
+
+  async function handleSaveLead() {
     try {
       setFormError(null);
 
-      if (!leadForm.name.trim()) {
+      const payload = buildPayload();
+
+      if (!payload.name) {
         setFormError("Lead name is required.");
         return;
       }
 
-      if (!leadForm.email.trim() && !leadForm.phone.trim()) {
+      if (!payload.email && !payload.phone) {
         setFormError("Email ya phone me se ek required hai.");
         return;
       }
 
-      setCreatingLead(true);
+      setSavingLead(true);
 
-      const payload: CreateClientLeadPayload = {
-        name: leadForm.name.trim(),
-        email: leadForm.email.trim() || undefined,
-        phone: leadForm.phone.trim() || undefined,
-        source: leadForm.source,
-        status: leadForm.status,
-        score: Number(leadForm.score) || 50,
-        notes: leadForm.notes.trim() || undefined,
-      };
+      if (editingLeadId) {
+        const updatedLead = await updateClientLead(editingLeadId, payload);
+        const mappedLead = mapApiLeadToUiLead(updatedLead, 0);
 
-      const createdLead = await createClientLead(payload);
-      const mappedLead = mapApiLeadToUiLead(createdLead, 0);
+        setLeads((prev) =>
+          prev.map((lead, index) =>
+            lead.id === editingLeadId ? mapApiLeadToUiLead(updatedLead, index) : lead
+          )
+        );
 
-      setLeads((prev) => [mappedLead, ...prev]);
-      setSelectedLead(mappedLead);
+        setSelectedLead(mappedLead);
+      } else {
+        const createdLead = await createClientLead(payload);
+        const mappedLead = mapApiLeadToUiLead(createdLead, 0);
+
+        setLeads((prev) => [mappedLead, ...prev]);
+        setSelectedLead(mappedLead);
+      }
+
       setLeadForm(emptyLeadForm);
-      setShowAddModal(false);
+      setEditingLeadId(null);
+      setShowLeadModal(false);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Failed to create lead");
+      setFormError(err instanceof Error ? err.message : "Failed to save lead");
     } finally {
-      setCreatingLead(false);
+      setSavingLead(false);
+    }
+  }
+
+  async function handleDeleteLead() {
+    if (!editingLeadId) return;
+
+    const confirmed = window.confirm("Archive this lead? It will be removed from active CRM.");
+    if (!confirmed) return;
+
+    try {
+      setDeletingLead(true);
+      setFormError(null);
+
+      await deleteClientLead(editingLeadId);
+
+      setLeads((prev) => {
+        const next = prev.filter((lead) => lead.id !== editingLeadId);
+        setSelectedLead(next[0] || null);
+        return next;
+      });
+
+      setLeadForm(emptyLeadForm);
+      setEditingLeadId(null);
+      setShowLeadModal(false);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Failed to archive lead");
+    } finally {
+      setDeletingLead(false);
     }
   }
 
@@ -248,8 +343,9 @@ export function CRM({ darkMode }: CRMProps) {
 
       const matchSearch =
         lead.name.toLowerCase().includes(query) ||
-        lead.company.toLowerCase().includes(query) ||
-        lead.title.toLowerCase().includes(query);
+        formatLabel(lead.source).toLowerCase().includes(query) ||
+        (lead.email || "").toLowerCase().includes(query) ||
+        (lead.phone || "").toLowerCase().includes(query);
 
       return matchStage && matchSearch;
     });
@@ -295,7 +391,7 @@ export function CRM({ darkMode }: CRMProps) {
           </div>
 
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={openCreateLeadModal}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
             style={{
               background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
@@ -416,7 +512,7 @@ export function CRM({ darkMode }: CRMProps) {
                     {lead.name}
                   </p>
                   <p className="text-xs truncate" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-                    {lead.title}
+                    {lead.email || lead.phone || "Real Estate Lead"}
                   </p>
                 </div>
 
@@ -473,10 +569,10 @@ export function CRM({ darkMode }: CRMProps) {
                     {selectedLead.name}
                   </h2>
                   <p className="text-sm" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-                    {selectedLead.title}
+                    {selectedLead.email || selectedLead.phone || "No contact detail"}
                   </p>
                   <p className="text-xs mt-1" style={{ color: selectedLead.color }}>
-                    {selectedLead.company}
+                    {formatLabel(selectedLead.source)}
                   </p>
                 </div>
 
@@ -537,14 +633,25 @@ export function CRM({ darkMode }: CRMProps) {
                   <div className="flex items-center gap-2 mb-2">
                     <Calendar size={14} style={{ color: "#10b981" }} />
                     <span className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                      Next Step
+                      Lead Notes
                     </span>
                   </div>
 
                   <p className="text-xs leading-relaxed" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
-                    Schedule site visit or follow-up call based on the lead source and current stage.
+                    {selectedLead.notes || "No notes added yet."}
                   </p>
                 </div>
+
+                <button
+                  onClick={() => openEditLeadModal(selectedLead)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
+                  style={{
+                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                    color: "#ffffff",
+                  }}
+                >
+                  <Edit3 size={14} /> Edit Lead
+                </button>
               </div>
             </>
           ) : (
@@ -555,12 +662,12 @@ export function CRM({ darkMode }: CRMProps) {
         </div>
       </div>
 
-      {showAddModal && (
+      {showLeadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0"
             style={{ background: "rgba(0,0,0,0.45)" }}
-            onClick={() => !creatingLead && setShowAddModal(false)}
+            onClick={closeLeadModal}
           />
 
           <motion.div
@@ -575,15 +682,15 @@ export function CRM({ darkMode }: CRMProps) {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h2 className="text-lg font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                  Add New Lead
+                  {editingLeadId ? "Edit Lead" : "Add New Lead"}
                 </h2>
                 <p className="text-xs mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-                  This lead will be saved directly in backend CRM.
+                  {editingLeadId ? "Update this lead directly in backend CRM." : "This lead will be saved directly in backend CRM."}
                 </p>
               </div>
 
               <button
-                onClick={() => !creatingLead && setShowAddModal(false)}
+                onClick={closeLeadModal}
                 className="p-2 rounded-xl"
                 style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
               >
@@ -709,28 +816,47 @@ export function CRM({ darkMode }: CRMProps) {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 mt-5">
-              <button
-                onClick={() => setShowAddModal(false)}
-                disabled={creatingLead}
-                className="px-4 py-2 rounded-xl text-sm border"
-                style={{ borderColor: cardBase.borderColor, color: darkMode ? "#94a3b8" : "#64748b" }}
-              >
-                Cancel
-              </button>
+            <div className="flex items-center justify-between gap-2 mt-5">
+              <div>
+                {editingLeadId && (
+                  <button
+                    onClick={handleDeleteLead}
+                    disabled={savingLead || deletingLead}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm border disabled:opacity-60"
+                    style={{
+                      borderColor: "rgba(239,68,68,0.25)",
+                      color: "#ef4444",
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    {deletingLead ? "Archiving..." : "Archive Lead"}
+                  </button>
+                )}
+              </div>
 
-              <button
-                onClick={handleCreateLead}
-                disabled={creatingLead}
-                className="px-4 py-2 rounded-xl text-sm font-medium"
-                style={{
-                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                  color: "#ffffff",
-                  opacity: creatingLead ? 0.7 : 1,
-                }}
-              >
-                {creatingLead ? "Creating..." : "Create Lead"}
-              </button>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={closeLeadModal}
+                  disabled={savingLead || deletingLead}
+                  className="px-4 py-2 rounded-xl text-sm border"
+                  style={{ borderColor: cardBase.borderColor, color: darkMode ? "#94a3b8" : "#64748b" }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={handleSaveLead}
+                  disabled={savingLead || deletingLead}
+                  className="px-4 py-2 rounded-xl text-sm font-medium"
+                  style={{
+                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                    color: "#ffffff",
+                    opacity: savingLead ? 0.7 : 1,
+                  }}
+                >
+                  {savingLead ? "Saving..." : editingLeadId ? "Update Lead" : "Create Lead"}
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>

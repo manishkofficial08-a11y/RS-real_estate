@@ -71,12 +71,22 @@ export async function clientFetch<T>(
     throw new Error("Client session expired. Please login again.");
   }
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `Request failed: ${response.status}`);
-  }
+if (!response.ok) {
+  const errorText = await response.text();
+  throw new Error(errorText || `Request failed: ${response.status}`);
+}
 
-  return response.json();
+if (response.status === 204) {
+  return undefined as T;
+}
+
+const text = await response.text();
+
+if (!text) {
+  return undefined as T;
+}
+
+return JSON.parse(text) as T;
 }
 export type ClientLead = {
   id: string;
@@ -150,5 +160,33 @@ export async function createClientLead(
   return clientFetch<ClientLead>("/leads/", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+export type UpdateClientPropertyPayload = Partial<CreateClientPropertyPayload>;
+
+export async function updateClientProperty(
+  propertyId: string,
+  payload: UpdateClientPropertyPayload
+): Promise<ClientProperty> {
+  return clientFetch<ClientProperty>(`/properties/${propertyId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+export type UpdateClientLeadPayload = Partial<CreateClientLeadPayload>;
+
+export async function updateClientLead(
+  leadId: string,
+  payload: UpdateClientLeadPayload
+): Promise<ClientLead> {
+  return clientFetch<ClientLead>(`/leads/${leadId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteClientLead(leadId: string): Promise<void> {
+  await clientFetch<void>(`/leads/${leadId}`, {
+    method: "DELETE",
   });
 }
