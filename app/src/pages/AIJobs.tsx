@@ -171,7 +171,7 @@ const getRuntimeLabel = (job: AdminAIJob) => {
     new Date().toISOString();
   const end = new Date(endValue).getTime();
 
-  if (Number.isNaN(start) || Number.isNaN(end) || end < start) return "—";
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start) return "â€”";
 
   const diffSeconds = Math.max(0, Math.round((end - start) / 1000));
 
@@ -523,7 +523,7 @@ export default function AIJobs() {
                     className="font-mono text-data font-medium"
                     style={{ color: "#F0EDE6" }}
                   >
-                    {loading ? "—" : card.value}
+                    {loading ? "â€”" : card.value}
                   </p>
                   <p className="mt-2 text-xs" style={{ color: "#55555C" }}>
                     {card.sub}
@@ -1182,7 +1182,7 @@ export default function AIJobs() {
         style={{ borderTop: "1px solid rgba(255, 255, 255, 0.04)" }}
       >
         <span className="text-xs" style={{ color: "#55555C" }}>
-          MMe-AI v2.0
+          RS Real Estate v2.0
         </span>
         <span className="text-xs font-mono" style={{ color: "#55555C" }}>
           Last synced:{" "}

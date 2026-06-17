@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getAdminTenants, toggleAdminTenant, type AdminTenant } from '@/lib/adminApi';
 import {
   AlertTriangle,
@@ -480,7 +480,7 @@ export default function Companies() {
         className="mt-8 flex flex-col gap-2 pt-4 sm:flex-row sm:items-center sm:justify-between"
         style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}
       >
-        <span className="text-xs" style={{ color: '#55555C' }}>AI Growth OS v2.0</span>
+        <span className="text-xs" style={{ color: '#55555C' }}>RS Real Estate v2.0</span>
         <span className="text-xs font-mono" style={{ color: '#55555C' }}>
           {loading ? 'Syncing...' : `Showing ${filtered.length} of ${tenants.length} companies`}
         </span>

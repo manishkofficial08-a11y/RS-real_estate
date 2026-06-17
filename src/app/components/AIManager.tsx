@@ -18,7 +18,7 @@ const suggested = [
 const initialMessages = [
   {
     role: "ai",
-    content: "Hello Jane! I'm your AI Business Manager. I've analyzed all your data — content performance, lead pipeline, analytics, and market trends.\n\nYour business is performing at **92/100** health score this week. Here's what I see:\n\n• 📈 Engagement up 28% — LinkedIn posts are crushing it\n• 🎯 12 warm leads haven't been contacted in 7+ days\n• ⚡ Thursday 7PM is your peak engagement window\n• 🔥 Video content generates 3.2x more reach than images\n\nWhat would you like to work on today?",
+    content: "Hello there! I'm your AI Business Manager. I've analyzed all your data â€” content performance, lead pipeline, analytics, and market trends.\n\nYour business is performing at **92/100** health score this week. Here's what I see:\n\nâ€¢ ðŸ“ˆ Engagement up 28% â€” LinkedIn posts are crushing it\nâ€¢ ðŸŽ¯ 12 warm leads haven't been contacted in 7+ days\nâ€¢ âš¡ Thursday 7PM is your peak engagement window\nâ€¢ ðŸ”¥ Video content generates 3.2x more reach than images\n\nWhat would you like to work on today?",
     time: "Just now",
   }
 ];
@@ -26,9 +26,9 @@ const initialMessages = [
 type Message = { role: "ai" | "user"; content: string; time: string };
 
 const aiResponses: Record<string, string> = {
-  default: "Based on your current data, I recommend focusing on **LinkedIn thought leadership content** this week. Your audience of marketing directors responds best to data-driven insights. I'll generate 3 post ideas for you.\n\n**Action items:**\n1. Schedule 2 posts on Thursday between 6-8 PM\n2. Follow up with Sarah Chen — she's your hottest lead\n3. Repurpose your top video into 5 short clips for Instagram Reels\n\nWant me to execute any of these automatically?",
-  "best performing": "Your **top performing content** this month:\n\n1. 🥇 'AI trends reshaping B2B marketing' — 42.1K reach, 8.4% engagement\n2. 🥈 'How we 10x'd lead gen' — 38.7K reach, 12.1% engagement\n3. 🥉 'The future of work thread' — 29.3K reach, 6.8% engagement\n\n**Pattern I notice:** Long-form educational content with data points performs 3x better than promotional posts. Want me to generate more content in this style?",
-  "growth strategy": "**30-Day AI-Powered Growth Strategy:**\n\n**Week 1–2: Content Authority**\n• Publish 3 thought leadership pieces on LinkedIn\n• Launch 1 YouTube tutorial per week\n• Engage with 50 warm prospects daily\n\n**Week 3–4: Lead Acceleration**\n• Retarget website visitors with LinkedIn ads\n• Launch automated email sequence for 12 cold leads\n• Host a live Q&A to capture 200+ new leads\n\n**Expected results:** +18% follower growth, +40% lead conversion, $95K additional pipeline\n\nShall I auto-schedule all content for the next 30 days?",
+  default: "Based on your current data, I recommend focusing on **LinkedIn thought leadership content** this week. Your audience of marketing directors responds best to data-driven insights. I'll generate 3 post ideas for you.\n\n**Action items:**\n1. Schedule 2 posts on Thursday between 6-8 PM\n2. Follow up with Sarah Chen â€” she's your hottest lead\n3. Repurpose your top video into 5 short clips for Instagram Reels\n\nWant me to execute any of these automatically?",
+  "best performing": "Your **top performing content** this month:\n\n1. ðŸ¥‡ 'AI trends reshaping B2B marketing' â€” 42.1K reach, 8.4% engagement\n2. ðŸ¥ˆ 'How we 10x'd lead gen' â€” 38.7K reach, 12.1% engagement\n3. ðŸ¥‰ 'The future of work thread' â€” 29.3K reach, 6.8% engagement\n\n**Pattern I notice:** Long-form educational content with data points performs 3x better than promotional posts. Want me to generate more content in this style?",
+  "growth strategy": "**30-Day AI-Powered Growth Strategy:**\n\n**Week 1â€“2: Content Authority**\nâ€¢ Publish 3 thought leadership pieces on LinkedIn\nâ€¢ Launch 1 YouTube tutorial per week\nâ€¢ Engage with 50 warm prospects daily\n\n**Week 3â€“4: Lead Acceleration**\nâ€¢ Retarget website visitors with LinkedIn ads\nâ€¢ Launch automated email sequence for 12 cold leads\nâ€¢ Host a live Q&A to capture 200+ new leads\n\n**Expected results:** +18% follower growth, +40% lead conversion, $95K additional pipeline\n\nShall I auto-schedule all content for the next 30 days?",
 };
 
 interface AIManagerProps {
@@ -149,7 +149,7 @@ export function AIManager({ darkMode }: AIManagerProps) {
           </div>
           <div>
             <p className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>AI Business Manager</p>
-            <p className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Powered by AI Growth OS · Full business context loaded</p>
+            <p className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Powered by RS Real Estate Â· Full business context loaded</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <button className="p-2 rounded-xl hover:bg-primary/5 transition-all" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
@@ -284,7 +284,7 @@ export function AIManager({ darkMode }: AIManagerProps) {
             </div>
           </div>
           <p className="text-xs text-center mt-2" style={{ color: darkMode ? "#1e293b" : "#cbd5e1" }}>
-            AI Manager has full access to your business data · <span style={{ color: darkMode ? "#818cf8" : "#6366f1" }}>Enterprise plan</span>
+            AI Manager has full access to your business data Â· <span style={{ color: darkMode ? "#818cf8" : "#6366f1" }}>Enterprise plan</span>
           </p>
         </div>
       </div>

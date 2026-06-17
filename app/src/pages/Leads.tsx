@@ -222,7 +222,7 @@ export default function Leads() {
       )}
 
       <div className="flex items-center justify-between mt-4 pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
-        <span className="text-xs" style={{ color: '#55555C' }}>AI Growth OS v2.0</span>
+        <span className="text-xs" style={{ color: '#55555C' }}>RS Real Estate v2.0</span>
         <span className="text-xs font-mono" style={{ color: '#55555C' }}>
           {loading ? 'Syncing...' : `Showing ${leads.length} real leads`}
         </span>

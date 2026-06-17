@@ -360,7 +360,7 @@ export default function Overview() {
         style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}
       >
         <span className="text-xs" style={{ color: '#55555C' }}>
-          MMe-AI v2.0
+          RS Real Estate v2.0
         </span>
         <span className="text-xs font-mono" style={{ color: '#55555C' }}>
           Last synced: live backend

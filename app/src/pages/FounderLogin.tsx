@@ -54,7 +54,7 @@ export default function FounderLogin() {
 
           <div>
             <h1 className="font-display text-2xl font-medium tracking-[-0.03em]" style={{ color: '#F0EDE6' }}>
-              AI Growth OS
+              RS Real Estate
             </h1>
             <p className="text-sm" style={{ color: '#8A8A93' }}>
               Founder Control Center

@@ -1,4 +1,4 @@
-﻿import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { analyticsData, companies } from '@/data/mock';
 import {
   AreaChart,
@@ -353,7 +353,7 @@ export default function Analytics() {
       </div>
 
       <div className="mt-8 flex flex-col gap-2 pt-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
-        <span className="text-xs" style={{ color: '#55555C' }}>MMe-AI v2.0</span>
+        <span className="text-xs" style={{ color: '#55555C' }}>RS Real Estate v2.0</span>
         <span className="text-xs font-mono" style={{ color: '#55555C' }}>Last synced: 2 min ago</span>
       </div>
     </div>

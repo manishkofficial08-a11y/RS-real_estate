@@ -15,12 +15,12 @@ const scheduledPosts: Record<number, { time: string; platform: string; content: 
     { time: "2:00 PM", platform: "Instagram", content: "Behind the scenes of our product launch", status: "scheduled", color: "#e1306c" },
     { time: "6:00 PM", platform: "Twitter", content: "Thread: 10 growth hacks we discovered", status: "scheduled", color: "#1da1f2" },
   ],
-  8: [{ time: "11:00 AM", platform: "YouTube", content: "Full tutorial: Getting started with AI Growth OS", status: "draft", color: "#ff0000" }],
+  8: [{ time: "11:00 AM", platform: "YouTube", content: "Full tutorial: Getting started with RS Real Estate", status: "draft", color: "#ff0000" }],
   11: [
     { time: "9:00 AM", platform: "LinkedIn", content: "Monthly analytics report breakdown", status: "scheduled", color: "#0077b5" },
     { time: "3:00 PM", platform: "Instagram", content: "Customer success story: 300% ROI", status: "scheduled", color: "#e1306c" },
   ],
-  15: [{ time: "10:00 AM", platform: "Twitter", content: "Product update announcement 🚀", status: "scheduled", color: "#1da1f2" }],
+  15: [{ time: "10:00 AM", platform: "Twitter", content: "Product update announcement ðŸš€", status: "scheduled", color: "#1da1f2" }],
   18: [{ time: "4:00 PM", platform: "LinkedIn", content: "Industry report: State of B2B Marketing", status: "draft", color: "#0077b5" }],
   22: [
     { time: "9:00 AM", platform: "Instagram", content: "New feature spotlight video", status: "scheduled", color: "#e1306c" },
@@ -80,7 +80,7 @@ export function Scheduler({ darkMode }: SchedulerProps) {
           <div>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: darkMode ? "#e2e8f0" : "#0f172a" }}>Scheduler</h1>
             <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-              28 posts scheduled this month · AI suggests 3 optimal times
+              28 posts scheduled this month Â· AI suggests 3 optimal times
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -140,8 +140,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
               }}
             >
               <div>
-                <p className="text-xs font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{s.day} · {s.time}</p>
-                <p className="text-xs" style={{ color: "#10b981" }}>{s.platform} · {s.reach} reach</p>
+                <p className="text-xs font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{s.day} Â· {s.time}</p>
+                <p className="text-xs" style={{ color: "#10b981" }}>{s.platform} Â· {s.reach} reach</p>
               </div>
               <Plus size={12} style={{ color: darkMode ? "#818cf8" : "#6366f1" }} />
             </button>

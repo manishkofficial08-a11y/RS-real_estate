@@ -9,7 +9,7 @@ const sessions = [
 
 export default function Settings() {
   const [tab, setTab] = useState<'general' | 'ai' | 'security'>('general');
-  const [platformName, setPlatformName] = useState('MMe-AI');
+  const [platformName, setPlatformName] = useState('RS Real Estate');
   const [supportEmail, setSupportEmail] = useState('support@aigrowth.os');
   const [aiModel, setAiModel] = useState('GPT-4o');
   const [aiCredits, setAiCredits] = useState('1000');
@@ -296,10 +296,9 @@ export default function Settings() {
       )}
 
       <div className="flex items-center justify-between mt-8 pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
-        <span className="text-xs" style={{ color: '#55555C' }}>MMe-AI v2.0</span>
+        <span className="text-xs" style={{ color: '#55555C' }}>RS Real Estate v2.0</span>
         <span className="text-xs font-mono" style={{ color: '#55555C' }}>Last synced: 2 min ago</span>
       </div>
     </div>
   );
 }
-

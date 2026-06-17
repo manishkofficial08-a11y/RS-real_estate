@@ -334,7 +334,7 @@ export default function Support() {
                             {ticket.subject}
                           </span>
                           <p className="text-xs mt-1" style={{ color: '#55555C' }}>
-                            #{ticket.id.slice(0, 8)} · {formatLabel(ticket.category)}
+                            #{ticket.id.slice(0, 8)} Â· {formatLabel(ticket.category)}
                           </p>
                         </div>
                       </td>
@@ -435,7 +435,7 @@ export default function Support() {
                   {selectedTicket.subject}
                 </h2>
                 <p className="text-xs mt-1" style={{ color: '#55555C' }}>
-                  {selectedTicket.business_name || 'Unknown Company'} · {formatDate(selectedTicket.created_at)}
+                  {selectedTicket.business_name || 'Unknown Company'} Â· {formatDate(selectedTicket.created_at)}
                 </p>
               </div>
 
@@ -542,7 +542,7 @@ export default function Support() {
         style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}
       >
         <span className="text-xs" style={{ color: '#55555C' }}>
-          AI Growth OS v2.0
+          RS Real Estate v2.0
         </span>
         <span className="text-xs font-mono" style={{ color: '#55555C' }}>
           {loading ? 'Syncing...' : `Showing ${tickets.length} tickets from backend`}
