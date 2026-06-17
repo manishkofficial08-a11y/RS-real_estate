@@ -36,14 +36,6 @@ const screenComponents: Record<
     <Dashboard darkMode={darkMode} onNavigate={onNavigate!} />
   ),
   "ai-studio": ({ darkMode }) => <AIStudio darkMode={darkMode} />,
-  content: ({ darkMode }) => (
-    <MediaLibrary
-      darkMode={darkMode}
-      defaultFilter="text"
-      title="Content Library"
-      subtitle="Manage reusable post copy, campaign notes, PDFs, and content links."
-    />
-  ),
   media: ({ darkMode }) => <MediaLibrary darkMode={darkMode} />,
   analytics: ({ darkMode }) => <Analytics darkMode={darkMode} />,
   crm: ({ darkMode }) => <CRM darkMode={darkMode} />,
@@ -57,7 +49,6 @@ const screenComponents: Record<
 
 const screenTitles: Record<string, string> = {
   dashboard: "Dashboard",
-  content: "Content",
   media: "Media Library",
   "ai-studio": "AI Studio",
   scheduler: "Scheduler",
@@ -167,7 +158,7 @@ export default function App() {
     );
   }
 
-  const ScreenComponent = screenComponents[activeScreen];
+  const ScreenComponent = (screenComponents[activeScreen] || screenComponents.media || screenComponents.dashboard);
   const handleNotificationClick = async (notification: ClientNotification) => {
     try {
       if (!notification.is_read) {
@@ -311,7 +302,7 @@ export default function App() {
               className="text-sm font-medium"
               style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
             >
-              {screenTitles[activeScreen] || activeScreen}
+              {(screenTitles[activeScreen] || screenTitles.media || "Media Library") || activeScreen}
             </span>
           </div>
 

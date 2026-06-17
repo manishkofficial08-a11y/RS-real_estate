@@ -73,7 +73,22 @@ export async function clientFetch<T>(
 
 if (!response.ok) {
   const errorText = await response.text();
-  throw new Error(errorText || `Request failed: ${response.status}`);
+  let friendlyMessage = "";
+  try {
+    const parsed = JSON.parse(errorText);
+    if (parsed && parsed.detail) {
+      if (typeof parsed.detail === "string") {
+        friendlyMessage = parsed.detail;
+      } else if (Array.isArray(parsed.detail)) {
+        friendlyMessage = parsed.detail.map((err: any) => err.msg || JSON.stringify(err)).join(", ");
+      } else {
+        friendlyMessage = JSON.stringify(parsed.detail);
+      }
+    }
+  } catch (e) {
+    friendlyMessage = errorText;
+  }
+  throw new Error(friendlyMessage || `Request failed: ${response.status}`);
 }
 
 if (response.status === 204) {
@@ -415,6 +430,9 @@ export type ClientUploadResponse = {
   filename: string;
   url: string;
   size: number;
+  mime_type?: string;
+  original_filename?: string;
+  asset_type?: ClientContentAssetType;
 };
 
 export async function uploadClientAssetFile(
@@ -430,7 +448,7 @@ export async function uploadClientAssetFile(
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${API_BASE_URL}/upload/image`, {
+  const response = await fetch(`${API_BASE_URL}/upload/asset`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -461,8 +479,10 @@ export async function getMyContentAssets(params?: {
     searchParams.set("asset_type", params.asset_type);
   }
 
-  if (params?.search?.trim()) {
-    searchParams.set("search", params.search.trim());
+  const search = typeof params?.search === "string" ? params.search.trim() : "";
+
+  if (search) {
+    searchParams.set("search", search);
   }
 
   const query = searchParams.toString();

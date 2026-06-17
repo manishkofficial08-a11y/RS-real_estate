@@ -29,7 +29,6 @@ import type { ClientProfile } from "../lib/clientApi";
 
 const navItems = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", badge: null },
-  { id: "content", icon: FileText, label: "Content", badge: "12" },
   { id: "media", icon: Image, label: "Media Library", badge: null },
   { id: "ai-studio", icon: Sparkles, label: "AI Studio", badge: "New" },
   { id: "scheduler", icon: Calendar, label: "Scheduler", badge: null },
