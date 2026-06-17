@@ -368,3 +368,131 @@ export async function getMyClientAIJobs(): Promise<ClientAIJob[]> {
   return clientFetch<ClientAIJob[]>("/ai-jobs/jobs/my");
 }
 
+export type ClientContentAssetType =
+  | "image"
+  | "video"
+  | "pdf"
+  | "text"
+  | "link";
+
+export type ClientContentAsset = {
+  id: string;
+  tenant_id: string;
+  uploaded_by_user_id: string;
+  title: string;
+  description?: string | null;
+  asset_type: ClientContentAssetType | string;
+  file_url?: string | null;
+  file_name?: string | null;
+  mime_type?: string | null;
+  file_size?: number | null;
+  property_id?: string | null;
+  property_title?: string | null;
+  uploaded_by_name?: string | null;
+  uploaded_by_email?: string | null;
+  metadata_json?: Record<string, unknown> | null;
+  is_active: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type CreateClientContentAssetPayload = {
+  title: string;
+  description?: string;
+  asset_type: ClientContentAssetType;
+  file_url?: string;
+  file_name?: string;
+  mime_type?: string;
+  file_size?: number;
+  property_id?: string | null;
+  metadata_json?: Record<string, unknown>;
+};
+
+export type UpdateClientContentAssetPayload =
+  Partial<CreateClientContentAssetPayload>;
+
+export type ClientUploadResponse = {
+  filename: string;
+  url: string;
+  size: number;
+};
+
+export async function uploadClientAssetFile(
+  file: File,
+): Promise<ClientUploadResponse> {
+  const token = getClientToken();
+
+  if (!token) {
+    clearClientSession();
+    throw new Error("Client session missing. Please login again.");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_BASE_URL}/upload/image`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    clearClientSession();
+    throw new Error("Client session expired. Please login again.");
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `Upload failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function getMyContentAssets(params?: {
+  asset_type?: ClientContentAssetType | "all";
+  search?: string;
+}): Promise<ClientContentAsset[]> {
+  const searchParams = new URLSearchParams();
+
+  if (params?.asset_type && params.asset_type !== "all") {
+    searchParams.set("asset_type", params.asset_type);
+  }
+
+  if (params?.search?.trim()) {
+    searchParams.set("search", params.search.trim());
+  }
+
+  const query = searchParams.toString();
+  return clientFetch<ClientContentAsset[]>(
+    `/content/assets/my${query ? `?${query}` : ""}`,
+  );
+}
+
+export async function createContentAsset(
+  payload: CreateClientContentAssetPayload,
+): Promise<ClientContentAsset> {
+  return clientFetch<ClientContentAsset>("/content/assets/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateContentAsset(
+  assetId: string,
+  payload: UpdateClientContentAssetPayload,
+): Promise<ClientContentAsset> {
+  return clientFetch<ClientContentAsset>(`/content/assets/${assetId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteContentAsset(assetId: string): Promise<void> {
+  await clientFetch<void>(`/content/assets/${assetId}`, {
+    method: "DELETE",
+  });
+}
+
