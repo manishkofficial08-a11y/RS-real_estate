@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import {
   createContentAsset,
+  createGeneratedPost,
   deleteContentAsset,
   getClientProperties,
   getMyContentAssets,
@@ -26,6 +27,7 @@ import {
   uploadClientAssetFile,
   type ClientContentAsset,
   type ClientContentAssetType,
+  type ClientGeneratedPostPlatform,
   type ClientProperty,
 } from "../lib/clientApi";
 
@@ -104,6 +106,18 @@ const creationModes: Array<{
   },
 ];
 
+const socialDraftPlatformOptions: Array<{
+  value: ClientGeneratedPostPlatform;
+  label: string;
+}> = [
+  { value: "instagram", label: "Instagram" },
+  { value: "facebook", label: "Facebook" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "twitter", label: "Twitter/X" },
+  { value: "website", label: "Website" },
+  { value: "other", label: "Other" },
+];
+
 function getAssetMeta(assetType?: string | null) {
   return (
     assetTypeOptions.find((option) => option.value === assetType) ||
@@ -180,6 +194,66 @@ function assetHasLocalPreview(asset: ClientContentAsset) {
   return Boolean(asset.file_url && asset.asset_type !== "link");
 }
 
+function isSuccessMessage(value: string) {
+  const normalized = value.toLowerCase();
+
+  return (
+    normalized.includes("success") ||
+    normalized.includes("created") ||
+    normalized.includes("added") ||
+    normalized.includes("updated") ||
+    normalized.includes("archived")
+  );
+}
+
+function getDraftContentFromAsset(asset: ClientContentAsset) {
+  const description = asset.description?.trim();
+
+  if (description) {
+    return description;
+  }
+
+  const textBody =
+    typeof asset.metadata_json?.body === "string"
+      ? asset.metadata_json.body.trim()
+      : "";
+
+  if (asset.asset_type === "text" && textBody) {
+    return textBody;
+  }
+
+  if (asset.asset_type === "image") {
+    return `Showcasing ${asset.title}. Message us for details, pricing, and site visit availability.`;
+  }
+
+  if (asset.asset_type === "video") {
+    return `Take a closer look at ${asset.title}. Message us for details, pricing, and site visit availability.`;
+  }
+
+  return `Sharing ${asset.title}. Message us for more details.`;
+}
+
+function getDraftHashtagsFromAsset(asset: ClientContentAsset) {
+  const tags = asset.metadata_json?.tags;
+
+  if (!Array.isArray(tags)) {
+    return [];
+  }
+
+  return tags
+    .filter((tag): tag is string => typeof tag === "string")
+    .map((tag) => tag.trim().replace(/^#+/, ""))
+    .filter(Boolean);
+}
+
+function getDraftMediaAssetIds(asset: ClientContentAsset) {
+  if (asset.asset_type === "image" || asset.asset_type === "video") {
+    return [asset.id];
+  }
+
+  return [];
+}
+
 let cachedContentAssets: ClientContentAsset[] = [];
 
 export function MediaLibrary({
@@ -202,6 +276,8 @@ export function MediaLibrary({
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [assetMode, setAssetMode] = useState<AssetMode>("upload");
+  const [draftPlatform, setDraftPlatform] =
+    useState<ClientGeneratedPostPlatform>("instagram");
   const [form, setForm] = useState<AssetFormState>(emptyForm);
 
   function syncAssets(
@@ -558,6 +634,42 @@ export function MediaLibrary({
     }
   }
 
+  async function handleCreateDraftPost(asset: ClientContentAsset) {
+    try {
+      setSaving(true);
+      setMessage(null);
+
+      await createGeneratedPost({
+        title: `Post: ${asset.title}`,
+        content: getDraftContentFromAsset(asset),
+        platform: draftPlatform,
+        status: "draft",
+        property_id: asset.property_id || null,
+        hashtags: getDraftHashtagsFromAsset(asset),
+        media_asset_ids: getDraftMediaAssetIds(asset),
+        metadata_json: {
+          source: "media_library",
+          source_asset_id: asset.id,
+          source_asset_type: asset.asset_type,
+          source_file_url: asset.file_url || null,
+          source_file_name: asset.file_name || null,
+        },
+      });
+
+      setMessage(
+        "Draft post created. Open AI Studio > Generated Posts to schedule or publish.",
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to create draft post from asset",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     loadAssets();
@@ -685,15 +797,15 @@ export function MediaLibrary({
             className="rounded-xl border px-4 py-3 text-sm"
             style={{
               background:
-                message.includes("success") || message.includes("archived")
+                isSuccessMessage(message)
                   ? "rgba(16,185,129,0.08)"
                   : "rgba(245,158,11,0.08)",
               borderColor:
-                message.includes("success") || message.includes("archived")
+                isSuccessMessage(message)
                   ? "rgba(16,185,129,0.22)"
                   : "rgba(245,158,11,0.22)",
               color:
-                message.includes("success") || message.includes("archived")
+                isSuccessMessage(message)
                   ? "#10b981"
                   : "#f59e0b",
             }}
@@ -1045,6 +1157,70 @@ export function MediaLibrary({
                     ))}
                   </div>
                 )}
+
+                <div className="rounded-2xl border p-4" style={subtlePanel}>
+                  <div>
+                    <h3
+                      className="text-sm font-semibold"
+                      style={{ color: textPrimary }}
+                    >
+                      Create social draft
+                    </h3>
+                    <p className="mt-1 text-xs" style={{ color: textMuted }}>
+                      Turn this asset into a Generated Posts draft for AI Studio.
+                    </p>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+                    <div>
+                      <label
+                        htmlFor="social-draft-platform"
+                        className="text-xs"
+                        style={{ color: textMuted }}
+                      >
+                        Platform
+                      </label>
+                      <select
+                        id="social-draft-platform"
+                        value={draftPlatform}
+                        onChange={(event) =>
+                          setDraftPlatform(
+                            event.target.value as ClientGeneratedPostPlatform,
+                          )
+                        }
+                        className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
+                        style={{
+                          background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
+                          borderColor: cardBase.borderColor,
+                          color: textPrimary,
+                        }}
+                      >
+                        {socialDraftPlatformOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => handleCreateDraftPost(selectedAsset)}
+                        disabled={saving}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-60 sm:w-auto"
+                        style={{
+                          background: "linear-gradient(135deg, #6366f1, #06b6d4)",
+                          color: "#ffffff",
+                          boxShadow: "0 4px 14px rgba(99,102,241,0.24)",
+                        }}
+                      >
+                        {saving && <Loader2 size={14} className="animate-spin" />}
+                        {saving ? "Creating..." : "Create Draft Post"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="flex flex-wrap gap-2">
                   {selectedAsset.file_url && (
