@@ -105,7 +105,7 @@ export default function Companies() {
     {
       label: 'Total Companies',
       value: tenants.length,
-      sub: 'Client workspaces',
+      sub: 'Client portals',
       icon: Building2,
       color: '#6B8AFF',
     },
@@ -215,7 +215,7 @@ export default function Companies() {
                   <Icon size={17} />
                 </div>
               </div>
-              <p className="font-mono text-data font-medium" style={{ color: '#F0EDE6' }}>{loading ? '—' : card.value}</p>
+              <p className="font-mono text-data font-medium" style={{ color: '#F0EDE6' }}>{loading ? 'â€”' : card.value}</p>
               <p className="mt-2 text-xs" style={{ color: '#55555C' }}>{card.sub}</p>
             </div>
           );
@@ -312,7 +312,7 @@ export default function Companies() {
                             </div>
                             <div>
                               <p className="text-sm font-medium" style={{ color: '#F0EDE6' }}>{company.name}</p>
-                              <p className="mt-1 text-xs font-mono" style={{ color: '#55555C' }}>Workspace tenant</p>
+                              <p className="mt-1 text-xs font-mono" style={{ color: '#55555C' }}>Portal tenant</p>
                             </div>
                           </div>
                         </td>

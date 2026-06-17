@@ -32,7 +32,7 @@ function MediaLibrary({ darkMode }: { darkMode: boolean }) {
         <div className="flex items-center justify-between">
           <div>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: darkMode ? "#e2e8f0" : "#0f172a" }}>Media Library</h1>
-            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>284 files Â· 4.2 GB used of 10 GB</p>
+            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>284 files Ã‚Â· 4.2 GB used of 10 GB</p>
           </div>
           <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#ffffff", boxShadow: "0 4px 14px rgba(99,102,241,0.3)" }}>
             <Upload size={14} /> Upload Files
@@ -48,7 +48,7 @@ function MediaLibrary({ darkMode }: { darkMode: boolean }) {
             <Upload size={20} style={{ color: "#6366f1" }} />
           </div>
           <p className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>Drag & drop files here</p>
-          <p className="text-xs mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>PNG, JPG, MP4, MOV up to 500MB Â· AI auto-analysis on upload</p>
+          <p className="text-xs mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>PNG, JPG, MP4, MOV up to 500MB Ã‚Â· AI auto-analysis on upload</p>
         </div>
 
         {/* Files grid */}
@@ -96,7 +96,7 @@ function Team({ darkMode }: { darkMode: boolean }) {
         <div className="flex items-center justify-between">
           <div>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: darkMode ? "#e2e8f0" : "#0f172a" }}>Team</h1>
-            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>5 members Â· 2 seats remaining</p>
+            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>5 members Ã‚Â· 2 seats remaining</p>
           </div>
           <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#ffffff" }}>
             <Plus size={14} /> Invite Member
@@ -141,7 +141,7 @@ function Integrations({ darkMode }: { darkMode: boolean }) {
         <div className="flex items-center justify-between">
           <div>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: darkMode ? "#e2e8f0" : "#0f172a" }}>Integrations</h1>
-            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>3 connected Â· 60+ available</p>
+            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>3 connected Ã‚Â· 60+ available</p>
           </div>
           <button className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs border transition-all" style={{ borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)", color: darkMode ? "#818cf8" : "#6366f1" }}>
             Browse all
@@ -188,7 +188,7 @@ function Billing({ darkMode }: { darkMode: boolean }) {
             <div>
               <span className="text-xs px-2 py-0.5 rounded-full mb-2 inline-block" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#ffffff" }}>Enterprise Plan</span>
               <div style={{ fontSize: "2rem", fontWeight: 700, color: darkMode ? "#e2e8f0" : "#0f172a", letterSpacing: "-0.03em" }}>$499<span className="text-sm font-normal" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>/mo</span></div>
-              <p className="text-xs mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Next billing: July 1, 2026 Â· Auto-renew enabled</p>
+              <p className="text-xs mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Next billing: July 1, 2026 Ã‚Â· Auto-renew enabled</p>
             </div>
             <button className="px-4 py-2 rounded-xl border text-sm transition-all" style={{ borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)", color: darkMode ? "#818cf8" : "#6366f1" }}>
               Manage Plan
@@ -241,9 +241,9 @@ function SettingsScreen({ darkMode }: { darkMode: boolean }) {
             ]
           },
           {
-            section: "Workspace", icon: Settings, items: [
+            section: "Portal", icon: Settings, items: [
               { label: "Brand Settings", desc: "Logo, colors, fonts", icon: Palette },
-              { label: "Custom Domain", desc: "White-label your workspace", icon: Globe },
+              { label: "Custom Domain", desc: "White-label your portal", icon: Globe },
               { label: "Team Permissions", desc: "Role-based access control", icon: Shield },
               { label: "Email Templates", desc: "Customize automated emails", icon: Mail },
             ]
@@ -289,7 +289,7 @@ function AutomationScreen({ darkMode }: { darkMode: boolean }) {
         <div className="flex items-center justify-between">
           <div>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: darkMode ? "#e2e8f0" : "#0f172a" }}>Automation</h1>
-            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>4 active automations Â· 591 total runs</p>
+            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>4 active automations Ã‚Â· 591 total runs</p>
           </div>
           <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#ffffff" }}>
             <Plus size={14} /> New Automation
@@ -308,7 +308,7 @@ function AutomationScreen({ darkMode }: { darkMode: boolean }) {
               </div>
               <div className="text-right">
                 <p className="text-xs font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{auto.runs} runs</p>
-                <span className="text-xs" style={{ color: auto.status === "active" ? "#10b981" : "#f59e0b" }}>â— {auto.status}</span>
+                <span className="text-xs" style={{ color: auto.status === "active" ? "#10b981" : "#f59e0b" }}>Ã¢â€”Â {auto.status}</span>
               </div>
             </div>
           ))}
