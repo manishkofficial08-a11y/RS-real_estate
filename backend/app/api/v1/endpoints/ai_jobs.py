@@ -12,6 +12,7 @@ from app.core.dependencies import get_current_user, get_current_admin, get_tenan
 from app.models.user import User
 from app.models.tenant import Tenant
 from app.models.ai_job import AIJob, AIJobStatus, AIJobType, AIJobPriority
+from app.services.ai_agents.orchestrator import execute_ai_job
 
 
 router = APIRouter(prefix="/ai-jobs", tags=["AI Jobs"])
@@ -199,6 +200,8 @@ async def create_ai_job(
     db.add(job)
     await db.commit()
     await db.refresh(job)
+
+    job = await execute_ai_job(job, db)
 
     return await enrich_ai_job(job, db)
 

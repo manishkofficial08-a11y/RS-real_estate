@@ -1,45 +1,131 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Sparkles, Hash, Search, Languages, Subtitles, Wand2,
-  History, Bookmark, Settings2, Copy, RefreshCw, ArrowRight,
-  ChevronDown, Zap, Star, Download, Share2
+  AlertTriangle,
+  Bookmark,
+  CheckCircle2,
+  ChevronDown,
+  Clock,
+  Copy,
+  Download,
+  FileText,
+  Hash,
+  History,
+  Languages,
+  Loader2,
+  RefreshCw,
+  Search,
+  Share2,
+  Sparkles,
+  Subtitles,
+  Wand2,
+  XCircle,
+  Zap,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import {
+  createClientAIJob,
+  getMyClientAIJobs,
+  type ClientAIJob,
+  type ClientAIJobType,
+} from "../lib/clientApi";
 
-const tools = [
-  { id: "caption", icon: Sparkles, label: "Caption Generator", desc: "AI-powered captions for any platform", color: "#6366f1" },
-  { id: "hashtag", icon: Hash, label: "Hashtag Generator", desc: "Trending & niche hashtags that convert", color: "#8b5cf6" },
-  { id: "seo", icon: Search, label: "SEO Content", desc: "Search-optimized titles & meta descriptions", color: "#06b6d4" },
-  { id: "translate", icon: Languages, label: "AI Translator", desc: "Translate to 50+ languages in brand voice", color: "#10b981" },
-  { id: "subtitle", icon: Subtitles, label: "Subtitle Generator", desc: "Auto-generate subtitles from video/audio", color: "#f59e0b" },
-  { id: "optimizer", icon: Wand2, label: "Content Optimizer", desc: "Improve engagement & clarity score", color: "#ef4444" },
-];
-
-const tones = ["Professional", "Casual", "Witty", "Inspiring", "Educational", "Promotional"];
-const platforms = ["Instagram", "LinkedIn", "Twitter/X", "Facebook", "TikTok", "YouTube"];
-
-const templates = [
-  { title: "Product Launch", uses: 284, rating: 4.9 },
-  { title: "Behind the Scenes", uses: 193, rating: 4.7 },
-  { title: "Case Study Hook", uses: 421, rating: 4.8 },
-  { title: "How-To Thread", uses: 156, rating: 4.6 },
-];
-
-const promptHistory = [
-  { prompt: "Write an engaging caption for our Q4 product launch", tool: "Caption", time: "2 min ago" },
-  { prompt: "Generate hashtags for B2B SaaS marketing content", tool: "Hashtag", time: "18 min ago" },
-  { prompt: "Optimize this LinkedIn post for better engagement", tool: "Optimizer", time: "1 hr ago" },
-  { prompt: "Translate product description to Spanish & French", tool: "Translate", time: "3 hr ago" },
-];
-
-const generatedCaptions = [
+const tools: Array<{
+  id: string;
+  jobType: ClientAIJobType;
+  icon: typeof Sparkles;
+  label: string;
+  desc: string;
+  color: string;
+}> = [
   {
-    text: "We didn't just build a tool — we built a new way to think about growth. AI Growth OS is your unfair advantage. 🚀\n\nWhat took 10 people and 3 weeks now happens in minutes.\n\n#AIGrowth #SaaS #FutureOfWork",
-    score: 94,
+    id: "caption",
+    jobType: "caption",
+    icon: Sparkles,
+    label: "Caption Generator",
+    desc: "Create captions for listings, launches, and posts",
+    color: "#6366f1",
   },
   {
-    text: "Stop guessing. Start knowing.\n\nAI Growth OS analyzes every post, every lead, every trend — and tells you exactly what to do next.\n\nYour competitors are flying blind. You don't have to. 💡",
-    score: 88,
+    id: "hashtag",
+    jobType: "hashtag",
+    icon: Hash,
+    label: "Hashtag Generator",
+    desc: "Generate niche and platform-specific hashtags",
+    color: "#8b5cf6",
+  },
+  {
+    id: "report",
+    jobType: "report",
+    icon: FileText,
+    label: "Report Agent",
+    desc: "Create short business and campaign reports",
+    color: "#06b6d4",
+  },
+  {
+    id: "translate",
+    jobType: "other",
+    icon: Languages,
+    label: "Translator",
+    desc: "Prepare translation jobs for content",
+    color: "#10b981",
+  },
+  {
+    id: "subtitle",
+    jobType: "other",
+    icon: Subtitles,
+    label: "Subtitle Helper",
+    desc: "Prepare subtitle-generation requests",
+    color: "#f59e0b",
+  },
+  {
+    id: "optimizer",
+    jobType: "recommendation",
+    icon: Wand2,
+    label: "Content Optimizer",
+    desc: "Improve content clarity and conversion intent",
+    color: "#ef4444",
+  },
+];
+
+const tones = [
+  "Professional",
+  "Casual",
+  "Luxury",
+  "Investor-focused",
+  "Educational",
+  "Promotional",
+];
+
+const platforms = [
+  "Instagram",
+  "LinkedIn",
+  "Twitter/X",
+  "Facebook",
+  "TikTok",
+  "YouTube",
+  "WhatsApp",
+];
+
+const templates = [
+  {
+    title: "New property launch",
+    prompt:
+      "Write a high-converting launch caption for a premium real estate property with clear CTA.",
+  },
+  {
+    title: "Lead follow-up message",
+    prompt:
+      "Create a polite follow-up message for a warm real estate lead who has not replied in 7 days.",
+  },
+  {
+    title: "Weekly performance report",
+    prompt:
+      "Create a short weekly report summary covering leads, properties, follow-ups, and next actions.",
+  },
+  {
+    title: "Instagram listing post",
+    prompt:
+      "Write an Instagram caption for a luxury apartment listing with urgency and lifestyle positioning.",
   },
 ];
 
@@ -47,22 +133,92 @@ interface AIStudioProps {
   darkMode: boolean;
 }
 
+const formatDateTime = (value?: string | null) => {
+  if (!value) return "—";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const getStatusConfig = (status: string) => {
+  if (status === "completed") {
+    return {
+      label: "Completed",
+      icon: CheckCircle2,
+      color: "#10b981",
+      bg: "rgba(16, 185, 129, 0.10)",
+      border: "rgba(16, 185, 129, 0.18)",
+    };
+  }
+
+  if (status === "running") {
+    return {
+      label: "Running",
+      icon: Loader2,
+      color: "#6366f1",
+      bg: "rgba(99, 102, 241, 0.10)",
+      border: "rgba(99, 102, 241, 0.18)",
+    };
+  }
+
+  if (status === "failed") {
+    return {
+      label: "Failed",
+      icon: XCircle,
+      color: "#ef4444",
+      bg: "rgba(239, 68, 68, 0.10)",
+      border: "rgba(239, 68, 68, 0.18)",
+    };
+  }
+
+  if (status === "cancelled") {
+    return {
+      label: "Cancelled",
+      icon: XCircle,
+      color: "#94a3b8",
+      bg: "rgba(148, 163, 184, 0.10)",
+      border: "rgba(148, 163, 184, 0.18)",
+    };
+  }
+
+  return {
+    label: "Queued",
+    icon: Clock,
+    color: "#f59e0b",
+    bg: "rgba(245, 158, 11, 0.10)",
+    border: "rgba(245, 158, 11, 0.18)",
+  };
+};
+
+const getToolById = (toolId: string) =>
+  tools.find((tool) => tool.id === toolId) || tools[0];
+
+const getToolByJob = (job: ClientAIJob) =>
+  tools.find((tool) => tool.jobType === job.job_type) || tools[0];
+
 export function AIStudio({ darkMode }: AIStudioProps) {
   const [activeTool, setActiveTool] = useState("caption");
   const [selectedTone, setSelectedTone] = useState("Professional");
   const [selectedPlatform, setSelectedPlatform] = useState("LinkedIn");
   const [prompt, setPrompt] = useState("");
-  const [generated, setGenerated] = useState(false);
+  const [jobs, setJobs] = useState<ClientAIJob[]>([]);
+  const [selectedJob, setSelectedJob] = useState<ClientAIJob | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [activeTab, setActiveTab] = useState<"generate" | "history" | "templates">("generate");
+  const [loadingJobs, setLoadingJobs] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"generate" | "history" | "templates">(
+    "generate",
+  );
 
-  const handleGenerate = () => {
-    setGenerating(true);
-    setTimeout(() => {
-      setGenerating(false);
-      setGenerated(true);
-    }, 2000);
-  };
+  const activeToolConfig = getToolById(activeTool);
 
   const cardStyle = {
     background: darkMode ? "rgba(13, 13, 40, 0.8)" : "#ffffff",
@@ -70,52 +226,187 @@ export function AIStudio({ darkMode }: AIStudioProps) {
     backdropFilter: "blur(16px)",
   };
 
+  const textPrimary = darkMode ? "#e2e8f0" : "#0f172a";
+  const textMuted = darkMode ? "#64748b" : "#64748b";
+  const textSoft = darkMode ? "#4a5568" : "#94a3b8";
+
+  const stats = useMemo(() => {
+    const total = jobs.length;
+    const completed = jobs.filter((job) => job.status === "completed").length;
+    const running = jobs.filter((job) => job.status === "running").length;
+    const failed = jobs.filter((job) => job.status === "failed").length;
+
+    return { total, completed, running, failed };
+  }, [jobs]);
+
+  const latestJobs = useMemo(() => jobs.slice(0, 8), [jobs]);
+
+  const loadJobs = async () => {
+    try {
+      setLoadingJobs(true);
+      setError(null);
+      const data = await getMyClientAIJobs();
+      setJobs(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load AI jobs");
+    } finally {
+      setLoadingJobs(false);
+    }
+  };
+
+  useEffect(() => {
+    loadJobs();
+  }, []);
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) {
+      setError("Prompt is required before creating an AI job.");
+      return;
+    }
+
+    try {
+      setGenerating(true);
+      setError(null);
+
+      const job = await createClientAIJob({
+        job_type: activeToolConfig.jobType,
+        title: `${activeToolConfig.label} - ${selectedPlatform}`,
+        description: prompt.trim(),
+        priority: activeToolConfig.jobType === "report" ? "high" : "normal",
+        input_payload: {
+          tool: activeToolConfig.id,
+          tool_label: activeToolConfig.label,
+          platform: selectedPlatform,
+          tone: selectedTone,
+          prompt: prompt.trim(),
+          requested_from: "client_ai_studio",
+        },
+      });
+
+      setSelectedJob(job);
+      setPrompt("");
+      await loadJobs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create AI job");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const copyJobPayload = async (job: ClientAIJob) => {
+    const payload = job.output_payload || job.input_payload || {};
+    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+  };
+
   return (
     <div className="h-full overflow-y-auto">
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
-        {/* Header */}
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", boxShadow: "0 0 20px rgba(99,102,241,0.3)" }}>
+          <div className="mb-1 flex items-center gap-3">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-xl"
+              style={{
+                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                boxShadow: "0 0 20px rgba(99,102,241,0.3)",
+              }}
+            >
               <Sparkles size={15} className="text-white" />
             </div>
-            <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: darkMode ? "#e2e8f0" : "#0f172a" }}>AI Studio</h1>
-            <span className="text-xs px-2 py-1 rounded-full" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#ffffff" }}>6 tools</span>
+            <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: textPrimary }}>
+              AI Studio
+            </h1>
+            <span
+              className="rounded-full px-2 py-1 text-xs"
+              style={{
+                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                color: "#ffffff",
+              }}
+            >
+              Backend connected
+            </span>
           </div>
-          <p className="text-sm ml-11" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-            Generate, optimize, and transform content with enterprise AI
+          <p className="ml-11 text-sm" style={{ color: textSoft }}>
+            Create AI jobs, track progress, and review generated outputs from one place.
           </p>
         </motion.div>
 
-        {/* Tools Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {tools.map((tool, i) => (
+        {error && (
+          <div
+            className="flex items-start gap-3 rounded-2xl border p-4 text-sm"
+            style={{
+              background: "rgba(239, 68, 68, 0.08)",
+              borderColor: "rgba(239, 68, 68, 0.18)",
+              color: "#ef4444",
+            }}
+          >
+            <AlertTriangle size={18} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[
+            { label: "Total AI Jobs", value: stats.total, color: "#6366f1" },
+            { label: "Running", value: stats.running, color: "#8b5cf6" },
+            { label: "Completed", value: stats.completed, color: "#10b981" },
+            { label: "Failed", value: stats.failed, color: "#ef4444" },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-2xl border p-4"
+              style={{
+                background: cardStyle.background,
+                borderColor: cardStyle.borderColor,
+              }}
+            >
+              <p className="text-xs" style={{ color: textSoft }}>
+                {stat.label}
+              </p>
+              <p className="mt-2 text-2xl font-semibold" style={{ color: stat.color }}>
+                {stat.value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {tools.map((tool, index) => (
             <motion.button
               key={tool.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => setActiveTool(tool.id)}
-              className="relative flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all group overflow-hidden"
+              transition={{ delay: index * 0.05 }}
+              onClick={() => {
+                setActiveTool(tool.id);
+                setActiveTab("generate");
+              }}
+              className="group relative flex flex-col items-center gap-2 overflow-hidden rounded-2xl border p-4 transition-all"
               style={{
-                background: activeTool === tool.id
-                  ? darkMode ? `${tool.color}15` : `${tool.color}08`
-                  : cardStyle.background,
-                borderColor: activeTool === tool.id
-                  ? `${tool.color}40`
-                  : darkMode ? "rgba(99,102,241,0.1)" : "rgba(15,23,42,0.06)",
-                boxShadow: activeTool === tool.id
-                  ? `0 0 20px ${tool.color}20`
-                  : "none",
+                background:
+                  activeTool === tool.id
+                    ? darkMode
+                      ? `${tool.color}15`
+                      : `${tool.color}08`
+                    : cardStyle.background,
+                borderColor:
+                  activeTool === tool.id
+                    ? `${tool.color}40`
+                    : darkMode
+                      ? "rgba(99,102,241,0.1)"
+                      : "rgba(15,23,42,0.06)",
+                boxShadow: activeTool === tool.id ? `0 0 20px ${tool.color}20` : "none",
               }}
             >
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
+                className="flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
                 style={{ background: `${tool.color}15` }}
               >
                 <tool.icon size={18} style={{ color: tool.color }} />
               </div>
-              <span className="text-xs font-medium text-center leading-tight" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+              <span
+                className="text-center text-xs font-medium leading-tight"
+                style={{ color: textPrimary }}
+              >
                 {tool.label}
               </span>
               {activeTool === tool.id && (
@@ -129,31 +420,42 @@ export function AIStudio({ darkMode }: AIStudioProps) {
           ))}
         </div>
 
-        {/* Main Workspace */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Generator Panel */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Tabs */}
-            <div className="flex gap-1 p-1 rounded-xl" style={{ background: darkMode ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.04)" }}>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="space-y-4 lg:col-span-2">
+            <div
+              className="flex gap-1 rounded-xl p-1"
+              style={{
+                background: darkMode
+                  ? "rgba(99,102,241,0.06)"
+                  : "rgba(99,102,241,0.04)",
+              }}
+            >
               {(["generate", "history", "templates"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className="flex-1 py-2 rounded-lg text-xs capitalize transition-all"
+                  className="flex-1 rounded-lg py-2 text-xs capitalize transition-all"
                   style={{
-                    background: activeTab === tab
-                      ? darkMode ? "rgba(99,102,241,0.2)" : "#ffffff"
-                      : "transparent",
-                    color: activeTab === tab
-                      ? darkMode ? "#818cf8" : "#6366f1"
-                      : darkMode ? "#4a5568" : "#94a3b8",
-                    boxShadow: activeTab === tab
-                      ? darkMode ? "none" : "0 1px 4px rgba(0,0,0,0.06)"
-                      : "none",
+                    background:
+                      activeTab === tab
+                        ? darkMode
+                          ? "rgba(99,102,241,0.2)"
+                          : "#ffffff"
+                        : "transparent",
+                    color:
+                      activeTab === tab
+                        ? darkMode
+                          ? "#818cf8"
+                          : "#6366f1"
+                        : textSoft,
+                    boxShadow:
+                      activeTab === tab && !darkMode
+                        ? "0 1px 4px rgba(0,0,0,0.06)"
+                        : "none",
                   }}
                 >
-                  {tab === "history" && <History size={11} className="inline mr-1" />}
-                  {tab === "templates" && <Bookmark size={11} className="inline mr-1" />}
+                  {tab === "history" && <History size={11} className="mr-1 inline" />}
+                  {tab === "templates" && <Bookmark size={11} className="mr-1 inline" />}
                   {tab}
                 </button>
               ))}
@@ -168,136 +470,161 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-4"
                 >
-                  {/* Config */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs mb-1.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Platform</label>
-                      <div className="relative">
-                        <select
-                          value={selectedPlatform}
-                          onChange={(e) => setSelectedPlatform(e.target.value)}
-                          className="w-full appearance-none px-3 py-2.5 rounded-xl border text-sm pr-8"
-                          style={{
-                            background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                            borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
-                            color: darkMode ? "#e2e8f0" : "#0f172a",
-                          }}
-                        >
-                          {platforms.map(p => <option key={p}>{p}</option>)}
-                        </select>
-                        <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }} />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs mb-1.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Brand Tone</label>
-                      <div className="relative">
-                        <select
-                          value={selectedTone}
-                          onChange={(e) => setSelectedTone(e.target.value)}
-                          className="w-full appearance-none px-3 py-2.5 rounded-xl border text-sm pr-8"
-                          style={{
-                            background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                            borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
-                            color: darkMode ? "#e2e8f0" : "#0f172a",
-                          }}
-                        >
-                          {tones.map(t => <option key={t}>{t}</option>)}
-                        </select>
-                        <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Prompt Input */}
-                  <div>
-                    <label className="block text-xs mb-1.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Describe your content</label>
-                    <textarea
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      placeholder="Describe what you want to create... e.g. 'Write a compelling caption about our new AI feature that helps marketing teams save 10 hours per week'"
-                      rows={4}
-                      className="w-full px-4 py-3 rounded-xl border resize-none text-sm outline-none focus:ring-2 transition-all"
-                      style={{
-                        background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                        borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
-                        color: darkMode ? "#e2e8f0" : "#0f172a",
-                        fontFamily: "inherit",
-                      }}
-                    />
-                  </div>
-
-                  <button
-                    onClick={handleGenerate}
-                    disabled={generating}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
-                    style={{
-                      background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
-                      color: "#ffffff",
-                      boxShadow: "0 4px 14px rgba(99,102,241,0.35)",
-                    }}
+                  <div
+                    className="rounded-2xl border p-4"
+                    style={{ background: cardStyle.background, borderColor: cardStyle.borderColor }}
                   >
-                    {generating ? (
-                      <>
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        >
-                          <RefreshCw size={14} />
-                        </motion.div>
-                        Generating with AI...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={14} />
-                        Generate Content
-                        <Zap size={12} className="opacity-70" />
-                      </>
-                    )}
-                  </button>
-
-                  {/* Generated Output */}
-                  <AnimatePresence>
-                    {generated && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-3"
+                    <div className="mb-4 flex items-start gap-3">
+                      <div
+                        className="flex h-10 w-10 items-center justify-center rounded-xl"
+                        style={{ background: `${activeToolConfig.color}18` }}
                       >
-                        <p className="text-xs font-medium" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Generated variants</p>
-                        {generatedCaptions.map((cap, i) => (
-                          <div
-                            key={i}
-                            className="p-4 rounded-xl border group"
+                        <activeToolConfig.icon size={18} style={{ color: activeToolConfig.color }} />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-semibold" style={{ color: textPrimary }}>
+                          {activeToolConfig.label}
+                        </h2>
+                        <p className="text-xs" style={{ color: textMuted }}>
+                          {activeToolConfig.desc}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1.5 block text-xs" style={{ color: textSoft }}>
+                          Platform
+                        </label>
+                        <div className="relative">
+                          <select
+                            value={selectedPlatform}
+                            onChange={(event) => setSelectedPlatform(event.target.value)}
+                            className="w-full appearance-none rounded-xl border px-3 py-2.5 pr-8 text-sm"
                             style={{
-                              background: darkMode ? "rgba(99,102,241,0.05)" : "#f8fafc",
-                              borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+                              background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                              borderColor: darkMode
+                                ? "rgba(99,102,241,0.12)"
+                                : "rgba(15,23,42,0.08)",
+                              color: textPrimary,
                             }}
                           >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <Star size={11} style={{ color: "#f59e0b" }} />
-                                <span className="text-xs font-semibold" style={{ color: "#f59e0b" }}>Score {cap.score}/100</span>
-                              </div>
-                              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                <button className="p-1.5 rounded-lg hover:bg-primary/10 transition-all" style={{ color: darkMode ? "#818cf8" : "#6366f1" }}>
-                                  <Copy size={12} />
-                                </button>
-                                <button className="p-1.5 rounded-lg hover:bg-primary/10 transition-all" style={{ color: darkMode ? "#818cf8" : "#6366f1" }}>
-                                  <Download size={12} />
-                                </button>
-                                <button className="p-1.5 rounded-lg hover:bg-primary/10 transition-all" style={{ color: darkMode ? "#818cf8" : "#6366f1" }}>
-                                  <Share2 size={12} />
-                                </button>
-                              </div>
-                            </div>
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: darkMode ? "#94a3b8" : "#475569" }}>
-                              {cap.text}
-                            </p>
-                          </div>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                            {platforms.map((platform) => (
+                              <option key={platform}>{platform}</option>
+                            ))}
+                          </select>
+                          <ChevronDown
+                            size={12}
+                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+                            style={{ color: textSoft }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="mb-1.5 block text-xs" style={{ color: textSoft }}>
+                          Brand Tone
+                        </label>
+                        <div className="relative">
+                          <select
+                            value={selectedTone}
+                            onChange={(event) => setSelectedTone(event.target.value)}
+                            className="w-full appearance-none rounded-xl border px-3 py-2.5 pr-8 text-sm"
+                            style={{
+                              background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                              borderColor: darkMode
+                                ? "rgba(99,102,241,0.12)"
+                                : "rgba(15,23,42,0.08)",
+                              color: textPrimary,
+                            }}
+                          >
+                            {tones.map((tone) => (
+                              <option key={tone}>{tone}</option>
+                            ))}
+                          </select>
+                          <ChevronDown
+                            size={12}
+                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+                            style={{ color: textSoft }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <label className="mb-1.5 block text-xs" style={{ color: textSoft }}>
+                        Describe your AI request
+                      </label>
+                      <textarea
+                        value={prompt}
+                        onChange={(event) => setPrompt(event.target.value)}
+                        placeholder="Example: Write a premium LinkedIn caption for a 3BHK luxury apartment in Gurgaon with a clear CTA."
+                        rows={5}
+                        className="w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none transition-all focus:ring-2"
+                        style={{
+                          background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                          borderColor: darkMode
+                            ? "rgba(99,102,241,0.12)"
+                            : "rgba(15,23,42,0.08)",
+                          color: textPrimary,
+                          fontFamily: "inherit",
+                        }}
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleGenerate}
+                      disabled={generating}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
+                      style={{
+                        background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                        color: "#ffffff",
+                        boxShadow: "0 4px 14px rgba(99,102,241,0.35)",
+                      }}
+                    >
+                      {generating ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          Creating AI job...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={14} />
+                          Create AI Job
+                          <Zap size={12} className="opacity-70" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {selectedJob && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-2xl border p-4"
+                      style={{
+                        background: darkMode
+                          ? "rgba(16,185,129,0.08)"
+                          : "rgba(16,185,129,0.06)",
+                        borderColor: "rgba(16,185,129,0.18)",
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <CheckCircle2 size={18} style={{ color: "#10b981" }} />
+                        <div>
+                          <p className="text-sm font-semibold" style={{ color: textPrimary }}>
+                            AI job created successfully
+                          </p>
+                          <p className="mt-1 text-xs" style={{ color: textMuted }}>
+                            Your request is now queued. Founder/admin can monitor and process it from AI Jobs.
+                          </p>
+                          <p className="mt-2 text-xs font-mono" style={{ color: "#10b981" }}>
+                            JOB-{selectedJob.id.slice(0, 8).toUpperCase()}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
                 </motion.div>
               )}
 
@@ -307,30 +634,75 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="space-y-2"
+                  className="space-y-3"
                 >
-                  {promptHistory.map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:border-primary/20"
-                      style={{
-                        background: darkMode ? "rgba(99,102,241,0.04)" : "#f8fafc",
-                        borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.05)",
-                      }}
-                    >
-                      <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(99,102,241,0.1)" }}>
-                        <History size={11} style={{ color: "#6366f1" }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{item.prompt}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(99,102,241,0.1)", color: "#818cf8" }}>{item.tool}</span>
-                          <span className="text-xs" style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}>{item.time}</span>
-                        </div>
-                      </div>
-                      <ArrowRight size={13} style={{ color: darkMode ? "#2d3748" : "#cbd5e1" }} />
+                  {loadingJobs ? (
+                    <div className="flex items-center gap-2 p-4 text-sm" style={{ color: textMuted }}>
+                      <Loader2 size={16} className="animate-spin" />
+                      Loading AI jobs...
                     </div>
-                  ))}
+                  ) : latestJobs.length ? (
+                    latestJobs.map((job) => {
+                      const config = getStatusConfig(job.status);
+                      const StatusIcon = config.icon;
+                      const tool = getToolByJob(job);
+
+                      return (
+                        <button
+                          key={job.id}
+                          onClick={() => setSelectedJob(job)}
+                          className="w-full rounded-2xl border p-4 text-left transition-all hover:scale-[1.01]"
+                          style={{
+                            background: cardStyle.background,
+                            borderColor: cardStyle.borderColor,
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="flex h-10 w-10 items-center justify-center rounded-xl"
+                              style={{ background: `${tool.color}15` }}
+                            >
+                              <tool.icon size={17} style={{ color: tool.color }} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-semibold" style={{ color: textPrimary }}>
+                                  {job.title}
+                                </p>
+                                <span
+                                  className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
+                                  style={{
+                                    color: config.color,
+                                    background: config.bg,
+                                    borderColor: config.border,
+                                  }}
+                                >
+                                  <StatusIcon
+                                    size={11}
+                                    className={job.status === "running" ? "animate-spin" : ""}
+                                  />
+                                  {config.label}
+                                </span>
+                              </div>
+                              <p className="mt-1 line-clamp-2 text-xs" style={{ color: textMuted }}>
+                                {job.description || "No description provided"}
+                              </p>
+                              <p className="mt-2 text-xs" style={{ color: textSoft }}>
+                                Created {formatDateTime(job.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div
+                      className="rounded-2xl border p-5 text-center text-sm"
+                      style={{ background: cardStyle.background, borderColor: cardStyle.borderColor, color: textMuted }}
+                    >
+                      No AI jobs created yet.
+                    </div>
+                  )}
                 </motion.div>
               )}
 
@@ -340,23 +712,24 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="grid grid-cols-2 gap-3"
+                  className="grid grid-cols-1 gap-3 sm:grid-cols-2"
                 >
-                  {templates.map((tmpl, i) => (
+                  {templates.map((template) => (
                     <button
-                      key={i}
-                      className="p-4 rounded-xl border text-left transition-all hover:border-primary/20 group"
-                      style={{
-                        background: darkMode ? "rgba(99,102,241,0.04)" : "#f8fafc",
-                        borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.05)",
+                      key={template.title}
+                      onClick={() => {
+                        setPrompt(template.prompt);
+                        setActiveTab("generate");
                       }}
+                      className="rounded-2xl border p-4 text-left transition-all hover:scale-[1.02]"
+                      style={{ background: cardStyle.background, borderColor: cardStyle.borderColor }}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <Bookmark size={14} style={{ color: "#6366f1" }} />
-                        <span className="text-xs" style={{ color: "#f59e0b" }}>★ {tmpl.rating}</span>
-                      </div>
-                      <p className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{tmpl.title}</p>
-                      <p className="text-xs mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{tmpl.uses} uses</p>
+                      <p className="text-sm font-semibold" style={{ color: textPrimary }}>
+                        {template.title}
+                      </p>
+                      <p className="mt-2 text-xs leading-5" style={{ color: textMuted }}>
+                        {template.prompt}
+                      </p>
                     </button>
                   ))}
                 </motion.div>
@@ -364,83 +737,166 @@ export function AIStudio({ darkMode }: AIStudioProps) {
             </AnimatePresence>
           </div>
 
-          {/* Side Panel */}
           <div className="space-y-4">
-            {/* Brand Settings */}
             <div
-              className="rounded-2xl p-4 border"
-              style={{ background: cardStyle.background, borderColor: cardStyle.borderColor, backdropFilter: cardStyle.backdropFilter }}
+              className="rounded-2xl border p-4"
+              style={{ background: cardStyle.background, borderColor: cardStyle.borderColor }}
             >
-              <div className="flex items-center gap-2 mb-4">
-                <Settings2 size={14} style={{ color: "#6366f1" }} />
-                <span className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>Brand Settings</span>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold" style={{ color: textPrimary }}>
+                    Recent AI Jobs
+                  </h3>
+                  <p className="text-xs" style={{ color: textSoft }}>
+                    Live backend status
+                  </p>
+                </div>
+                <button
+                  onClick={loadJobs}
+                  className="rounded-xl p-2 transition-all hover:bg-primary/5"
+                  style={{ color: textSoft }}
+                >
+                  <RefreshCw size={14} className={loadingJobs ? "animate-spin" : ""} />
+                </button>
               </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs mb-1.5 block" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Company Name</label>
-                  <input
-                    defaultValue="Acme Corp"
-                    className="w-full px-3 py-2 rounded-xl border text-sm"
-                    style={{
-                      background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                      borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
-                      color: darkMode ? "#e2e8f0" : "#0f172a",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs mb-1.5 block" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Industry</label>
-                  <input
-                    defaultValue="B2B SaaS / Technology"
-                    className="w-full px-3 py-2 rounded-xl border text-sm"
-                    style={{
-                      background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                      borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
-                      color: darkMode ? "#e2e8f0" : "#0f172a",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs mb-1.5 block" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Target Audience</label>
-                  <input
-                    defaultValue="Marketing Directors, CMOs"
-                    className="w-full px-3 py-2 rounded-xl border text-sm"
-                    style={{
-                      background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                      borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
-                      color: darkMode ? "#e2e8f0" : "#0f172a",
-                    }}
-                  />
-                </div>
+
+              <div className="space-y-2">
+                {latestJobs.length ? (
+                  latestJobs.slice(0, 5).map((job) => {
+                    const config = getStatusConfig(job.status);
+                    const StatusIcon = config.icon;
+
+                    return (
+                      <button
+                        key={job.id}
+                        onClick={() => setSelectedJob(job)}
+                        className="w-full rounded-xl border p-3 text-left"
+                        style={{
+                          background: darkMode ? "rgba(99,102,241,0.04)" : "#f8fafc",
+                          borderColor: darkMode
+                            ? "rgba(99,102,241,0.08)"
+                            : "rgba(15,23,42,0.06)",
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-xs font-medium" style={{ color: textPrimary }}>
+                            {job.title}
+                          </p>
+                          <StatusIcon
+                            size={13}
+                            className={job.status === "running" ? "animate-spin" : ""}
+                            style={{ color: config.color }}
+                          />
+                        </div>
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full" style={{ background: darkMode ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)" }}>
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${job.progress || 0}%`,
+                              background: config.color,
+                            }}
+                          />
+                        </div>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <p className="text-xs" style={{ color: textMuted }}>
+                    No AI jobs yet. Create your first request from the generator.
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Usage Stats */}
-            <div
-              className="rounded-2xl p-4 border"
-              style={{ background: cardStyle.background, borderColor: cardStyle.borderColor }}
-            >
-              <p className="text-sm font-semibold mb-3" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>Usage this month</p>
-              <div className="space-y-3">
-                {[
-                  { label: "Captions generated", used: 284, max: 500, color: "#6366f1" },
-                  { label: "Translations", used: 38, max: 100, color: "#06b6d4" },
-                  { label: "SEO articles", used: 12, max: 20, color: "#10b981" },
-                ].map((item) => (
-                  <div key={item.label}>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{item.label}</span>
-                      <span className="text-xs font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{item.used}/{item.max}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: darkMode ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.06)" }}>
-                      <div className="h-full rounded-full" style={{ width: `${(item.used / item.max) * 100}%`, background: item.color }} />
-                    </div>
+            {selectedJob && (
+              <div
+                className="rounded-2xl border p-4"
+                style={{ background: cardStyle.background, borderColor: cardStyle.borderColor }}
+              >
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold" style={{ color: textPrimary }}>
+                      Selected Job
+                    </h3>
+                    <p className="mt-1 text-xs font-mono" style={{ color: textSoft }}>
+                      JOB-{selectedJob.id.slice(0, 8).toUpperCase()}
+                    </p>
                   </div>
-                ))}
+                  <button
+                    onClick={() => copyJobPayload(selectedJob)}
+                    className="rounded-xl p-2 transition-all hover:bg-primary/5"
+                    style={{ color: textSoft }}
+                  >
+                    <Copy size={14} />
+                  </button>
+                </div>
+
+                <p className="text-sm font-medium" style={{ color: textPrimary }}>
+                  {selectedJob.title}
+                </p>
+                <p className="mt-2 text-xs leading-5" style={{ color: textMuted }}>
+                  {selectedJob.description || "No description provided"}
+                </p>
+
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <p className="mb-1 text-xs" style={{ color: textSoft }}>
+                      Output payload
+                    </p>
+                    <pre
+                      className="max-h-48 overflow-auto rounded-xl p-3 text-xs leading-5"
+                      style={{
+                        background: darkMode ? "rgba(255,255,255,0.04)" : "#f8fafc",
+                        color: textMuted,
+                        border: `1px solid ${cardStyle.borderColor}`,
+                      }}
+                    >
+                      {JSON.stringify(selectedJob.output_payload || {}, null, 2)}
+                    </pre>
+                  </div>
+
+                  {selectedJob.error_message && (
+                    <div
+                      className="rounded-xl border p-3 text-xs"
+                      style={{
+                        background: "rgba(239, 68, 68, 0.08)",
+                        borderColor: "rgba(239, 68, 68, 0.18)",
+                        color: "#ef4444",
+                      }}
+                    >
+                      {selectedJob.error_message}
+                    </div>
+                  )}
+                </div>
               </div>
-              <button className="mt-3 w-full py-2 rounded-xl text-xs transition-all hover:opacity-90" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#ffffff" }}>
-                Upgrade Plan
-              </button>
+            )}
+
+            <div
+              className="rounded-2xl border p-4"
+              style={{
+                background: darkMode
+                  ? "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08))"
+                  : "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.05))",
+                borderColor: "rgba(99,102,241,0.16)",
+              }}
+            >
+              <div className="mb-2 flex items-center gap-2">
+                <Zap size={15} style={{ color: "#6366f1" }} />
+                <p className="text-sm font-semibold" style={{ color: textPrimary }}>
+                  Workflow Note
+                </p>
+              </div>
+              <p className="text-xs leading-5" style={{ color: textMuted }}>
+                This screen now creates real backend AI jobs. Actual AI generation worker/model execution will be added in the next phase.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <button className="rounded-lg p-2 transition-all hover:bg-primary/5" style={{ color: textSoft }}>
+                  <Download size={13} />
+                </button>
+                <button className="rounded-lg p-2 transition-all hover:bg-primary/5" style={{ color: textSoft }}>
+                  <Share2 size={13} />
+                </button>
+              </div>
             </div>
           </div>
         </div>

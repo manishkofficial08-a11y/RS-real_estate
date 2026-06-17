@@ -302,3 +302,69 @@ export async function markClientNotificationRead(
     method: "PUT",
   });
 }
+
+export type ClientAIJobStatus =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type ClientAIJobType =
+  | "caption"
+  | "hashtag"
+  | "scheduler"
+  | "publisher"
+  | "analytics"
+  | "recommendation"
+  | "report"
+  | "chat"
+  | "voice"
+  | "orchestrator"
+  | "other";
+
+export type ClientAIJobPriority = "low" | "normal" | "high" | "urgent";
+
+export type ClientAIJob = {
+  id: string;
+  tenant_id: string;
+  created_by_user_id?: string | null;
+  job_type: ClientAIJobType | string;
+  title: string;
+  description?: string | null;
+  status: ClientAIJobStatus | string;
+  priority: ClientAIJobPriority | string;
+  input_payload?: Record<string, unknown> | null;
+  output_payload?: Record<string, unknown> | null;
+  error_message?: string | null;
+  progress: number;
+  attempts: number;
+  max_attempts: number;
+  started_at?: string | null;
+  completed_at?: string | null;
+  failed_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type CreateClientAIJobPayload = {
+  job_type: ClientAIJobType;
+  title: string;
+  description?: string;
+  priority?: ClientAIJobPriority;
+  input_payload?: Record<string, unknown>;
+};
+
+export async function createClientAIJob(
+  payload: CreateClientAIJobPayload,
+): Promise<ClientAIJob> {
+  return clientFetch<ClientAIJob>("/ai-jobs/jobs", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getMyClientAIJobs(): Promise<ClientAIJob[]> {
+  return clientFetch<ClientAIJob[]>("/ai-jobs/jobs/my");
+}
+

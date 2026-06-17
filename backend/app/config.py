@@ -21,7 +21,13 @@ class Settings(BaseSettings):
     # CORS
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # AI
+    AI_PROVIDER: str = "mock"
+    OPENAI_MODEL: str = "gpt-4.1-mini"
+    OPENAI_API_KEY: str = ""
+
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 settings = Settings()
