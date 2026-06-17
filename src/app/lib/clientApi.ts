@@ -644,3 +644,146 @@ export async function deleteGeneratedPost(postId: string): Promise<void> {
   });
 }
 
+export type ClientScheduledPostStatus =
+  | "scheduled"
+  | "publishing"
+  | "published"
+  | "failed"
+  | "cancelled";
+
+export type ClientScheduledPostPlatform =
+  | "instagram"
+  | "facebook"
+  | "linkedin"
+  | "twitter"
+  | "website"
+  | "other";
+
+export type ClientScheduledPost = {
+  id: string;
+  tenant_id: string;
+  generated_post_id: string;
+  created_by_user_id?: string | null;
+  platform: ClientScheduledPostPlatform | string;
+  status: ClientScheduledPostStatus | string;
+  scheduled_at: string;
+  published_at?: string | null;
+  failed_at?: string | null;
+  failure_reason?: string | null;
+  external_post_id?: string | null;
+  external_post_url?: string | null;
+  retry_count: number;
+  max_retries: number;
+  metadata_json?: Record<string, unknown> | null;
+  is_active: boolean;
+  generated_post_title?: string | null;
+  created_by_name?: string | null;
+  created_by_email?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type CreateClientScheduledPostPayload = {
+  generated_post_id: string;
+  platform?: ClientScheduledPostPlatform;
+  status?: ClientScheduledPostStatus;
+  scheduled_at: string;
+  published_at?: string | null;
+  failed_at?: string | null;
+  failure_reason?: string | null;
+  external_post_id?: string | null;
+  external_post_url?: string | null;
+  retry_count?: number;
+  max_retries?: number;
+  metadata_json?: Record<string, unknown>;
+};
+
+export type UpdateClientScheduledPostPayload =
+  Partial<CreateClientScheduledPostPayload>;
+
+export type GetClientScheduledPostsParams = {
+  status?: ClientScheduledPostStatus | "all";
+  platform?: ClientScheduledPostPlatform | "all";
+  generated_post_id?: string;
+  from_date?: string | Date;
+  to_date?: string | Date;
+  limit?: number;
+};
+
+function formatClientDateQueryValue(value?: string | Date): string {
+  if (!value) return "";
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  return value.trim();
+}
+
+export async function getMyScheduledPosts(
+  params?: GetClientScheduledPostsParams,
+): Promise<ClientScheduledPost[]> {
+  const searchParams = new URLSearchParams();
+
+  if (params?.status && params.status !== "all") {
+    searchParams.set("status", params.status);
+  }
+
+  if (params?.platform && params.platform !== "all") {
+    searchParams.set("platform", params.platform);
+  }
+
+  if (params?.generated_post_id) {
+    searchParams.set("generated_post_id", params.generated_post_id);
+  }
+
+  const fromDate = formatClientDateQueryValue(params?.from_date);
+  if (fromDate) {
+    searchParams.set("from_date", fromDate);
+  }
+
+  const toDate = formatClientDateQueryValue(params?.to_date);
+  if (toDate) {
+    searchParams.set("to_date", toDate);
+  }
+
+  if (typeof params?.limit === "number" && params.limit > 0) {
+    searchParams.set("limit", String(params.limit));
+  }
+
+  const query = searchParams.toString();
+  return clientFetch<ClientScheduledPost[]>(
+    `/scheduled-posts/my${query ? `?${query}` : ""}`,
+  );
+}
+
+export async function getScheduledPost(
+  scheduleId: string,
+): Promise<ClientScheduledPost> {
+  return clientFetch<ClientScheduledPost>(`/scheduled-posts/${scheduleId}`);
+}
+
+export async function createScheduledPost(
+  payload: CreateClientScheduledPostPayload,
+): Promise<ClientScheduledPost> {
+  return clientFetch<ClientScheduledPost>("/scheduled-posts/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateScheduledPost(
+  scheduleId: string,
+  payload: UpdateClientScheduledPostPayload,
+): Promise<ClientScheduledPost> {
+  return clientFetch<ClientScheduledPost>(`/scheduled-posts/${scheduleId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteScheduledPost(scheduleId: string): Promise<void> {
+  await clientFetch<void>(`/scheduled-posts/${scheduleId}`, {
+    method: "DELETE",
+  });
+}
