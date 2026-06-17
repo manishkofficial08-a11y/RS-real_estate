@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, properties, leads, admin, upload, support, notifications, ai_jobs, content_assets
+from app.api.v1.endpoints import auth, properties, leads, admin, upload, support, notifications, ai_jobs, content_assets, generated_posts
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -12,3 +12,4 @@ api_router.include_router(support.router)
 api_router.include_router(notifications.router)
 api_router.include_router(ai_jobs.router)
 api_router.include_router(content_assets.router)
+api_router.include_router(generated_posts.router)

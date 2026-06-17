@@ -6,3 +6,4 @@ from app.models.support_ticket import SupportTicket, SupportTicketStatus, Suppor
 from app.models.notification import Notification, NotificationAudience, NotificationType
 from app.models.ai_job import AIJob, AIJobStatus, AIJobType, AIJobPriority
 from app.models.content_asset import ContentAsset, ContentAssetType
+from app.models.generated_post import GeneratedPost, GeneratedPostStatus, GeneratedPostPlatform
