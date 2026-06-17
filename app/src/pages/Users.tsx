@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getAdminUsers, type AdminUser } from '@/lib/adminApi';
 import {
   Activity,
@@ -115,7 +115,7 @@ export default function UsersPage() {
     {
       label: 'Clients',
       value: clientUsers,
-      sub: 'Client dashboard users',
+      sub: 'Client portal users',
       icon: UserCog,
       color: '#6B8AFF',
     },
@@ -438,7 +438,7 @@ export default function UsersPage() {
       </div>
 
       <div className="mt-8 flex flex-col gap-2 pt-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
-        <span className="text-xs" style={{ color: '#55555C' }}>AI Growth OS v2.0</span>
+        <span className="text-xs" style={{ color: '#55555C' }}>RS Real Estate v2.0</span>
         <span className="text-xs font-mono" style={{ color: '#55555C' }}>
           {loading ? 'Syncing...' : `Showing ${filtered.length} of ${users.length} users`}
         </span>

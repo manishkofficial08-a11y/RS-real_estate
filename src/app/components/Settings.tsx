@@ -78,7 +78,7 @@ export function Settings({ darkMode }: SettingsProps) {
       {
         icon: Mail,
         label: "Email",
-        value: profile?.email || "client@rsrealestate.com",
+        value: profile?.email || "Email not available",
         color: "#06b6d4",
       },
       {
@@ -213,7 +213,7 @@ export function Settings({ darkMode }: SettingsProps) {
                 className="text-sm mt-1"
                 style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
               >
-                {formatLabel(profile?.business_type || "real_estate")} ·{" "}
+                {formatLabel(profile?.business_type || "real_estate")} Â·{" "}
                 {formatLabel(profile?.plan || "free")} Plan
               </p>
             </div>

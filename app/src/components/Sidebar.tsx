@@ -82,7 +82,7 @@ export default function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse
               className="font-display text-base font-medium tracking-[-0.02em]"
               style={{ color: '#F0EDE6' }}
             >
-              AI Growth OS
+              RS Real Estate
             </span>
           )}
         </div>

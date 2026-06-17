@@ -56,9 +56,9 @@ function formatNumber(value: number) {
 }
 
 function formatPrice(price: number) {
-  if (price >= 10000000) return `₹${(price / 10000000).toFixed(1)} Cr`;
-  if (price >= 100000) return `₹${(price / 100000).toFixed(1)} L`;
-  return `₹${new Intl.NumberFormat("en-IN").format(price)}`;
+  if (price >= 10000000) return `â‚¹${(price / 10000000).toFixed(1)} Cr`;
+  if (price >= 100000) return `â‚¹${(price / 100000).toFixed(1)} L`;
+  return `â‚¹${new Intl.NumberFormat("en-IN").format(price)}`;
 }
 
 function getStatusCount(items: { status?: string }[], status: string) {
@@ -232,7 +232,7 @@ export function Reports({ darkMode }: ReportsProps) {
   const recentItems = useMemo<RecentReportItem[]>(() => {
     const leadRows: RecentReportItem[] = leads.slice(0, 4).map((lead) => ({
       title: `Lead: ${lead.name}`,
-      meta: `${lead.status || "new"} · ${lead.score || 50}/100 score`,
+      meta: `${lead.status || "new"} Â· ${lead.score || 50}/100 score`,
       type: "CRM",
       signal: (lead.score || 0) >= 80 ? "Hot" : "Active",
       color: "#6366f1",
@@ -240,7 +240,7 @@ export function Reports({ darkMode }: ReportsProps) {
 
     const propertyRows: RecentReportItem[] = properties.slice(0, 4).map((property) => ({
       title: `Property: ${property.title}`,
-      meta: `${property.location} · ${formatPrice(property.price || 0)}`,
+      meta: `${property.location} Â· ${formatPrice(property.price || 0)}`,
       type: "Property",
       signal: property.status,
       color: "#10b981",
@@ -261,7 +261,7 @@ export function Reports({ darkMode }: ReportsProps) {
 
   const reportText = useMemo(() => {
     return [
-      "AI Growth OS - Real Estate Business Report",
+      "RS Real Estate - Real Estate Business Report",
       `Report Type: ${activeReport}`,
       `Generated: ${new Date().toLocaleString()}`,
       "",
@@ -299,7 +299,7 @@ export function Reports({ darkMode }: ReportsProps) {
   };
 
   const handleEmailReport = () => {
-    const subject = encodeURIComponent(`AI Growth OS ${activeReport} Report`);
+    const subject = encodeURIComponent(`RS Real Estate ${activeReport} Report`);
     const body = encodeURIComponent(reportText);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };

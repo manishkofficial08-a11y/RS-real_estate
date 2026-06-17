@@ -55,7 +55,7 @@ const upcomingPosts = [
   { time: "Today 3:00 PM", platform: "Instagram", content: "5 AI trends reshaping B2B marketing in 2025", status: "scheduled" },
   { time: "Today 6:00 PM", platform: "LinkedIn", content: "How we 10x'd our lead gen using AI automation", status: "scheduled" },
   { time: "Tomorrow 9:00 AM", platform: "Twitter", content: "Thread: The future of content creation is here", status: "draft" },
-  { time: "Tomorrow 2:00 PM", platform: "YouTube", content: "Full tutorial: AI Growth OS walkthrough", status: "processing" },
+  { time: "Tomorrow 2:00 PM", platform: "YouTube", content: "Full tutorial: RS Real Estate walkthrough", status: "processing" },
 ];
 
 interface DashboardProps {
@@ -334,15 +334,15 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
               className="tracking-tight"
               style={{ color: darkMode ? "#e2e8f0" : "#0f172a", fontSize: "1.5rem", fontWeight: 600 }}
             >
-              Good morning 👋
+              Good morning ðŸ‘‹
             </h1>
 
             <p className="text-sm mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
               {loadingLeads
                 ? "Loading your real dashboard data..."
                 : leadError
-                  ? `Backend data unavailable · ${leadError}`
-                  : `Your AI health score is ${stats.healthScore}/100 — ${stats.activeLeads} active leads need attention.`}
+                  ? `Backend data unavailable Â· ${leadError}`
+                  : `Your AI health score is ${stats.healthScore}/100 â€” ${stats.activeLeads} active leads need attention.`}
             </p>
           </div>
 
@@ -809,7 +809,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                           {post.content}
                         </p>
                         <p className="text-xs mt-0.5" style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}>
-                          Demo fallback · {post.time}
+                          Demo fallback Â· {post.time}
                         </p>
                       </div>
 

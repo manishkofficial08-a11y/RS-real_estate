@@ -9,7 +9,7 @@ type ClientLoginProps = {
 };
 
 export function ClientLogin({ darkMode, onLoginSuccess }: ClientLoginProps) {
-  const [email, setEmail] = useState("testclient@example.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("test123456");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,10 +66,10 @@ export function ClientLogin({ darkMode, onLoginSuccess }: ClientLoginProps) {
 
           <div>
             <h1 className="text-2xl font-semibold tracking-[-0.03em]" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-              Client Dashboard
+              RS Real Estate Portal
             </h1>
             <p className="text-sm" style={{ color: darkMode ? "#64748b" : "#64748b" }}>
-              AI Growth OS Workspace
+              RS Real Estate Workspace
             </p>
           </div>
         </div>

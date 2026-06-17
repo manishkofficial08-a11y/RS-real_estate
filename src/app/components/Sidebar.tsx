@@ -43,7 +43,7 @@ const navItems = [
   { id: "billing", icon: CreditCard, label: "Billing", badge: null },
   { id: "support", icon: LifeBuoy, label: "Support", badge: null },
   { id: "settings", icon: Settings, label: "Settings", badge: null },
-  { id: "ai-manager", icon: Bot, label: "AI Manager", badge: "●" },
+  { id: "ai-manager", icon: Bot, label: "AI Manager", badge: "â—" },
 ];
 
 interface SidebarProps {
@@ -70,8 +70,8 @@ export function Sidebar({
 }: SidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const businessName = profile?.business_name || "RS Real Estate OS";
-  const userName = profile?.full_name || "MMe-AI";
-  const userEmail = profile?.email || "client@rsrealestate.com";
+  const userName = profile?.full_name || "RS Real Estate";
+  const userEmail = profile?.email || "Email not available";
   const initials =
     userName
       .trim()
@@ -141,7 +141,7 @@ export function Sidebar({
                 className="text-xs"
                 style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
               >
-                MMe-AI Client Portal
+                RS Real Estate Portal
               </div>
             </motion.div>
           )}
@@ -188,7 +188,7 @@ export function Sidebar({
                   color: darkMode ? "#818cf8" : "#6366f1",
                 }}
               >
-                ⌘K
+                âŒ˜K
               </kbd>
             </div>
           </button>
@@ -271,13 +271,13 @@ export function Sidebar({
                       background:
                         item.badge === "New"
                           ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
-                          : item.badge === "●"
+                          : item.badge === "â—"
                             ? "transparent"
                             : darkMode
                               ? "rgba(99,102,241,0.2)"
                               : "rgba(99,102,241,0.1)",
                       color:
-                        item.badge === "●"
+                        item.badge === "â—"
                           ? "#22c55e"
                           : item.badge === "New"
                             ? "#ffffff"
