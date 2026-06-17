@@ -5,3 +5,4 @@ from app.models.lead import Lead, LeadActivity, LeadStatus, LeadSource
 from app.models.support_ticket import SupportTicket, SupportTicketStatus, SupportTicketPriority, SupportTicketCategory
 from app.models.notification import Notification, NotificationAudience, NotificationType
 from app.models.ai_job import AIJob, AIJobStatus, AIJobType, AIJobPriority
+from app.models.content_asset import ContentAsset, ContentAssetType

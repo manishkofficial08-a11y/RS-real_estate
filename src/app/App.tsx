@@ -9,6 +9,7 @@ import { CRM } from "./components/CRM";
 import { Scheduler } from "./components/Scheduler";
 import { Settings } from "./components/Settings";
 import { Support } from "./components/Support";
+import { MediaLibrary } from "./components/MediaLibrary";
 import { Reports } from "./components/Reports";
 import { AIManager } from "./components/AIManager";
 import { Background3D } from "./components/Background3D";
@@ -35,6 +36,15 @@ const screenComponents: Record<
     <Dashboard darkMode={darkMode} onNavigate={onNavigate!} />
   ),
   "ai-studio": ({ darkMode }) => <AIStudio darkMode={darkMode} />,
+  content: ({ darkMode }) => (
+    <MediaLibrary
+      darkMode={darkMode}
+      defaultFilter="text"
+      title="Content Library"
+      subtitle="Manage reusable post copy, campaign notes, PDFs, and content links."
+    />
+  ),
+  media: ({ darkMode }) => <MediaLibrary darkMode={darkMode} />,
   analytics: ({ darkMode }) => <Analytics darkMode={darkMode} />,
   crm: ({ darkMode }) => <CRM darkMode={darkMode} />,
   properties: ({ darkMode }) => <Properties darkMode={darkMode} />,
