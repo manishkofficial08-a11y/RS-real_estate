@@ -24,11 +24,15 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import {
   createClientAIJob,
+  createScheduledPost,
   getMyClientAIJobs,
   getMyGeneratedPosts,
+  updateGeneratedPost,
   type ClientAIJob,
   type ClientAIJobType,
   type ClientGeneratedPost,
+  type ClientGeneratedPostPlatform,
+  type ClientScheduledPostPlatform,
 } from "../lib/clientApi";
 
 const tools: Array<{
@@ -139,6 +143,7 @@ type GeneratedPost = {
   id: string;
   caption: string;
   platform: GeneratedPostPlatform;
+  apiPlatform: ClientGeneratedPostPlatform;
   status: GeneratedPostStatus;
   createdAt: string;
 };
@@ -150,6 +155,17 @@ const generatedPostFilters: Array<{ label: string; value: GeneratedPostFilter }>
   { label: "Published", value: "published" },
 ];
 
+const generatedPostPlatformOptions: Array<{
+  label: string;
+  value: ClientScheduledPostPlatform;
+}> = [
+  { label: "Instagram", value: "instagram" },
+  { label: "LinkedIn", value: "linkedin" },
+  { label: "Facebook", value: "facebook" },
+  { label: "Twitter/X", value: "twitter" },
+  { label: "Website", value: "website" },
+  { label: "Other", value: "other" },
+];
 
 const getGeneratedPostStatusConfig = (status: GeneratedPostStatus) => {
   if (status === "published") {
@@ -196,11 +212,38 @@ const formatDateTime = (value?: string | null) => {
   });
 };
 
-const formatGeneratedPostPlatform = (platform: string) =>
-  platform
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+const normalizeGeneratedPostPlatform = (
+  platform?: string | null,
+): ClientGeneratedPostPlatform => {
+  const normalized = String(platform || "instagram")
+    .trim()
+    .toLowerCase()
+    .replace("twitter/x", "twitter");
+
+  const allowedPlatforms = new Set<ClientGeneratedPostPlatform>([
+    "instagram",
+    "facebook",
+    "linkedin",
+    "twitter",
+    "website",
+    "other",
+  ]);
+
+  if (allowedPlatforms.has(normalized as ClientGeneratedPostPlatform)) {
+    return normalized as ClientGeneratedPostPlatform;
+  }
+
+  return "other";
+};
+
+const formatGeneratedPostPlatform = (platform: string) => {
+  const normalized = normalizeGeneratedPostPlatform(platform);
+
+  return (
+    generatedPostPlatformOptions.find((option) => option.value === normalized)
+      ?.label || "Other"
+  );
+};
 
 const normalizeGeneratedPostStatus = (
   status: ClientGeneratedPost["status"],
@@ -216,6 +259,7 @@ const mapGeneratedPostToCard = (post: ClientGeneratedPost): GeneratedPost => ({
   id: post.id,
   caption: post.content || post.title,
   platform: formatGeneratedPostPlatform(String(post.platform || "instagram")),
+  apiPlatform: normalizeGeneratedPostPlatform(post.platform),
   status: normalizeGeneratedPostStatus(post.status),
   createdAt: formatDateTime(post.created_at),
 });
@@ -286,6 +330,17 @@ export function AIStudio({ darkMode }: AIStudioProps) {
   const [generatedPosts, setGeneratedPosts] = useState<GeneratedPost[]>([]);
   const [generatedPostFilter, setGeneratedPostFilter] = useState<GeneratedPostFilter>("all");
   const [generatedPostActionMessage, setGeneratedPostActionMessage] = useState<string | null>(null);
+  const [generatedPostActionTone, setGeneratedPostActionTone] =
+    useState<"success" | "error">("success");
+  const [generatedPostActionKey, setGeneratedPostActionKey] = useState<string | null>(null);
+  const [scheduleTargetPost, setScheduleTargetPost] = useState<GeneratedPost | null>(null);
+  const [schedulePlatform, setSchedulePlatform] =
+    useState<ClientScheduledPostPlatform>("instagram");
+  const [scheduledDateTime, setScheduledDateTime] = useState("");
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [editTargetPost, setEditTargetPost] = useState<GeneratedPost | null>(null);
+  const [editedCaption, setEditedCaption] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
   const [loadingGeneratedPosts, setLoadingGeneratedPosts] = useState(true);
   const [generatedPostsError, setGeneratedPostsError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -339,18 +394,154 @@ export function AIStudio({ darkMode }: AIStudioProps) {
     }
   };
 
-  const handleCreateMockGeneratedPost = () => {
-    setGeneratedPostFilter("all");
-    void loadGeneratedPosts();
-  };
-
-  const handleGeneratedPostAction = (action: string, post?: GeneratedPost) => {
-    const target = post ? `${post.platform} post` : "generated posts";
-    setGeneratedPostActionMessage(`${action} placeholder ready for ${target}.`);
+  const showGeneratedPostActionMessage = (
+    message: string,
+    tone: "success" | "error" = "success",
+  ) => {
+    setGeneratedPostActionTone(tone);
+    setGeneratedPostActionMessage(message);
 
     window.setTimeout(() => {
       setGeneratedPostActionMessage(null);
     }, 2800);
+  };
+
+  const handleRefreshGeneratedPosts = () => {
+    setGeneratedPostFilter("all");
+    void loadGeneratedPosts();
+  };
+
+  const openEditGeneratedPost = (post: GeneratedPost) => {
+    setEditTargetPost(post);
+    setEditedCaption(post.caption);
+    setEditError(null);
+  };
+
+  const handleSubmitEditPost = async () => {
+    if (!editTargetPost) return;
+
+    const content = editedCaption.trim();
+
+    if (!content) {
+      setEditError("Caption content is required.");
+      return;
+    }
+
+    const actionKey = `${editTargetPost.id}:edit`;
+
+    try {
+      setGeneratedPostActionKey(actionKey);
+      setEditError(null);
+
+      await updateGeneratedPost(editTargetPost.id, {
+        content,
+      });
+
+      setEditTargetPost(null);
+      setEditedCaption("");
+      await loadGeneratedPosts();
+      showGeneratedPostActionMessage("Post updated successfully.");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to update generated post.";
+      setEditError(message);
+      showGeneratedPostActionMessage(message, "error");
+    } finally {
+      setGeneratedPostActionKey(null);
+    }
+  };
+
+  const handleCopyGeneratedPost = async (post: GeneratedPost) => {
+    const actionKey = `${post.id}:copy`;
+
+    try {
+      setGeneratedPostActionKey(actionKey);
+      await navigator.clipboard.writeText(post.caption);
+      showGeneratedPostActionMessage("Post copied to clipboard.");
+    } catch (err) {
+      showGeneratedPostActionMessage(
+        err instanceof Error ? err.message : "Failed to copy post.",
+        "error",
+      );
+    } finally {
+      setGeneratedPostActionKey(null);
+    }
+  };
+
+  const openScheduleGeneratedPost = (post: GeneratedPost) => {
+    setScheduleTargetPost(post);
+    setSchedulePlatform(post.apiPlatform as ClientScheduledPostPlatform);
+    setScheduledDateTime("");
+    setScheduleError(null);
+  };
+
+  const handleSubmitSchedulePost = async () => {
+    if (!scheduleTargetPost) return;
+
+    if (!scheduledDateTime) {
+      setScheduleError("Scheduled date/time is required.");
+      return;
+    }
+
+    const scheduledDate = new Date(scheduledDateTime);
+
+    if (Number.isNaN(scheduledDate.getTime())) {
+      setScheduleError("Please select a valid scheduled date/time.");
+      return;
+    }
+
+    if (scheduledDate <= new Date()) {
+      setScheduleError("Scheduled date/time should be in the future.");
+      return;
+    }
+
+    const actionKey = `${scheduleTargetPost.id}:schedule`;
+
+    try {
+      setGeneratedPostActionKey(actionKey);
+      setScheduleError(null);
+
+      await createScheduledPost({
+        generated_post_id: scheduleTargetPost.id,
+        platform: schedulePlatform,
+        scheduled_at: scheduledDate.toISOString(),
+      });
+
+      setScheduleTargetPost(null);
+      setScheduledDateTime("");
+      await loadGeneratedPosts();
+      showGeneratedPostActionMessage("Post scheduled successfully.");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to schedule generated post.";
+      setScheduleError(message);
+      showGeneratedPostActionMessage(message, "error");
+    } finally {
+      setGeneratedPostActionKey(null);
+    }
+  };
+
+  const handlePublishGeneratedPost = async (post: GeneratedPost) => {
+    const actionKey = `${post.id}:publish`;
+
+    try {
+      setGeneratedPostActionKey(actionKey);
+
+      await updateGeneratedPost(post.id, {
+        status: "published",
+        published_at: new Date().toISOString(),
+      });
+
+      await loadGeneratedPosts();
+      showGeneratedPostActionMessage("Post marked as published.");
+    } catch (err) {
+      showGeneratedPostActionMessage(
+        err instanceof Error ? err.message : "Failed to mark post as published.",
+        "error",
+      );
+    } finally {
+      setGeneratedPostActionKey(null);
+    }
   };
 
   const loadJobs = async () => {
@@ -772,11 +963,20 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                             role="status"
                             className="mt-3 rounded-xl border px-3 py-2 text-xs"
                             style={{
-                              background: darkMode
-                                ? "rgba(16,185,129,0.10)"
-                                : "rgba(16,185,129,0.06)",
-                              borderColor: "rgba(16,185,129,0.18)",
-                              color: "#10b981",
+                              background:
+                                generatedPostActionTone === "error"
+                                  ? darkMode
+                                    ? "rgba(239,68,68,0.10)"
+                                    : "rgba(239,68,68,0.06)"
+                                  : darkMode
+                                    ? "rgba(16,185,129,0.10)"
+                                    : "rgba(16,185,129,0.06)",
+                              borderColor:
+                                generatedPostActionTone === "error"
+                                  ? "rgba(239,68,68,0.18)"
+                                  : "rgba(16,185,129,0.18)",
+                              color:
+                                generatedPostActionTone === "error" ? "#ef4444" : "#10b981",
                             }}
                           >
                             {generatedPostActionMessage}
@@ -815,6 +1015,238 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                         })}
                       </div>
                     </div>
+
+                    {editTargetPost && (
+                      <div
+                        className="mt-4 rounded-2xl border p-4"
+                        style={{
+                          background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                          borderColor: darkMode
+                            ? "rgba(99,102,241,0.18)"
+                            : "rgba(15,23,42,0.08)",
+                        }}
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-sm font-semibold" style={{ color: textPrimary }}>
+                              Edit generated post
+                            </h3>
+                            <p className="mt-1 text-xs" style={{ color: textMuted }}>
+                              Update the caption/content saved for this generated post.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditTargetPost(null);
+                              setEditedCaption("");
+                              setEditError(null);
+                            }}
+                            className="rounded-lg border px-2 py-1 text-xs transition-all hover:opacity-80"
+                            style={{
+                              borderColor: cardStyle.borderColor,
+                              color: textSoft,
+                            }}
+                          >
+                            Close
+                          </button>
+                        </div>
+
+                        <label
+                          htmlFor="generated-post-edit-caption"
+                          className="mb-1.5 block text-xs"
+                          style={{ color: textSoft }}
+                        >
+                          Caption/content
+                        </label>
+                        <textarea
+                          id="generated-post-edit-caption"
+                          value={editedCaption}
+                          onChange={(event) => setEditedCaption(event.target.value)}
+                          rows={5}
+                          className="w-full resize-none rounded-xl border px-3 py-2.5 text-sm"
+                          style={{
+                            background: darkMode ? "rgba(255,255,255,0.04)" : "#ffffff",
+                            borderColor: cardStyle.borderColor,
+                            color: textPrimary,
+                            fontFamily: "inherit",
+                          }}
+                        />
+
+                        {editError && (
+                          <p className="mt-3 text-xs" style={{ color: "#ef4444" }}>
+                            {editError}
+                          </p>
+                        )}
+
+                        <div className="mt-4 flex flex-wrap justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditTargetPost(null);
+                              setEditedCaption("");
+                              setEditError(null);
+                            }}
+                            className="rounded-xl border px-4 py-2 text-xs font-medium transition-all hover:opacity-80"
+                            style={{
+                              borderColor: cardStyle.borderColor,
+                              color: textMuted,
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleSubmitEditPost()}
+                            disabled={generatedPostActionKey === `${editTargetPost.id}:edit`}
+                            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-all hover:opacity-90 disabled:opacity-60"
+                            style={{
+                              background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                              color: "#ffffff",
+                            }}
+                          >
+                            {generatedPostActionKey === `${editTargetPost.id}:edit` && (
+                              <Loader2 size={12} className="animate-spin" />
+                            )}
+                            Save changes
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {scheduleTargetPost && (
+                      <div
+                        className="mt-4 rounded-2xl border p-4"
+                        style={{
+                          background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                          borderColor: darkMode
+                            ? "rgba(99,102,241,0.18)"
+                            : "rgba(15,23,42,0.08)",
+                        }}
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-sm font-semibold" style={{ color: textPrimary }}>
+                              Schedule generated post
+                            </h3>
+                            <p className="mt-1 line-clamp-2 text-xs" style={{ color: textMuted }}>
+                              {scheduleTargetPost.caption}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setScheduleTargetPost(null);
+                              setScheduledDateTime("");
+                              setScheduleError(null);
+                            }}
+                            className="rounded-lg border px-2 py-1 text-xs transition-all hover:opacity-80"
+                            style={{
+                              borderColor: cardStyle.borderColor,
+                              color: textSoft,
+                            }}
+                          >
+                            Close
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <div>
+                            <label
+                              htmlFor="generated-post-schedule-platform"
+                              className="mb-1.5 block text-xs"
+                              style={{ color: textSoft }}
+                            >
+                              Platform
+                            </label>
+                            <select
+                              id="generated-post-schedule-platform"
+                              value={schedulePlatform}
+                              onChange={(event) =>
+                                setSchedulePlatform(
+                                  event.target.value as ClientScheduledPostPlatform,
+                                )
+                              }
+                              className="w-full rounded-xl border px-3 py-2.5 text-sm"
+                              style={{
+                                background: darkMode ? "rgba(255,255,255,0.04)" : "#ffffff",
+                                borderColor: cardStyle.borderColor,
+                                color: textPrimary,
+                              }}
+                            >
+                              {generatedPostPlatformOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor="generated-post-scheduled-at"
+                              className="mb-1.5 block text-xs"
+                              style={{ color: textSoft }}
+                            >
+                              Scheduled date/time
+                            </label>
+                            <input
+                              id="generated-post-scheduled-at"
+                              type="datetime-local"
+                              value={scheduledDateTime}
+                              onChange={(event) => setScheduledDateTime(event.target.value)}
+                              className="w-full rounded-xl border px-3 py-2.5 text-sm"
+                              style={{
+                                background: darkMode ? "rgba(255,255,255,0.04)" : "#ffffff",
+                                borderColor: cardStyle.borderColor,
+                                color: textPrimary,
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {scheduleError && (
+                          <p className="mt-3 text-xs" style={{ color: "#ef4444" }}>
+                            {scheduleError}
+                          </p>
+                        )}
+
+                        <div className="mt-4 flex flex-wrap justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setScheduleTargetPost(null);
+                              setScheduledDateTime("");
+                              setScheduleError(null);
+                            }}
+                            className="rounded-xl border px-4 py-2 text-xs font-medium transition-all hover:opacity-80"
+                            style={{
+                              borderColor: cardStyle.borderColor,
+                              color: textMuted,
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleSubmitSchedulePost()}
+                            disabled={
+                              generatedPostActionKey === `${scheduleTargetPost.id}:schedule`
+                            }
+                            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-all hover:opacity-90 disabled:opacity-60"
+                            style={{
+                              background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                              color: "#ffffff",
+                            }}
+                          >
+                            {generatedPostActionKey === `${scheduleTargetPost.id}:schedule` && (
+                              <Loader2 size={12} className="animate-spin" />
+                            )}
+                            Schedule post
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="mt-4">
                       {loadingGeneratedPosts ? (
@@ -886,7 +1318,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                           </p>
                           <button
                             type="button"
-                            onClick={handleCreateMockGeneratedPost}
+                            onClick={handleRefreshGeneratedPosts}
                             className="mt-4 rounded-xl px-4 py-2 text-xs font-medium transition-all hover:opacity-90"
                             style={{
                               background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
@@ -948,18 +1380,50 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                                     <button
                                       key={action}
                                       type="button"
-                                      onClick={() => handleGeneratedPostAction(action, post)}
-                                      className="rounded-lg border px-3 py-1.5 text-xs font-medium transition-all hover:scale-[1.02]"
+                                      onClick={() => {
+                                        if (action === "Edit") {
+                                          openEditGeneratedPost(post);
+                                          return;
+                                        }
+
+                                        if (action === "Copy") {
+                                          void handleCopyGeneratedPost(post);
+                                          return;
+                                        }
+
+                                        if (action === "Schedule") {
+                                          openScheduleGeneratedPost(post);
+                                          return;
+                                        }
+
+                                        void handlePublishGeneratedPost(post);
+                                      }}
+                                      disabled={Boolean(generatedPostActionKey)}
+                                      className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all hover:scale-[1.02] disabled:hover:scale-100"
                                       style={{
                                         background: darkMode
                                           ? "rgba(255,255,255,0.04)"
                                           : "#ffffff",
                                         borderColor: cardStyle.borderColor,
                                         color: textMuted,
+                                        cursor: generatedPostActionKey ? "not-allowed" : "pointer",
+                                        opacity: generatedPostActionKey ? 0.6 : 1,
                                       }}
                                       aria-label={`${action} ${post.platform} generated post`}
+                                      aria-busy={
+                                        generatedPostActionKey ===
+                                        `${post.id}:${action.toLowerCase()}`
+                                      }
                                     >
-                                      {action}
+                                      {generatedPostActionKey ===
+                                      `${post.id}:${action.toLowerCase()}` ? (
+                                        <>
+                                          <Loader2 size={12} className="animate-spin" />
+                                          {action}...
+                                        </>
+                                      ) : (
+                                        action
+                                      )}
                                     </button>
                                   ))}
                                 </div>
