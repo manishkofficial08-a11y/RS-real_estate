@@ -206,11 +206,11 @@ interface AIStudioProps {
 }
 
 const formatDateTime = (value?: string | null) => {
-  if (!value) return "â€”";
+  if (!value) return "—";
 
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) return "â€”";
+  if (Number.isNaN(date.getTime())) return "—";
 
   return date.toLocaleString("en-IN", {
     day: "2-digit",
@@ -915,7 +915,8 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                         </div>
                       )}
                     </div>
-                  </section>                </motion.div>
+                  </section>
+                </motion.div>
               )}
 
               {activeTab === "history" && (
