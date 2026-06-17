@@ -25,8 +25,10 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   createClientAIJob,
   getMyClientAIJobs,
+  getMyGeneratedPosts,
   type ClientAIJob,
   type ClientAIJobType,
+  type ClientGeneratedPost,
 } from "../lib/clientApi";
 
 const tools: Array<{
@@ -131,7 +133,7 @@ const templates = [
 
 type GeneratedPostStatus = "draft" | "scheduled" | "published";
 type GeneratedPostFilter = "all" | GeneratedPostStatus;
-type GeneratedPostPlatform = "Instagram" | "LinkedIn" | "Facebook";
+type GeneratedPostPlatform = string;
 
 type GeneratedPost = {
   id: string;
@@ -148,32 +150,6 @@ const generatedPostFilters: Array<{ label: string; value: GeneratedPostFilter }>
   { label: "Published", value: "published" },
 ];
 
-const generatedPostSeedData: GeneratedPost[] = [
-  {
-    id: "post-1",
-    caption:
-      "Discover a premium 3BHK residence designed for modern city living, with elegant interiors, smart amenities, and a location built for everyday convenience.",
-    platform: "Instagram",
-    status: "draft",
-    createdAt: "Today, 10:30 AM",
-  },
-  {
-    id: "post-2",
-    caption:
-      "Real estate growth starts with fast lead follow-up. Here are three practical ways agencies can improve conversion without adding more manual work.",
-    platform: "LinkedIn",
-    status: "scheduled",
-    createdAt: "Yesterday, 6:15 PM",
-  },
-  {
-    id: "post-3",
-    caption:
-      "Looking for a family-ready home near schools, markets, and metro connectivity? This listing brings comfort, location, and long-term value together.",
-    platform: "Facebook",
-    status: "published",
-    createdAt: "12 Jun, 4:45 PM",
-  },
-];
 
 const getGeneratedPostStatusConfig = (status: GeneratedPostStatus) => {
   if (status === "published") {
@@ -219,6 +195,30 @@ const formatDateTime = (value?: string | null) => {
     minute: "2-digit",
   });
 };
+
+const formatGeneratedPostPlatform = (platform: string) =>
+  platform
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const normalizeGeneratedPostStatus = (
+  status: ClientGeneratedPost["status"],
+): GeneratedPostStatus => {
+  if (status === "scheduled" || status === "published") {
+    return status;
+  }
+
+  return "draft";
+};
+
+const mapGeneratedPostToCard = (post: ClientGeneratedPost): GeneratedPost => ({
+  id: post.id,
+  caption: post.content || post.title,
+  platform: formatGeneratedPostPlatform(String(post.platform || "instagram")),
+  status: normalizeGeneratedPostStatus(post.status),
+  createdAt: formatDateTime(post.created_at),
+});
 
 const getStatusConfig = (status: string) => {
   if (status === "completed") {
@@ -283,6 +283,11 @@ export function AIStudio({ darkMode }: AIStudioProps) {
   const [prompt, setPrompt] = useState("");
   const [jobs, setJobs] = useState<ClientAIJob[]>([]);
   const [selectedJob, setSelectedJob] = useState<ClientAIJob | null>(null);
+  const [generatedPosts, setGeneratedPosts] = useState<GeneratedPost[]>([]);
+  const [generatedPostFilter, setGeneratedPostFilter] = useState<GeneratedPostFilter>("all");
+  const [generatedPostActionMessage, setGeneratedPostActionMessage] = useState<string | null>(null);
+  const [loadingGeneratedPosts, setLoadingGeneratedPosts] = useState(true);
+  const [generatedPostsError, setGeneratedPostsError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -319,19 +324,24 @@ export function AIStudio({ darkMode }: AIStudioProps) {
     return generatedPosts.filter((post) => post.status === generatedPostFilter);
   }, [generatedPostFilter, generatedPosts]);
 
+  const loadGeneratedPosts = async () => {
+    try {
+      setLoadingGeneratedPosts(true);
+      setGeneratedPostsError(null);
+      const data = await getMyGeneratedPosts({ limit: 100 });
+      setGeneratedPosts(data.map(mapGeneratedPostToCard));
+    } catch (err) {
+      setGeneratedPostsError(
+        err instanceof Error ? err.message : "Failed to load generated posts",
+      );
+    } finally {
+      setLoadingGeneratedPosts(false);
+    }
+  };
+
   const handleCreateMockGeneratedPost = () => {
-    setGeneratedPosts((currentPosts) => {
-      if (currentPosts.length > 0) return currentPosts;
-
-      return generatedPostSeedData;
-    });
-
     setGeneratedPostFilter("all");
-    setGeneratedPostActionMessage("Sample generated posts added locally for preview.");
-
-    window.setTimeout(() => {
-      setGeneratedPostActionMessage(null);
-    }, 2800);
+    void loadGeneratedPosts();
   };
 
   const handleGeneratedPostAction = (action: string, post?: GeneratedPost) => {
@@ -358,6 +368,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
 
   useEffect(() => {
     loadJobs();
+    void loadGeneratedPosts();
   }, []);
 
   const handleGenerate = async () => {
@@ -806,7 +817,50 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                     </div>
 
                     <div className="mt-4">
-                      {filteredGeneratedPosts.length === 0 ? (
+                      {loadingGeneratedPosts ? (
+                        <div
+                          className="rounded-2xl border border-dashed p-6 text-center"
+                          style={{
+                            background: darkMode ? "rgba(99,102,241,0.04)" : "#f8fafc",
+                            borderColor: darkMode
+                              ? "rgba(99,102,241,0.18)"
+                              : "rgba(15,23,42,0.10)",
+                          }}
+                        >
+                          <Loader2 className="mx-auto animate-spin" size={20} style={{ color: "#6366f1" }} />
+                          <p className="mt-3 text-sm font-semibold" style={{ color: textPrimary }}>
+                            Loading generated posts...
+                          </p>
+                        </div>
+                      ) : generatedPostsError ? (
+                        <div
+                          className="rounded-2xl border border-dashed p-6 text-center"
+                          style={{
+                            background: darkMode ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.06)",
+                            borderColor: "rgba(239,68,68,0.18)",
+                          }}
+                        >
+                          <AlertTriangle className="mx-auto" size={20} style={{ color: "#ef4444" }} />
+                          <p className="mt-3 text-sm font-semibold" style={{ color: textPrimary }}>
+                            Could not load generated posts
+                          </p>
+                          <p className="mx-auto mt-2 max-w-md text-xs leading-5" style={{ color: textMuted }}>
+                            {generatedPostsError}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => void loadGeneratedPosts()}
+                            className="mt-4 rounded-xl px-4 py-2 text-xs font-medium transition-all hover:opacity-90"
+                            style={{
+                              background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                              color: "#ffffff",
+                              boxShadow: "0 4px 14px rgba(99,102,241,0.25)",
+                            }}
+                          >
+                            Retry
+                          </button>
+                        </div>
+                      ) : filteredGeneratedPosts.length === 0 ? (
                         <div
                           className="rounded-2xl border border-dashed p-6 text-center"
                           style={{
@@ -828,7 +882,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                             No generated posts yet
                           </p>
                           <p className="mx-auto mt-2 max-w-md text-xs leading-5" style={{ color: textMuted }}>
-                            Generate content in AI Studio and saved posts will appear here.
+                            Generate content in AI Studio and saved posts from the backend will appear here.
                           </p>
                           <button
                             type="button"
@@ -840,7 +894,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                               boxShadow: "0 4px 14px rgba(99,102,241,0.25)",
                             }}
                           >
-                            Generate first post
+                            Refresh posts
                           </button>
                         </div>
                       ) : (
