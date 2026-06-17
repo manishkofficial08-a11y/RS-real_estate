@@ -46,6 +46,44 @@ export async function loginClient(email: string, password: string) {
   return data;
 }
 
+export async function requestClientPasswordReset(email: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/request-password-reset`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Failed to request password reset");
+  }
+
+  return response.json();
+}
+
+export async function resetClientPassword(payload: {
+  token: string;
+  password: string;
+}): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Failed to reset password");
+  }
+
+  return response.json();
+}
+
+
 export async function clientFetch<T>(
   path: string,
   options: RequestInit = {}

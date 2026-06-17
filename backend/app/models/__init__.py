@@ -8,3 +8,5 @@ from app.models.ai_job import AIJob, AIJobStatus, AIJobType, AIJobPriority
 from app.models.content_asset import ContentAsset, ContentAssetType
 from app.models.generated_post import GeneratedPost, GeneratedPostStatus, GeneratedPostPlatform
 from app.models.scheduled_post import ScheduledPost, ScheduledPostStatus, ScheduledPostPlatform
+
+from app.models.password_reset_token import PasswordResetToken

@@ -17,6 +17,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { GenericScreen } from "./components/GenericScreen";
 import { Bell, Search, Sparkles } from "lucide-react";
 import { ClientLogin } from "./components/ClientLogin";
+import { ResetPassword } from "./components/ResetPassword";
 import {
   clearClientSession,
   getClientNotificationUnreadCount,
@@ -69,6 +70,9 @@ export default function App() {
   const [activeScreen, setActiveScreen] = useState("dashboard");
   const [darkMode, setDarkMode] = useState(true);
   const [clientLoggedIn, setClientLoggedIn] = useState(isClientLoggedIn());
+  const [passwordResetToken, setPasswordResetToken] = useState(() =>
+    new URLSearchParams(window.location.search).get("token"),
+  );
   const [clientProfile, setClientProfile] = useState<ClientProfile | null>(
     null,
   );
@@ -97,6 +101,11 @@ export default function App() {
         setClientProfile(null);
       });
   }, [clientLoggedIn]);
+
+  function handleBackToLoginFromReset() {
+    setPasswordResetToken(null);
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -148,6 +157,16 @@ export default function App() {
       window.clearInterval(intervalId);
     };
   }, [clientLoggedIn]);
+
+  if (passwordResetToken && !clientLoggedIn) {
+    return (
+      <ResetPassword
+        darkMode={darkMode}
+        token={passwordResetToken}
+        onBackToLogin={handleBackToLoginFromReset}
+      />
+    );
+  }
 
   if (!clientLoggedIn) {
     return (
