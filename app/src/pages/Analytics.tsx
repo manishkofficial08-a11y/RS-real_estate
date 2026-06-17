@@ -97,7 +97,7 @@ export default function Analytics() {
     {
       label: 'Active Companies',
       value: companies.length.toString(),
-      sub: 'Live real estate workspaces',
+      sub: 'Live real estate portals',
       icon: Building2,
       color: '#6B8AFF',
     },
@@ -265,7 +265,7 @@ export default function Analytics() {
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-sm font-medium" style={{ color: '#F0EDE6' }}>Top Companies by AI Usage</h3>
-              <p className="mt-1 text-xs" style={{ color: '#8A8A93' }}>Highest automation consumption across client workspaces</p>
+              <p className="mt-1 text-xs" style={{ color: '#8A8A93' }}>Highest automation consumption across client portals</p>
             </div>
             <span className="text-xs font-mono" style={{ color: '#55555C' }}>Mock leaderboard</span>
           </div>

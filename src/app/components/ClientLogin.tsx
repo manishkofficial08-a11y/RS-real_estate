@@ -152,7 +152,7 @@ export function ClientLogin({ darkMode, onLoginSuccess }: ClientLoginProps) {
             }}
           >
             {loading && <Loader2 size={16} className="animate-spin" />}
-            {loading ? "Signing in..." : "Login to Workspace"}
+            {loading ? "Signing in..." : "Login to Portal"}
           </button>
         </form>
       </motion.div>

@@ -133,7 +133,7 @@ export function Settings({ darkMode }: SettingsProps) {
               className="text-sm mt-1"
               style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
             >
-              Manage your business profile, account identity and workspace details.
+              Manage your business profile, account identity and portal details.
             </p>
           </div>
 
@@ -213,7 +213,7 @@ export function Settings({ darkMode }: SettingsProps) {
                 className="text-sm mt-1"
                 style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
               >
-                {formatLabel(profile?.business_type || "real_estate")} Â·{" "}
+                {formatLabel(profile?.business_type || "real_estate")} Ã‚Â·{" "}
                 {formatLabel(profile?.plan || "free")} Plan
               </p>
             </div>
