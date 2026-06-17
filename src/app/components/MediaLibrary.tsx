@@ -11,6 +11,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
   Upload,
   Video,
@@ -34,6 +35,8 @@ interface MediaLibraryProps {
   title?: string;
   subtitle?: string;
 }
+
+type AssetMode = "upload" | "text" | "link";
 
 type AssetFormState = {
   title: string;
@@ -75,6 +78,32 @@ const assetTypeOptions: Array<{
   { value: "link", label: "Links", icon: Link2, color: "#06b6d4" },
 ];
 
+const creationModes: Array<{
+  value: AssetMode;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+}> = [
+  {
+    value: "upload",
+    label: "Upload File",
+    description: "Images, PDFs, videos, text files",
+    icon: Upload,
+  },
+  {
+    value: "text",
+    label: "Text Note",
+    description: "Reusable captions or notes",
+    icon: FileText,
+  },
+  {
+    value: "link",
+    label: "External Link",
+    description: "Drive, website, social link",
+    icon: Link2,
+  },
+];
+
 function getAssetMeta(assetType?: string | null) {
   return (
     assetTypeOptions.find((option) => option.value === assetType) ||
@@ -91,10 +120,14 @@ function formatFileSize(value?: number | null) {
 
 function formatDate(value?: string | null) {
   if (!value) return "Just now";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Just now";
+
   return new Intl.DateTimeFormat("en-IN", {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(value));
+  }).format(date);
 }
 
 function resolveAssetUrl(url?: string | null) {
@@ -105,7 +138,9 @@ function resolveAssetUrl(url?: string | null) {
 
 function getTags(asset: ClientContentAsset) {
   const tags = asset.metadata_json?.tags;
-  return Array.isArray(tags) ? tags.filter((tag) => typeof tag === "string") : [];
+  return Array.isArray(tags)
+    ? tags.filter((tag) => typeof tag === "string")
+    : [];
 }
 
 function parseTags(value: string) {
@@ -115,13 +150,45 @@ function parseTags(value: string) {
     .filter(Boolean);
 }
 
+function isValidUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function inferAssetTypeFromFile(file: File): ClientContentAssetType {
+  const extension = file.name.split(".").pop()?.toLowerCase() || "";
+
+  if (file.type.startsWith("image/")) return "image";
+  if (file.type.startsWith("video/")) return "video";
+  if (file.type === "application/pdf" || extension === "pdf") return "pdf";
+  if (
+    file.type.startsWith("text/") ||
+    extension === "txt" ||
+    extension === "md"
+  ) {
+    return "text";
+  }
+
+  return "text";
+}
+
+function assetHasLocalPreview(asset: ClientContentAsset) {
+  return Boolean(asset.file_url && asset.asset_type !== "link");
+}
+
+let cachedContentAssets: ClientContentAsset[] = [];
+
 export function MediaLibrary({
   darkMode,
   defaultFilter = "all",
   title = "Media Library",
-  subtitle = "Store listing media, content drafts, PDFs, and campaign links.",
+  subtitle = "Store listing media, content drafts, PDFs, videos, and campaign links.",
 }: MediaLibraryProps) {
-  const [assets, setAssets] = useState<ClientContentAsset[]>([]);
+  const [allAssets, setAllAssets] = useState<ClientContentAsset[]>(cachedContentAssets);
   const [properties, setProperties] = useState<ClientProperty[]>([]);
   const [typeFilter, setTypeFilter] = useState<ClientContentAssetType | "all">(
     defaultFilter,
@@ -134,7 +201,24 @@ export function MediaLibrary({
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [assetMode, setAssetMode] = useState<AssetMode>("upload");
   const [form, setForm] = useState<AssetFormState>(emptyForm);
+
+  function syncAssets(
+    nextAssets:
+      | ClientContentAsset[]
+      | ((previousAssets: ClientContentAsset[]) => ClientContentAsset[]),
+  ) {
+    setAllAssets((previousAssets) => {
+      const resolvedAssets =
+        typeof nextAssets === "function"
+          ? nextAssets(previousAssets)
+          : nextAssets;
+
+      cachedContentAssets = resolvedAssets;
+      return resolvedAssets;
+    });
+  }
 
   const cardBase = {
     background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
@@ -146,20 +230,52 @@ export function MediaLibrary({
     borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
   };
 
-  async function loadAssets() {
+  const textPrimary = darkMode ? "#e2e8f0" : "#0f172a";
+  const textMuted = darkMode ? "#94a3b8" : "#64748b";
+  const textSoft = darkMode ? "#64748b" : "#94a3b8";
+
+  async function loadAssets(searchOverride?: string) {
     try {
       setLoading(true);
       setMessage(null);
+
+      const searchValue =
+        typeof searchOverride === "string" ? searchOverride : searchTerm;
+
       const data = await getMyContentAssets({
-        asset_type: typeFilter,
-        search: searchTerm,
+        search: searchValue,
       });
-      setAssets(data);
-      setSelectedAssetId((current) => current || data[0]?.id || null);
+
+      const safeData = Array.isArray(data) ? data : [];
+      const normalizedSearch = searchValue.trim();
+
+      if (
+        safeData.length === 0 &&
+        cachedContentAssets.length > 0 &&
+        normalizedSearch.length === 0
+      ) {
+        return;
+      }
+
+      syncAssets(safeData);
+
+      const nextVisible = safeData.filter((asset) => {
+        if (typeFilter === "all") return true;
+        return getAssetMeta(asset.asset_type).value === typeFilter;
+      });
+
+      setSelectedAssetId((current) => {
+        if (!nextVisible.length) return null;
+        if (current && nextVisible.some((asset) => asset.id === current)) {
+          return current;
+        }
+        return nextVisible[0].id;
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Failed to load assets");
-      setAssets([]);
-      setSelectedAssetId(null);
+      setMessage(
+        error instanceof Error ? error.message : "Failed to load assets",
+      );
+      // Preserve existing assets on transient reload failures.
     } finally {
       setLoading(false);
     }
@@ -176,20 +292,46 @@ export function MediaLibrary({
 
   useEffect(() => {
     loadProperties();
+    loadAssets();
   }, []);
 
+
+  const visibleAssets = useMemo(() => {
+    return allAssets.filter((asset) => {
+      if (typeFilter === "all") return true;
+      return getAssetMeta(asset.asset_type).value === typeFilter;
+    });
+  }, [allAssets, typeFilter]);
+
   useEffect(() => {
-    loadAssets();
-  }, [typeFilter]);
+    if (!selectedAssetId && visibleAssets.length > 0) {
+      setSelectedAssetId(visibleAssets[0].id);
+      return;
+    }
+
+    if (
+      selectedAssetId &&
+      visibleAssets.length > 0 &&
+      !visibleAssets.some((asset) => asset.id === selectedAssetId)
+    ) {
+      setSelectedAssetId(visibleAssets[0].id);
+      return;
+    }
+
+    if (selectedAssetId && visibleAssets.length === 0) {
+      setSelectedAssetId(null);
+    }
+  }, [visibleAssets, selectedAssetId]);
 
   const selectedAsset = useMemo(
-    () => assets.find((asset) => asset.id === selectedAssetId) || assets[0],
-    [assets, selectedAssetId],
+    () =>
+      visibleAssets.find((asset) => asset.id === selectedAssetId) ||
+      visibleAssets[0],
+    [visibleAssets, selectedAssetId],
   );
-
   const counts = useMemo(() => {
     const initial: Record<ClientContentAssetType | "all", number> = {
-      all: assets.length,
+      all: allAssets.length,
       image: 0,
       video: 0,
       pdf: 0,
@@ -197,45 +339,69 @@ export function MediaLibrary({
       link: 0,
     };
 
-    for (const asset of assets) {
-      const type = assetTypeOptions.some((option) => option.value === asset.asset_type)
-        ? (asset.asset_type as ClientContentAssetType)
-        : "text";
+    for (const asset of allAssets) {
+      const type = getAssetMeta(asset.asset_type).value;
       initial[type] += 1;
     }
 
     return initial;
-  }, [assets]);
+  }, [allAssets]);
 
   function resetForm() {
     setForm(emptyForm);
     setSelectedFile(null);
     setEditingAssetId(null);
+    setAssetMode("upload");
   }
 
-  function startCreate() {
+  function startCreate(mode: AssetMode = "upload") {
     resetForm();
+    setAssetMode(mode);
+
+    if (mode === "text") {
+      setForm((prev) => ({ ...prev, asset_type: "text" }));
+    }
+
+    if (mode === "link") {
+      setForm((prev) => ({ ...prev, asset_type: "link" }));
+    }
+
     setShowForm(true);
   }
 
   function startEdit(asset: ClientContentAsset) {
+    const assetType = getAssetMeta(asset.asset_type).value;
+    const tags = getTags(asset);
+
     setEditingAssetId(asset.id);
+    setAssetMode(
+      assetType === "link"
+        ? "link"
+        : assetType === "text" && !asset.file_url
+          ? "text"
+          : "upload",
+    );
     setForm({
       title: asset.title,
-      description: asset.description || "",
-      asset_type: getAssetMeta(asset.asset_type).value,
+      description:
+        asset.description ||
+        (typeof asset.metadata_json?.body === "string"
+          ? asset.metadata_json.body
+          : ""),
+      asset_type: assetType,
       file_url: asset.file_url || "",
       file_name: asset.file_name || "",
       mime_type: asset.mime_type || "",
       file_size: asset.file_size || undefined,
       property_id: asset.property_id || "",
-      tags: getTags(asset).join(", "),
+      tags: tags.join(", "),
     });
     setSelectedFile(null);
     setShowForm(true);
   }
 
   function closeForm() {
+    if (saving) return;
     setShowForm(false);
     resetForm();
   }
@@ -245,24 +411,50 @@ export function MediaLibrary({
 
     if (!file) return;
 
-    const inferredType: ClientContentAssetType = file.type.includes("pdf")
-      ? "pdf"
-      : "image";
+    const inferredType = inferAssetTypeFromFile(file);
 
     setForm((prev) => ({
       ...prev,
       asset_type: inferredType,
       file_name: file.name,
-      mime_type: file.type,
+      mime_type: file.type || prev.mime_type,
       file_size: file.size,
     }));
+  }
+
+  function validateForm() {
+    if (!form.title.trim()) {
+      return "Title is required.";
+    }
+
+    if (assetMode === "upload" && !editingAssetId && !selectedFile) {
+      return "Please choose a file before saving.";
+    }
+
+    if (assetMode === "text" && !form.description.trim()) {
+      return "Text note body is required.";
+    }
+
+    if (assetMode === "link") {
+      if (!form.file_url.trim()) return "URL is required.";
+      if (!isValidUrl(form.file_url.trim())) {
+        return "Please enter a valid http/https URL.";
+      }
+    }
+
+    if (form.file_size !== undefined && form.file_size < 0) {
+      return "File size cannot be negative.";
+    }
+
+    return null;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!form.title.trim()) {
-      setMessage("Title is required.");
+    const validationError = validateForm();
+    if (validationError) {
+      setMessage(validationError);
       return;
     }
 
@@ -270,50 +462,71 @@ export function MediaLibrary({
       setSaving(true);
       setMessage(null);
 
-      let uploaded:
-        | {
-            url: string;
-            filename: string;
-            size: number;
-          }
-        | null = null;
+      let uploaded: Awaited<ReturnType<typeof uploadClientAssetFile>> | null =
+        null;
+      let payloadAssetType = form.asset_type;
 
-      if (selectedFile) {
+      if (assetMode === "upload" && selectedFile) {
         uploaded = await uploadClientAssetFile(selectedFile);
+        payloadAssetType =
+          uploaded.asset_type || inferAssetTypeFromFile(selectedFile);
+      }
+
+      if (assetMode === "text") {
+        payloadAssetType = "text";
+      }
+
+      if (assetMode === "link") {
+        payloadAssetType = "link";
       }
 
       const payload = {
         title: form.title.trim(),
         description: form.description.trim() || undefined,
-        asset_type: form.asset_type,
-        file_url: uploaded?.url || form.file_url.trim() || undefined,
-        file_name: selectedFile?.name || form.file_name.trim() || uploaded?.filename,
-        mime_type: selectedFile?.type || form.mime_type.trim() || undefined,
+        asset_type: payloadAssetType,
+        file_url:
+          assetMode === "link"
+            ? form.file_url.trim()
+            : uploaded?.url || form.file_url.trim() || undefined,
+        file_name:
+          selectedFile?.name ||
+          uploaded?.original_filename ||
+          form.file_name.trim() ||
+          uploaded?.filename,
+        mime_type:
+          selectedFile?.type ||
+          uploaded?.mime_type ||
+          form.mime_type.trim() ||
+          undefined,
         file_size: uploaded?.size || form.file_size,
         property_id: form.property_id || null,
         metadata_json: {
           tags: parseTags(form.tags),
           source: "client_library",
+          mode: assetMode,
+          ...(assetMode === "text" ? { body: form.description.trim() } : {}),
         },
       };
 
       if (editingAssetId) {
         const updated = await updateContentAsset(editingAssetId, payload);
-        setAssets((prev) =>
+        syncAssets((prev) =>
           prev.map((asset) => (asset.id === updated.id ? updated : asset)),
         );
         setSelectedAssetId(updated.id);
         setMessage("Asset updated successfully.");
       } else {
         const created = await createContentAsset(payload);
-        setAssets((prev) => [created, ...prev]);
+        syncAssets((prev) => [created, ...prev]);
         setSelectedAssetId(created.id);
         setMessage("Asset added successfully.");
       }
 
       closeForm();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Failed to save asset");
+      setMessage(
+        error instanceof Error ? error.message : "Failed to save asset",
+      );
     } finally {
       setSaving(false);
     }
@@ -325,12 +538,21 @@ export function MediaLibrary({
 
     try {
       setSaving(true);
+      setMessage(null);
+
       await deleteContentAsset(asset.id);
-      setAssets((prev) => prev.filter((item) => item.id !== asset.id));
-      setSelectedAssetId((current) => (current === asset.id ? null : current));
+
+      syncAssets((prev) => {
+        const next = prev.filter((item) => item.id !== asset.id);
+        setSelectedAssetId(next[0]?.id || null);
+        return next;
+      });
+
       setMessage("Asset archived.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Failed to archive asset");
+      setMessage(
+        error instanceof Error ? error.message : "Failed to archive asset",
+      );
     } finally {
       setSaving(false);
     }
@@ -341,13 +563,77 @@ export function MediaLibrary({
     loadAssets();
   }
 
+  function resetSearch() {
+    setSearchTerm("");
+    loadAssets("");
+  }
+
+  function renderPreview(asset: ClientContentAsset, compact = false) {
+    const meta = getAssetMeta(asset.asset_type);
+    const Icon = meta.icon;
+    const assetUrl = resolveAssetUrl(asset.file_url);
+    const textBody =
+      asset.description ||
+      (typeof asset.metadata_json?.body === "string"
+        ? asset.metadata_json.body
+        : "");
+
+    if (asset.asset_type === "image" && assetUrl) {
+      return (
+        <img
+          src={assetUrl}
+          alt={asset.title}
+          className="h-full w-full object-cover"
+        />
+      );
+    }
+
+    if (asset.asset_type === "video" && assetUrl) {
+      return compact ? (
+        <div
+          className="flex h-full w-full items-center justify-center"
+          style={{ background: `${meta.color}12`, color: meta.color }}
+        >
+          <Video size={24} />
+        </div>
+      ) : (
+        <video
+          src={assetUrl}
+          controls
+          className="h-full w-full rounded-xl object-cover"
+        />
+      );
+    }
+
+    if (asset.asset_type === "text" && textBody && !compact) {
+      return (
+        <div
+          className="h-full w-full overflow-hidden p-4 text-sm leading-relaxed"
+          style={{ color: textMuted }}
+        >
+          {textBody}
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center"
+        style={{ background: `${meta.color}12`, color: meta.color }}
+      >
+        <Icon size={compact ? 22 : 32} />
+        <span className="text-xs font-medium">{meta.label}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full overflow-y-auto">
-      <div className="p-6 max-w-7xl mx-auto space-y-5">
+      <div className="mx-auto max-w-7xl space-y-5 p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              className="flex h-10 w-10 items-center justify-center rounded-xl"
               style={{
                 background: "linear-gradient(135deg, #6366f1, #06b6d4)",
                 color: "#ffffff",
@@ -358,39 +644,30 @@ export function MediaLibrary({
             <div>
               <h1
                 className="font-semibold"
-                style={{
-                  fontSize: "1.5rem",
-                  color: darkMode ? "#e2e8f0" : "#0f172a",
-                }}
+                style={{ fontSize: "1.5rem", color: textPrimary }}
               >
                 {title}
               </h1>
-              <p
-                className="text-sm mt-0.5"
-                style={{ color: darkMode ? "#64748b" : "#64748b" }}
-              >
+              <p className="mt-0.5 text-sm" style={{ color: textMuted }}>
                 {subtitle}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={loadAssets}
-              className="p-2 rounded-xl border transition-all hover:bg-primary/5"
-              style={{
-                borderColor: cardBase.borderColor,
-                color: darkMode ? "#94a3b8" : "#475569",
-              }}
+              onClick={() => loadAssets()}
+              className="rounded-xl border p-2 transition-all hover:bg-primary/5"
+              style={{ borderColor: cardBase.borderColor, color: textMuted }}
               title="Refresh assets"
             >
               <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
             </button>
             <button
               type="button"
-              onClick={startCreate}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
+              onClick={() => startCreate("upload")}
+              className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
               style={{
                 background: "linear-gradient(135deg, #6366f1, #06b6d4)",
                 color: "#ffffff",
@@ -425,198 +702,240 @@ export function MediaLibrary({
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {[
-            { label: "Total Assets", value: counts.all, icon: FileText, color: "#6366f1" },
-            {
-              label: "Media Files",
-              value: counts.image + counts.video,
-              icon: Image,
-              color: "#06b6d4",
-            },
-            {
-              label: "Docs and Links",
-              value: counts.pdf + counts.text + counts.link,
-              icon: Link2,
-              color: "#10b981",
-            },
-          ].map((item) => (
-            <div key={item.label} className="rounded-2xl border p-4" style={cardBase}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs" style={{ color: darkMode ? "#64748b" : "#64748b" }}>
-                    {item.label}
-                  </p>
-                  <p
-                    className="text-2xl font-semibold mt-1"
-                    style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
-                  >
-                    {item.value}
-                  </p>
-                </div>
-                <item.icon size={18} style={{ color: item.color }} />
-              </div>
-            </div>
-          ))}
-        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+          <button
+            type="button"
+            onClick={() => setTypeFilter("all")}
+            className="rounded-2xl border p-4 text-left transition-all hover:border-primary/30"
+            style={{
+              background:
+                typeFilter === "all"
+                  ? "rgba(99,102,241,0.08)"
+                  : cardBase.background,
+              borderColor:
+                typeFilter === "all"
+                  ? "rgba(99,102,241,0.32)"
+                  : cardBase.borderColor,
+            }}
+          >
+            <p className="text-xs" style={{ color: textSoft }}>
+              All Assets
+            </p>
+            <p
+              className="mt-2 text-xl font-semibold"
+              style={{ color: textPrimary }}
+            >
+              {counts.all}
+            </p>
+          </button>
 
-        <div className="rounded-2xl border p-4" style={cardBase}>
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <form onSubmit={handleSearch} className="relative flex-1">
-              <Search
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2"
-                style={{ color: darkMode ? "#64748b" : "#94a3b8" }}
-              />
-              <input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                className="w-full rounded-xl border pl-9 pr-3 py-2 text-sm outline-none"
-                style={{
-                  background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                  borderColor: cardBase.borderColor,
-                  color: darkMode ? "#e2e8f0" : "#0f172a",
-                }}
-                placeholder="Search by title, description, or file name"
-              />
-            </form>
+          {assetTypeOptions.map((option) => {
+            const Icon = option.icon;
+            const active = typeFilter === option.value;
 
-            <div className="flex flex-wrap gap-2">
+            return (
               <button
+                key={option.value}
                 type="button"
-                onClick={() => setTypeFilter("all")}
-                className="px-3 py-2 rounded-xl text-xs border transition-all"
+                onClick={() => setTypeFilter(option.value)}
+                className="rounded-2xl border p-4 text-left transition-all hover:border-primary/30"
                 style={{
-                  background:
-                    typeFilter === "all" ? "rgba(99,102,241,0.14)" : "transparent",
-                  borderColor:
-                    typeFilter === "all" ? "rgba(99,102,241,0.35)" : cardBase.borderColor,
-                  color: typeFilter === "all" ? "#818cf8" : darkMode ? "#94a3b8" : "#475569",
+                  background: active
+                    ? `${option.color}12`
+                    : cardBase.background,
+                  borderColor: active
+                    ? `${option.color}45`
+                    : cardBase.borderColor,
                 }}
               >
-                All
-              </button>
-              {assetTypeOptions.map((option) => (
-                <button
-                  type="button"
-                  key={option.value}
-                  onClick={() => setTypeFilter(option.value)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border transition-all"
-                  style={{
-                    background:
-                      typeFilter === option.value ? `${option.color}18` : "transparent",
-                    borderColor:
-                      typeFilter === option.value ? `${option.color}55` : cardBase.borderColor,
-                    color: typeFilter === option.value ? option.color : darkMode ? "#94a3b8" : "#475569",
-                  }}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs" style={{ color: textSoft }}>
+                    {option.label}
+                  </p>
+                  <Icon size={14} style={{ color: option.color }} />
+                </div>
+                <p
+                  className="mt-2 text-xl font-semibold"
+                  style={{ color: option.color }}
                 >
-                  <option.icon size={12} />
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
+                  {counts[option.value]}
+                </p>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-4">
-          <div className="rounded-2xl border p-4 min-h-[520px]" style={cardBase}>
-            {loading ? (
-              <div className="h-80 flex items-center justify-center gap-2 text-sm" style={{ color: "#64748b" }}>
-                <Loader2 size={16} className="animate-spin" />
+        <form
+          onSubmit={handleSearch}
+          className="flex flex-col gap-2 rounded-2xl border p-3 sm:flex-row sm:items-center"
+          style={cardBase}
+        >
+          <div className="flex flex-1 items-center gap-2">
+            <Search size={15} style={{ color: textSoft }} />
+            <input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search by title, description, or file name..."
+              className="w-full bg-transparent text-sm outline-none"
+              style={{ color: textPrimary }}
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              className="rounded-xl px-4 py-2 text-sm font-medium"
+              style={{ background: "rgba(99,102,241,0.12)", color: "#6366f1" }}
+            >
+              Search
+            </button>
+            <button
+              type="button"
+              onClick={resetSearch}
+              className="flex items-center gap-1 rounded-xl border px-4 py-2 text-sm"
+              style={{ borderColor: cardBase.borderColor, color: textMuted }}
+            >
+              <RotateCcw size={13} />
+              Reset
+            </button>
+          </div>
+        </form>
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_420px]">
+          <div className="space-y-4">
+            {loading && (
+              <div
+                className="rounded-2xl border p-8 text-center text-sm"
+                style={{ ...cardBase, color: textMuted }}
+              >
+                <Loader2 className="mx-auto mb-2 animate-spin" size={20} />
                 Loading assets...
               </div>
-            ) : assets.length === 0 ? (
-              <div className="h-80 flex flex-col items-center justify-center text-center">
+            )}
+
+            {!loading && visibleAssets.length === 0 && (
+              <div
+                className="rounded-2xl border p-8 text-center"
+                style={cardBase}
+              >
                 <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
-                  style={{ background: "rgba(99,102,241,0.1)", color: "#6366f1" }}
+                  className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl"
+                  style={{
+                    background: "rgba(99,102,241,0.10)",
+                    color: "#6366f1",
+                  }}
                 >
-                  <Upload size={20} />
+                  <Image size={22} />
                 </div>
-                <p className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                <h2
+                  className="text-base font-semibold"
+                  style={{ color: textPrimary }}
+                >
                   No assets found
-                </p>
-                <p className="text-xs mt-1 max-w-sm" style={{ color: "#64748b" }}>
-                  Add property images, PDFs, content drafts, or useful campaign links.
+                </h2>
+                <p
+                  className="mx-auto mt-2 max-w-md text-sm"
+                  style={{ color: textMuted }}
+                >
+                  Add images, PDFs, videos, notes, or links to build your
+                  reusable real estate content library.
                 </p>
                 <button
                   type="button"
-                  onClick={startCreate}
-                  className="mt-4 px-4 py-2 rounded-xl text-sm font-medium"
-                  style={{ background: "#6366f1", color: "#ffffff" }}
+                  onClick={() => startCreate("upload")}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
+                  style={{
+                    background: "linear-gradient(135deg, #6366f1, #06b6d4)",
+                    color: "#ffffff",
+                  }}
                 >
+                  <Plus size={14} />
                   Add first asset
                 </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-3">
-                {assets.map((asset) => {
+            )}
+
+            {!loading && visibleAssets.length > 0 && (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {visibleAssets.map((asset, index) => {
                   const meta = getAssetMeta(asset.asset_type);
                   const Icon = meta.icon;
-                  const previewUrl =
-                    meta.value === "image" ? resolveAssetUrl(asset.file_url) : null;
-                  const isSelected = selectedAsset?.id === asset.id;
+                  const active = selectedAsset?.id === asset.id;
 
                   return (
                     <motion.button
-                      type="button"
                       key={asset.id}
+                      type="button"
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03 }}
                       onClick={() => setSelectedAssetId(asset.id)}
-                      className="rounded-2xl border overflow-hidden text-left transition-all"
+                      className="overflow-hidden rounded-2xl border text-left transition-all hover:border-primary/30"
                       style={{
-                        background: isSelected
+                        background: active
                           ? darkMode
                             ? "rgba(99,102,241,0.14)"
                             : "rgba(99,102,241,0.07)"
-                          : darkMode
-                            ? "rgba(2,2,15,0.35)"
-                            : "#ffffff",
-                        borderColor: isSelected ? "rgba(99,102,241,0.45)" : cardBase.borderColor,
+                          : cardBase.background,
+                        borderColor: active
+                          ? "rgba(99,102,241,0.35)"
+                          : cardBase.borderColor,
                       }}
-                      whileHover={{ y: -2 }}
-                      transition={{ duration: 0.15 }}
                     >
-                      <div
-                        className="h-36 flex items-center justify-center overflow-hidden"
-                        style={{
-                          background: previewUrl
-                            ? "rgba(2,2,15,0.35)"
-                            : darkMode
-                              ? "rgba(99,102,241,0.06)"
-                              : "rgba(99,102,241,0.04)",
-                        }}
-                      >
-                        {previewUrl ? (
-                          <img
-                            src={previewUrl}
-                            alt={asset.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <Icon size={30} style={{ color: meta.color }} />
-                        )}
+                      <div className="h-40 overflow-hidden" style={subtlePanel}>
+                        {renderPreview(asset, true)}
                       </div>
-                      <div className="p-3 space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <p
-                            className="text-sm font-medium line-clamp-2"
-                            style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
-                          >
-                            {asset.title}
-                          </p>
+
+                      <div className="space-y-3 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3
+                              className="truncate text-sm font-semibold"
+                              style={{ color: textPrimary }}
+                            >
+                              {asset.title}
+                            </h3>
+                            <p
+                              className="mt-1 text-xs"
+                              style={{ color: textSoft }}
+                            >
+                              {formatDate(asset.created_at)}
+                            </p>
+                          </div>
+
                           <span
-                            className="text-[11px] px-2 py-0.5 rounded-full capitalize flex-shrink-0"
-                            style={{ background: `${meta.color}18`, color: meta.color }}
+                            className="flex items-center gap-1 rounded-full px-2 py-1 text-xs"
+                            style={{
+                              background: `${meta.color}12`,
+                              color: meta.color,
+                            }}
                           >
+                            <Icon size={12} />
                             {meta.value}
                           </span>
                         </div>
-                        <p className="text-xs line-clamp-2 min-h-8" style={{ color: "#64748b" }}>
-                          {asset.description || asset.file_name || "No description added"}
-                        </p>
-                        <div className="flex items-center justify-between text-xs" style={{ color: "#64748b" }}>
+
+                        {asset.description && (
+                          <p
+                            className="line-clamp-2 text-xs leading-relaxed"
+                            style={{ color: textMuted }}
+                          >
+                            {asset.description}
+                          </p>
+                        )}
+
+                        <div
+                          className="flex flex-wrap items-center gap-2 text-xs"
+                          style={{ color: textSoft }}
+                        >
+                          <span>
+                            {asset.file_name ||
+                              (asset.asset_type === "link"
+                                ? "External link"
+                                : "No file")}
+                          </span>
+                          <span>•</span>
                           <span>{formatFileSize(asset.file_size)}</span>
-                          <span>{asset.property_title || "General"}</span>
                         </div>
                       </div>
                     </motion.button>
@@ -626,256 +945,99 @@ export function MediaLibrary({
             )}
           </div>
 
-          <div className="rounded-2xl border p-4 min-h-[520px]" style={cardBase}>
-            {showForm ? (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-base font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                      {editingAssetId ? "Edit Asset" : "Add Asset"}
-                    </h2>
-                    <p className="text-xs mt-1" style={{ color: "#64748b" }}>
-                      Upload a file or save a reusable content link.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={closeForm}
-                    className="p-2 rounded-xl border"
-                    style={{ borderColor: cardBase.borderColor, color: "#64748b" }}
-                    title="Close form"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-
-                <div>
-                  <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
-                    Title
-                  </label>
-                  <input
-                    value={form.title}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, title: event.target.value }))
-                    }
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
-                    style={{
-                      background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                      borderColor: cardBase.borderColor,
-                      color: darkMode ? "#e2e8f0" : "#0f172a",
-                    }}
-                    placeholder="Luxury villa walkthrough"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
-                      Type
-                    </label>
-                    <select
-                      value={form.asset_type}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          asset_type: event.target.value as ClientContentAssetType,
-                        }))
-                      }
-                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
-                      style={{
-                        background: darkMode ? "#0d0d28" : "#ffffff",
-                        borderColor: cardBase.borderColor,
-                        color: darkMode ? "#e2e8f0" : "#0f172a",
-                      }}
-                    >
-                      {assetTypeOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
-                      Property
-                    </label>
-                    <select
-                      value={form.property_id}
-                      onChange={(event) =>
-                        setForm((prev) => ({ ...prev, property_id: event.target.value }))
-                      }
-                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
-                      style={{
-                        background: darkMode ? "#0d0d28" : "#ffffff",
-                        borderColor: cardBase.borderColor,
-                        color: darkMode ? "#e2e8f0" : "#0f172a",
-                      }}
-                    >
-                      <option value="">General library</option>
-                      {properties.map((property) => (
-                        <option key={property.id} value={property.id}>
-                          {property.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
-                    Upload
-                  </label>
-                  <label
-                    className="mt-1 flex items-center justify-center gap-2 rounded-xl border border-dashed px-3 py-4 text-sm cursor-pointer"
-                    style={{
-                      background: darkMode ? "rgba(99,102,241,0.05)" : "#f8fafc",
-                      borderColor: darkMode ? "rgba(99,102,241,0.22)" : "rgba(99,102,241,0.16)",
-                      color: darkMode ? "#94a3b8" : "#64748b",
-                    }}
-                  >
-                    <Upload size={15} />
-                    {selectedFile ? selectedFile.name : "Choose image or PDF"}
-                    <input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.webp,.pdf"
-                      className="hidden"
-                      onChange={(event) => handleFileSelect(event.target.files?.[0] || null)}
-                    />
-                  </label>
-                  <p className="text-[11px] mt-1" style={{ color: "#64748b" }}>
-                    Video assets can be saved with an external URL.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
-                    File or Link URL
-                  </label>
-                  <input
-                    value={form.file_url}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, file_url: event.target.value }))
-                    }
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
-                    style={{
-                      background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                      borderColor: cardBase.borderColor,
-                      color: darkMode ? "#e2e8f0" : "#0f172a",
-                    }}
-                    placeholder="https://..."
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
-                    Description
-                  </label>
-                  <textarea
-                    value={form.description}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, description: event.target.value }))
-                    }
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm min-h-24 resize-none outline-none"
-                    style={{
-                      background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                      borderColor: cardBase.borderColor,
-                      color: darkMode ? "#e2e8f0" : "#0f172a",
-                    }}
-                    placeholder="Short usage notes, campaign angle, or asset context"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
-                    Tags
-                  </label>
-                  <input
-                    value={form.tags}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, tags: event.target.value }))
-                    }
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
-                    style={{
-                      background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                      borderColor: cardBase.borderColor,
-                      color: darkMode ? "#e2e8f0" : "#0f172a",
-                    }}
-                    placeholder="luxury, instagram, brochure"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium disabled:opacity-60"
-                  style={{
-                    background: "linear-gradient(135deg, #6366f1, #06b6d4)",
-                    color: "#ffffff",
-                  }}
+          <aside className="rounded-2xl border p-5" style={cardBase}>
+            {selectedAsset ? (
+              <div className="space-y-5">
+                <div
+                  className="overflow-hidden rounded-2xl border"
+                  style={subtlePanel}
                 >
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                  {saving ? "Saving..." : editingAssetId ? "Save Changes" : "Add Asset"}
-                </button>
-              </form>
-            ) : selectedAsset ? (
-              <div className="space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-lg font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                      {selectedAsset.title}
-                    </h2>
-                    <p className="text-xs mt-1" style={{ color: "#64748b" }}>
-                      Added {formatDate(selectedAsset.created_at)}
-                    </p>
-                  </div>
-                  <span
-                    className="text-xs px-2.5 py-1 rounded-full capitalize"
-                    style={{
-                      background: `${getAssetMeta(selectedAsset.asset_type).color}18`,
-                      color: getAssetMeta(selectedAsset.asset_type).color,
-                    }}
-                  >
-                    {getAssetMeta(selectedAsset.asset_type).value}
-                  </span>
+                  <div className="h-64">{renderPreview(selectedAsset)}</div>
                 </div>
 
-                <div className="rounded-xl border p-4" style={subtlePanel}>
-                  <p className="text-xs uppercase tracking-wider mb-2" style={{ color: "#64748b" }}>
-                    Description
-                  </p>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: darkMode ? "#94a3b8" : "#475569" }}>
-                    {selectedAsset.description || "No description added."}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "File", value: selectedAsset.file_name || "Not attached" },
-                    { label: "Size", value: formatFileSize(selectedAsset.file_size) },
-                    { label: "Property", value: selectedAsset.property_title || "General library" },
-                    { label: "Uploaded By", value: selectedAsset.uploaded_by_name || "Client user" },
-                  ].map((item) => (
-                    <div key={item.label} className="rounded-xl border p-3" style={subtlePanel}>
-                      <p className="text-[11px]" style={{ color: "#64748b" }}>
-                        {item.label}
-                      </p>
-                      <p className="text-sm font-medium mt-1 line-clamp-2" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                        {item.value}
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2
+                        className="text-lg font-semibold"
+                        style={{ color: textPrimary }}
+                      >
+                        {selectedAsset.title}
+                      </h2>
+                      <p className="mt-1 text-xs" style={{ color: textSoft }}>
+                        {formatDate(selectedAsset.created_at)}
                       </p>
                     </div>
-                  ))}
+                    <span
+                      className="rounded-full px-2 py-1 text-xs"
+                      style={{
+                        background: `${getAssetMeta(selectedAsset.asset_type).color}12`,
+                        color: getAssetMeta(selectedAsset.asset_type).color,
+                      }}
+                    >
+                      {selectedAsset.asset_type}
+                    </span>
+                  </div>
+
+                  {selectedAsset.description && (
+                    <p
+                      className="mt-4 text-sm leading-relaxed"
+                      style={{ color: textMuted }}
+                    >
+                      {selectedAsset.description}
+                    </p>
+                  )}
                 </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="rounded-xl border p-3" style={subtlePanel}>
+                    <p style={{ color: textSoft }}>File</p>
+                    <p
+                      className="mt-1 truncate font-medium"
+                      style={{ color: textPrimary }}
+                    >
+                      {selectedAsset.file_name || "No file"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border p-3" style={subtlePanel}>
+                    <p style={{ color: textSoft }}>Size</p>
+                    <p
+                      className="mt-1 font-medium"
+                      style={{ color: textPrimary }}
+                    >
+                      {formatFileSize(selectedAsset.file_size)}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedAsset.property_title && (
+                  <div
+                    className="rounded-xl border p-3 text-sm"
+                    style={subtlePanel}
+                  >
+                    <p className="text-xs" style={{ color: textSoft }}>
+                      Linked property
+                    </p>
+                    <p
+                      className="mt-1 font-medium"
+                      style={{ color: textPrimary }}
+                    >
+                      {selectedAsset.property_title}
+                    </p>
+                  </div>
+                )}
 
                 {getTags(selectedAsset).length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {getTags(selectedAsset).map((tag) => (
                       <span
                         key={tag}
-                        className="text-xs px-2 py-1 rounded-full"
+                        className="rounded-full px-2 py-1 text-xs"
                         style={{
-                          background: darkMode ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)",
-                          color: darkMode ? "#a5b4fc" : "#4f46e5",
+                          background: darkMode
+                            ? "rgba(99,102,241,0.10)"
+                            : "rgba(99,102,241,0.08)",
+                          color: "#6366f1",
                         }}
                       >
                         {tag}
@@ -884,39 +1046,48 @@ export function MediaLibrary({
                   </div>
                 )}
 
-                {selectedAsset.file_url && (
-                  <a
-                    href={resolveAssetUrl(selectedAsset.file_url) || selectedAsset.file_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium"
-                    style={{
-                      borderColor: cardBase.borderColor,
-                      color: darkMode ? "#a5b4fc" : "#4f46e5",
-                    }}
-                  >
-                    <ExternalLink size={14} />
-                    Open Asset
-                  </a>
-                )}
+                <div className="flex flex-wrap gap-2">
+                  {selectedAsset.file_url && (
+                    <a
+                      href={
+                        resolveAssetUrl(selectedAsset.file_url) ||
+                        selectedAsset.file_url
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
+                      style={{
+                        background: "rgba(6,182,212,0.12)",
+                        color: "#06b6d4",
+                      }}
+                    >
+                      <ExternalLink size={14} />
+                      {selectedAsset.asset_type === "link"
+                        ? "Open Link"
+                        : "Open Asset"}
+                    </a>
+                  )}
 
-                <div className="grid grid-cols-2 gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => startEdit(selectedAsset)}
-                    className="flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium"
-                    style={{ background: "#6366f1", color: "#ffffff" }}
+                    className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
+                    style={{
+                      background: "rgba(99,102,241,0.12)",
+                      color: "#6366f1",
+                    }}
                   >
                     <Pencil size={14} />
                     Edit
                   </button>
+
                   <button
                     type="button"
                     onClick={() => handleArchive(selectedAsset)}
                     disabled={saving}
-                    className="flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium disabled:opacity-60"
+                    className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-60"
                     style={{
-                      borderColor: "rgba(239,68,68,0.25)",
+                      background: "rgba(239,68,68,0.10)",
                       color: "#ef4444",
                     }}
                   >
@@ -926,26 +1097,356 @@ export function MediaLibrary({
                 </div>
               </div>
             ) : (
-              <div className="h-full min-h-[420px] flex items-center justify-center text-center">
-                <div>
-                  <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
-                    style={{ background: "rgba(99,102,241,0.1)", color: "#6366f1" }}
+              <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
+                <Image size={28} style={{ color: textSoft }} />
+                <p className="mt-3 text-sm" style={{ color: textMuted }}>
+                  Select an asset to view details.
+                </p>
+              </div>
+            )}
+          </aside>
+        </div>
+      </div>
+
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0"
+            style={{ background: "rgba(0,0,0,0.52)" }}
+            onClick={closeForm}
+          />
+
+          <motion.form
+            onSubmit={handleSubmit}
+            initial={{ opacity: 0, scale: 0.96, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border p-5"
+            style={{
+              background: darkMode ? "#0d0d28" : "#ffffff",
+              borderColor: cardBase.borderColor,
+            }}
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2
+                  className="text-lg font-semibold"
+                  style={{ color: textPrimary }}
+                >
+                  {editingAssetId ? "Edit Asset" : "Add Asset"}
+                </h2>
+                <p className="mt-1 text-sm" style={{ color: textMuted }}>
+                  Upload local files, save text notes, or attach external links.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeForm}
+                className="rounded-xl p-2"
+                style={{ color: textMuted }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {creationModes.map((mode) => {
+                const Icon = mode.icon;
+                const active = assetMode === mode.value;
+
+                return (
+                  <button
+                    key={mode.value}
+                    type="button"
+                    onClick={() => {
+                      setAssetMode(mode.value);
+                      setSelectedFile(null);
+                      setForm((prev) => ({
+                        ...prev,
+                        asset_type:
+                          mode.value === "text"
+                            ? "text"
+                            : mode.value === "link"
+                              ? "link"
+                              : prev.asset_type === "link"
+                                ? "image"
+                                : prev.asset_type,
+                        file_url: mode.value === "link" ? prev.file_url : "",
+                      }));
+                    }}
+                    className="rounded-2xl border p-4 text-left transition-all"
+                    style={{
+                      background: active
+                        ? "rgba(99,102,241,0.10)"
+                        : subtlePanel.background,
+                      borderColor: active
+                        ? "rgba(99,102,241,0.36)"
+                        : subtlePanel.borderColor,
+                    }}
                   >
-                    <FileText size={20} />
-                  </div>
-                  <p className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                    Select an asset
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: "#64748b" }}>
-                    Details, links, and actions will appear here.
-                  </p>
+                    <Icon
+                      size={18}
+                      style={{ color: active ? "#6366f1" : textSoft }}
+                    />
+                    <p
+                      className="mt-2 text-sm font-semibold"
+                      style={{ color: textPrimary }}
+                    >
+                      {mode.label}
+                    </p>
+                    <p className="mt-1 text-xs" style={{ color: textMuted }}>
+                      {mode.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-xs" style={{ color: textMuted }}>
+                  Title *
+                </label>
+                <input
+                  value={form.title}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, title: event.target.value }))
+                  }
+                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
+                  style={{
+                    background: subtlePanel.background,
+                    borderColor: subtlePanel.borderColor,
+                    color: textPrimary,
+                  }}
+                  placeholder="Luxury apartment launch creative"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs" style={{ color: textMuted }}>
+                  Linked Property
+                </label>
+                <select
+                  value={form.property_id}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      property_id: event.target.value,
+                    }))
+                  }
+                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
+                  style={{
+                    background: subtlePanel.background,
+                    borderColor: subtlePanel.borderColor,
+                    color: textPrimary,
+                  }}
+                >
+                  <option value="">No property link</option>
+                  {properties.map((property) => (
+                    <option key={property.id} value={property.id}>
+                      {property.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {assetMode === "upload" && (
+              <div className="mt-4 rounded-2xl border p-4" style={subtlePanel}>
+                <label className="text-xs" style={{ color: textMuted }}>
+                  Upload file{" "}
+                  {editingAssetId ? "(optional while editing)" : "*"}
+                </label>
+                <label
+                  className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed p-6 text-center transition-all hover:border-primary/40"
+                  style={{
+                    background: darkMode ? "rgba(99,102,241,0.06)" : "#ffffff",
+                    borderColor: darkMode
+                      ? "rgba(99,102,241,0.24)"
+                      : "rgba(99,102,241,0.22)",
+                    color: textMuted,
+                  }}
+                >
+                  <Upload size={24} style={{ color: "#6366f1" }} />
+                  <span
+                    className="mt-2 text-sm font-medium"
+                    style={{ color: textPrimary }}
+                  >
+                    Choose file
+                  </span>
+                  <span className="mt-1 text-xs" style={{ color: textSoft }}>
+                    JPG, PNG, WEBP, PDF, MP4, MOV, WEBM, TXT, MD
+                  </span>
+
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf,video/mp4,video/webm,video/quicktime,text/plain,.md,.txt"
+                    onChange={(event) =>
+                      handleFileSelect(event.target.files?.[0] || null)
+                    }
+                    className="hidden"
+                  />
+                </label>
+
+                <div
+                  className="mt-3 rounded-xl border p-3 text-xs"
+                  style={cardBase}
+                >
+                  {selectedFile ? (
+                    <div className="space-y-1" style={{ color: textMuted }}>
+                      <p>
+                        <strong style={{ color: textPrimary }}>
+                          Selected:
+                        </strong>{" "}
+                        {selectedFile.name}
+                      </p>
+                      <p>Size: {formatFileSize(selectedFile.size)}</p>
+                      <p>
+                        Type:{" "}
+                        {selectedFile.type ||
+                          inferAssetTypeFromFile(selectedFile)}
+                      </p>
+                    </div>
+                  ) : form.file_name ? (
+                    <p style={{ color: textMuted }}>
+                      Current file:{" "}
+                      <strong style={{ color: textPrimary }}>
+                        {form.file_name}
+                      </strong>
+                    </p>
+                  ) : (
+                    <p style={{ color: textSoft }}>
+                      Supported: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM, TXT, MD.
+                    </p>
+                  )}
                 </div>
               </div>
             )}
-          </div>
+
+            {assetMode === "text" && (
+              <div className="mt-4">
+                <label className="text-xs" style={{ color: textMuted }}>
+                  Text body *
+                </label>
+                <textarea
+                  value={form.description}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      description: event.target.value,
+                    }))
+                  }
+                  rows={7}
+                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
+                  style={{
+                    background: subtlePanel.background,
+                    borderColor: subtlePanel.borderColor,
+                    color: textPrimary,
+                  }}
+                  placeholder="Write reusable caption, property note, campaign idea, or script..."
+                />
+              </div>
+            )}
+
+            {assetMode === "link" && (
+              <div className="mt-4">
+                <label className="text-xs" style={{ color: textMuted }}>
+                  External URL *
+                </label>
+                <input
+                  value={form.file_url}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      file_url: event.target.value,
+                    }))
+                  }
+                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
+                  style={{
+                    background: subtlePanel.background,
+                    borderColor: subtlePanel.borderColor,
+                    color: textPrimary,
+                  }}
+                  placeholder="https://..."
+                />
+              </div>
+            )}
+
+            {assetMode !== "text" && (
+              <div className="mt-4">
+                <label className="text-xs" style={{ color: textMuted }}>
+                  Description
+                </label>
+                <textarea
+                  value={form.description}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      description: event.target.value,
+                    }))
+                  }
+                  rows={4}
+                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
+                  style={{
+                    background: subtlePanel.background,
+                    borderColor: subtlePanel.borderColor,
+                    color: textPrimary,
+                  }}
+                  placeholder="Optional notes about this asset..."
+                />
+              </div>
+            )}
+
+            <div className="mt-4">
+              <label className="text-xs" style={{ color: textMuted }}>
+                Tags
+              </label>
+              <input
+                value={form.tags}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, tags: event.target.value }))
+                }
+                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
+                style={{
+                  background: subtlePanel.background,
+                  borderColor: subtlePanel.borderColor,
+                  color: textPrimary,
+                }}
+                placeholder="launch, instagram, luxury"
+              />
+            </div>
+
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={closeForm}
+                disabled={saving}
+                className="rounded-xl border px-4 py-2 text-sm disabled:opacity-60"
+                style={{ borderColor: cardBase.borderColor, color: textMuted }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex items-center justify-center gap-2 rounded-xl px-5 py-2 text-sm font-medium disabled:opacity-70"
+                style={{
+                  background: "linear-gradient(135deg, #6366f1, #06b6d4)",
+                  color: "#ffffff",
+                }}
+              >
+                {saving && <Loader2 size={14} className="animate-spin" />}
+                {saving
+                  ? "Saving..."
+                  : editingAssetId
+                    ? "Update Asset"
+                    : "Save Asset"}
+              </button>
+            </div>
+          </motion.form>
         </div>
-      </div>
+      )}
     </div>
   );
 }
