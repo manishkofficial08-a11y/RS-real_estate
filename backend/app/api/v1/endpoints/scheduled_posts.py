@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_tenant_id
 from app.database.session import get_db
-from app.models.generated_post import GeneratedPost
+from app.models.generated_post import GeneratedPost, GeneratedPostStatus
 from app.models.scheduled_post import (
     ScheduledPost,
     ScheduledPostPlatform,
@@ -164,7 +164,7 @@ async def create_scheduled_post(
     current_user: User = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
 ):
-    await _get_tenant_generated_post(db, tenant_id, data.generated_post_id)
+    generated_post = await _get_tenant_generated_post(db, tenant_id, data.generated_post_id)
 
     retry_count = _validate_retry_count(data.retry_count, "retry_count")
     max_retries = _validate_retry_count(data.max_retries, "max_retries")
@@ -192,6 +192,8 @@ async def create_scheduled_post(
     )
 
     db.add(schedule)
+    generated_post.status = GeneratedPostStatus.scheduled.value
+
     await db.commit()
     await db.refresh(schedule)
 
@@ -203,6 +205,8 @@ async def get_my_scheduled_posts(
     status_filter: Optional[ScheduledPostStatus] = Query(default=None, alias="status"),
     platform: Optional[ScheduledPostPlatform] = None,
     generated_post_id: Optional[str] = None,
+    from_date: Optional[datetime] = None,
+    to_date: Optional[datetime] = None,
     limit: int = Query(default=100, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(get_tenant_id),
@@ -221,6 +225,12 @@ async def get_my_scheduled_posts(
     if generated_post_id:
         await _get_tenant_generated_post(db, tenant_id, generated_post_id)
         query = query.where(ScheduledPost.generated_post_id == generated_post_id)
+
+    if from_date:
+        query = query.where(ScheduledPost.scheduled_at >= from_date)
+
+    if to_date:
+        query = query.where(ScheduledPost.scheduled_at <= to_date)
 
     query = query.order_by(ScheduledPost.scheduled_at.asc()).limit(limit)
 
@@ -271,17 +281,40 @@ async def update_scheduled_post(
         raise HTTPException(status_code=404, detail="Scheduled post not found")
 
     updates = data.model_dump(exclude_unset=True)
+    generated_post = None
 
-    if "generated_post_id" in updates and updates["generated_post_id"] is not None:
-        await _get_tenant_generated_post(db, tenant_id, updates["generated_post_id"])
+    if "generated_post_id" in updates:
+        if updates["generated_post_id"] is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="generated_post_id cannot be null",
+            )
+
+        generated_post = await _get_tenant_generated_post(
+            db,
+            tenant_id,
+            updates["generated_post_id"],
+        )
 
     if "platform" in updates and updates["platform"] is not None:
         updates["platform"] = updates["platform"].value
 
     if "status" in updates and updates["status"] is not None:
         updates["status"] = updates["status"].value
+        if generated_post is None:
+            generated_post = await _get_tenant_generated_post(
+                db,
+                tenant_id,
+                updates.get("generated_post_id") or schedule.generated_post_id,
+            )
+
         if updates["status"] == ScheduledPostStatus.published.value and not schedule.published_at:
             updates["published_at"] = datetime.now(timezone.utc)
+
+        if updates["status"] == ScheduledPostStatus.published.value:
+            generated_post.status = GeneratedPostStatus.published.value
+        elif updates["status"] == ScheduledPostStatus.cancelled.value:
+            generated_post.status = GeneratedPostStatus.draft.value
 
     if "retry_count" in updates and updates["retry_count"] is not None:
         updates["retry_count"] = _validate_retry_count(updates["retry_count"], "retry_count")
@@ -322,6 +355,8 @@ async def cancel_scheduled_post(
 
     schedule.is_active = False
     schedule.status = ScheduledPostStatus.cancelled.value
+    generated_post = await _get_tenant_generated_post(db, tenant_id, schedule.generated_post_id)
+    generated_post.status = GeneratedPostStatus.draft.value
 
     await db.commit()
     return None
