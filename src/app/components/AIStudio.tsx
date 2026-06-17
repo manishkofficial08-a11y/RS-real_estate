@@ -129,6 +129,78 @@ const templates = [
   },
 ];
 
+type GeneratedPostStatus = "draft" | "scheduled" | "published";
+type GeneratedPostFilter = "all" | GeneratedPostStatus;
+type GeneratedPostPlatform = "Instagram" | "LinkedIn" | "Facebook";
+
+type GeneratedPost = {
+  id: string;
+  caption: string;
+  platform: GeneratedPostPlatform;
+  status: GeneratedPostStatus;
+  createdAt: string;
+};
+
+const generatedPostFilters: Array<{ label: string; value: GeneratedPostFilter }> = [
+  { label: "All", value: "all" },
+  { label: "Draft", value: "draft" },
+  { label: "Scheduled", value: "scheduled" },
+  { label: "Published", value: "published" },
+];
+
+const generatedPostSeedData: GeneratedPost[] = [
+  {
+    id: "post-1",
+    caption:
+      "Discover a premium 3BHK residence designed for modern city living, with elegant interiors, smart amenities, and a location built for everyday convenience.",
+    platform: "Instagram",
+    status: "draft",
+    createdAt: "Today, 10:30 AM",
+  },
+  {
+    id: "post-2",
+    caption:
+      "Real estate growth starts with fast lead follow-up. Here are three practical ways agencies can improve conversion without adding more manual work.",
+    platform: "LinkedIn",
+    status: "scheduled",
+    createdAt: "Yesterday, 6:15 PM",
+  },
+  {
+    id: "post-3",
+    caption:
+      "Looking for a family-ready home near schools, markets, and metro connectivity? This listing brings comfort, location, and long-term value together.",
+    platform: "Facebook",
+    status: "published",
+    createdAt: "12 Jun, 4:45 PM",
+  },
+];
+
+const getGeneratedPostStatusConfig = (status: GeneratedPostStatus) => {
+  if (status === "published") {
+    return {
+      label: "Published",
+      color: "#10b981",
+      bg: "rgba(16, 185, 129, 0.10)",
+      border: "rgba(16, 185, 129, 0.18)",
+    };
+  }
+
+  if (status === "scheduled") {
+    return {
+      label: "Scheduled",
+      color: "#6366f1",
+      bg: "rgba(99, 102, 241, 0.10)",
+      border: "rgba(99, 102, 241, 0.18)",
+    };
+  }
+
+  return {
+    label: "Draft",
+    color: "#f59e0b",
+    bg: "rgba(245, 158, 11, 0.10)",
+    border: "rgba(245, 158, 11, 0.18)",
+  };
+};
 interface AIStudioProps {
   darkMode: boolean;
 }
@@ -240,6 +312,36 @@ export function AIStudio({ darkMode }: AIStudioProps) {
   }, [jobs]);
 
   const latestJobs = useMemo(() => jobs.slice(0, 8), [jobs]);
+
+  const filteredGeneratedPosts = useMemo(() => {
+    if (generatedPostFilter === "all") return generatedPosts;
+
+    return generatedPosts.filter((post) => post.status === generatedPostFilter);
+  }, [generatedPostFilter, generatedPosts]);
+
+  const handleCreateMockGeneratedPost = () => {
+    setGeneratedPosts((currentPosts) => {
+      if (currentPosts.length > 0) return currentPosts;
+
+      return generatedPostSeedData;
+    });
+
+    setGeneratedPostFilter("all");
+    setGeneratedPostActionMessage("Sample generated posts added locally for preview.");
+
+    window.setTimeout(() => {
+      setGeneratedPostActionMessage(null);
+    }, 2800);
+  };
+
+  const handleGeneratedPostAction = (action: string, post?: GeneratedPost) => {
+    const target = post ? `${post.platform} post` : "generated posts";
+    setGeneratedPostActionMessage(`${action} placeholder ready for ${target}.`);
+
+    window.setTimeout(() => {
+      setGeneratedPostActionMessage(null);
+    }, 2800);
+  };
 
   const loadJobs = async () => {
     try {
@@ -625,6 +727,195 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                       </div>
                     </motion.div>
                   )}
+
+                  <section
+                    aria-labelledby="generated-posts-heading"
+                    className="rounded-2xl border p-4"
+                    style={{ background: cardStyle.background, borderColor: cardStyle.borderColor }}
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="mb-2 flex items-center gap-2">
+                          <div
+                            className="flex h-9 w-9 items-center justify-center rounded-xl"
+                            style={{ background: darkMode ? "rgba(99,102,241,0.16)" : "rgba(99,102,241,0.10)" }}
+                          >
+                            <FileText size={16} style={{ color: "#6366f1" }} />
+                          </div>
+                          <div>
+                            <h2
+                              id="generated-posts-heading"
+                              className="text-sm font-semibold"
+                              style={{ color: textPrimary }}
+                            >
+                              Generated Posts
+                            </h2>
+                            <p className="text-xs" style={{ color: textSoft }}>
+                              Saved AI captions and post drafts will appear here.
+                            </p>
+                          </div>
+                        </div>
+
+                        {generatedPostActionMessage && (
+                          <div
+                            role="status"
+                            className="mt-3 rounded-xl border px-3 py-2 text-xs"
+                            style={{
+                              background: darkMode
+                                ? "rgba(16,185,129,0.10)"
+                                : "rgba(16,185,129,0.06)",
+                              borderColor: "rgba(16,185,129,0.18)",
+                              color: "#10b981",
+                            }}
+                          >
+                            {generatedPostActionMessage}
+                          </div>
+                        )}
+                      </div>
+
+                      <div
+                        aria-label="Filter generated posts"
+                        className="flex flex-wrap gap-2"
+                      >
+                        {generatedPostFilters.map((filter) => {
+                          const active = generatedPostFilter === filter.value;
+
+                          return (
+                            <button
+                              key={filter.value}
+                              type="button"
+                              onClick={() => setGeneratedPostFilter(filter.value)}
+                              className="rounded-full border px-3 py-1.5 text-xs font-medium transition-all"
+                              style={{
+                                background: active
+                                  ? darkMode
+                                    ? "rgba(99,102,241,0.22)"
+                                    : "rgba(99,102,241,0.10)"
+                                  : "transparent",
+                                borderColor: active
+                                  ? "rgba(99,102,241,0.36)"
+                                  : cardStyle.borderColor,
+                                color: active ? "#6366f1" : textMuted,
+                              }}
+                            >
+                              {filter.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      {filteredGeneratedPosts.length === 0 ? (
+                        <div
+                          className="rounded-2xl border border-dashed p-6 text-center"
+                          style={{
+                            background: darkMode ? "rgba(99,102,241,0.04)" : "#f8fafc",
+                            borderColor: darkMode
+                              ? "rgba(99,102,241,0.18)"
+                              : "rgba(15,23,42,0.10)",
+                          }}
+                        >
+                          <div
+                            className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
+                            style={{
+                              background: "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.12))",
+                            }}
+                          >
+                            <Sparkles size={18} style={{ color: "#6366f1" }} />
+                          </div>
+                          <p className="text-sm font-semibold" style={{ color: textPrimary }}>
+                            No generated posts yet
+                          </p>
+                          <p className="mx-auto mt-2 max-w-md text-xs leading-5" style={{ color: textMuted }}>
+                            Generate content in AI Studio and saved posts will appear here.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleCreateMockGeneratedPost}
+                            className="mt-4 rounded-xl px-4 py-2 text-xs font-medium transition-all hover:opacity-90"
+                            style={{
+                              background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                              color: "#ffffff",
+                              boxShadow: "0 4px 14px rgba(99,102,241,0.25)",
+                            }}
+                          >
+                            Generate first post
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                          {filteredGeneratedPosts.map((post) => {
+                            const statusConfig = getGeneratedPostStatusConfig(post.status);
+
+                            return (
+                              <article
+                                key={post.id}
+                                className="rounded-2xl border p-4"
+                                style={{
+                                  background: darkMode ? "rgba(99,102,241,0.04)" : "#f8fafc",
+                                  borderColor: cardStyle.borderColor,
+                                }}
+                              >
+                                <div className="mb-3 flex flex-wrap items-center gap-2">
+                                  <span
+                                    className="rounded-full border px-2.5 py-1 text-xs font-medium"
+                                    style={{
+                                      color: "#6366f1",
+                                      background: darkMode
+                                        ? "rgba(99,102,241,0.12)"
+                                        : "rgba(99,102,241,0.08)",
+                                      borderColor: "rgba(99,102,241,0.18)",
+                                    }}
+                                  >
+                                    {post.platform}
+                                  </span>
+                                  <span
+                                    className="rounded-full border px-2.5 py-1 text-xs font-medium"
+                                    style={{
+                                      color: statusConfig.color,
+                                      background: statusConfig.bg,
+                                      borderColor: statusConfig.border,
+                                    }}
+                                  >
+                                    {statusConfig.label}
+                                  </span>
+                                  <span className="ml-auto text-xs" style={{ color: textSoft }}>
+                                    {post.createdAt}
+                                  </span>
+                                </div>
+
+                                <p className="text-sm leading-6" style={{ color: textPrimary }}>
+                                  {post.caption}
+                                </p>
+
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                  {(["Edit", "Copy", "Schedule", "Publish"] as const).map((action) => (
+                                    <button
+                                      key={action}
+                                      type="button"
+                                      onClick={() => handleGeneratedPostAction(action, post)}
+                                      className="rounded-lg border px-3 py-1.5 text-xs font-medium transition-all hover:scale-[1.02]"
+                                      style={{
+                                        background: darkMode
+                                          ? "rgba(255,255,255,0.04)"
+                                          : "#ffffff",
+                                        borderColor: cardStyle.borderColor,
+                                        color: textMuted,
+                                      }}
+                                      aria-label={`${action} ${post.platform} generated post`}
+                                    >
+                                      {action}
+                                    </button>
+                                  ))}
+                                </div>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </section>
                 </motion.div>
               )}
 
