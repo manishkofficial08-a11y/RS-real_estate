@@ -516,3 +516,131 @@ export async function deleteContentAsset(assetId: string): Promise<void> {
   });
 }
 
+export type ClientGeneratedPostStatus =
+  | "draft"
+  | "scheduled"
+  | "published"
+  | "failed"
+  | "archived";
+
+export type ClientGeneratedPostPlatform =
+  | "instagram"
+  | "facebook"
+  | "linkedin"
+  | "twitter"
+  | "website"
+  | "other";
+
+export type ClientGeneratedPost = {
+  id: string;
+  tenant_id: string;
+  created_by_user_id?: string | null;
+  property_id?: string | null;
+  source_ai_job_id?: string | null;
+  title: string;
+  content: string;
+  platform: ClientGeneratedPostPlatform | string;
+  status: ClientGeneratedPostStatus | string;
+  hashtags: string[];
+  media_asset_ids: string[];
+  metadata_json?: Record<string, unknown> | null;
+  scheduled_at?: string | null;
+  published_at?: string | null;
+  is_active: boolean;
+  property_title?: string | null;
+  created_by_name?: string | null;
+  created_by_email?: string | null;
+  source_ai_job_title?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type CreateClientGeneratedPostPayload = {
+  title: string;
+  content: string;
+  platform?: ClientGeneratedPostPlatform;
+  status?: ClientGeneratedPostStatus;
+  property_id?: string | null;
+  source_ai_job_id?: string | null;
+  hashtags?: string[];
+  media_asset_ids?: string[];
+  scheduled_at?: string | null;
+  published_at?: string | null;
+  metadata_json?: Record<string, unknown>;
+};
+
+export type UpdateClientGeneratedPostPayload =
+  Partial<CreateClientGeneratedPostPayload>;
+
+export type GetClientGeneratedPostsParams = {
+  status?: ClientGeneratedPostStatus | "all";
+  platform?: ClientGeneratedPostPlatform | "all";
+  property_id?: string;
+  search?: string;
+  limit?: number;
+};
+
+export async function getMyGeneratedPosts(
+  params?: GetClientGeneratedPostsParams,
+): Promise<ClientGeneratedPost[]> {
+  const searchParams = new URLSearchParams();
+
+  if (params?.status && params.status !== "all") {
+    searchParams.set("status", params.status);
+  }
+
+  if (params?.platform && params.platform !== "all") {
+    searchParams.set("platform", params.platform);
+  }
+
+  if (params?.property_id) {
+    searchParams.set("property_id", params.property_id);
+  }
+
+  const search = typeof params?.search === "string" ? params.search.trim() : "";
+
+  if (search) {
+    searchParams.set("search", search);
+  }
+
+  if (typeof params?.limit === "number" && params.limit > 0) {
+    searchParams.set("limit", String(params.limit));
+  }
+
+  const query = searchParams.toString();
+  return clientFetch<ClientGeneratedPost[]>(
+    `/generated-posts/my${query ? `?${query}` : ""}`,
+  );
+}
+
+export async function getGeneratedPost(
+  postId: string,
+): Promise<ClientGeneratedPost> {
+  return clientFetch<ClientGeneratedPost>(`/generated-posts/${postId}`);
+}
+
+export async function createGeneratedPost(
+  payload: CreateClientGeneratedPostPayload,
+): Promise<ClientGeneratedPost> {
+  return clientFetch<ClientGeneratedPost>("/generated-posts/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateGeneratedPost(
+  postId: string,
+  payload: UpdateClientGeneratedPostPayload,
+): Promise<ClientGeneratedPost> {
+  return clientFetch<ClientGeneratedPost>(`/generated-posts/${postId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteGeneratedPost(postId: string): Promise<void> {
+  await clientFetch<void>(`/generated-posts/${postId}`, {
+    method: "DELETE",
+  });
+}
+
