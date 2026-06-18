@@ -80,3 +80,81 @@ If you did not request this, you can ignore this email.
     except Exception:
         logger.exception("Failed to send password reset email to %s", email)
         print(f"PASSWORD RESET LINK for {email}: {reset_link}")
+
+
+async def send_email_message(
+    to_emails: list[str],
+    subject: str,
+    body: str,
+    html_body: str | None = None,
+) -> dict:
+    clean_recipients = []
+    seen = set()
+
+    for email in to_emails:
+        clean_email = str(email).strip().lower()
+
+        if clean_email and clean_email not in seen:
+            clean_recipients.append(clean_email)
+            seen.add(clean_email)
+
+    if not clean_recipients:
+        return {
+            "sent": False,
+            "recipients": [],
+            "message": "No valid email recipients provided.",
+        }
+
+    if not _smtp_configured():
+        logger.warning(
+            "EMAIL NOT SENT because SMTP is not configured. Subject=%s Recipients=%s",
+            subject,
+            clean_recipients,
+        )
+        print(f"EMAIL PREVIEW - To: {', '.join(clean_recipients)}")
+        print(f"EMAIL PREVIEW - Subject: {subject}")
+        print(body)
+
+        return {
+            "sent": False,
+            "recipients": clean_recipients,
+            "message": "SMTP is not configured. Email preview was printed in backend logs.",
+        }
+
+    message = EmailMessage()
+    message["Subject"] = subject
+    message["From"] = _get_config_value("SMTP_FROM_EMAIL") or ""
+    message["To"] = ", ".join(clean_recipients)
+    message.set_content(body)
+
+    if html_body:
+        message.add_alternative(html_body, subtype="html")
+
+    host = _get_config_value("SMTP_HOST") or ""
+    port = int(_get_config_value("SMTP_PORT") or "587")
+    username = _get_config_value("SMTP_USERNAME") or ""
+    password = _get_config_value("SMTP_PASSWORD") or ""
+
+    try:
+        with smtplib.SMTP(host, port, timeout=20) as smtp:
+            smtp.starttls()
+            smtp.login(username, password)
+            smtp.send_message(message)
+
+        return {
+            "sent": True,
+            "recipients": clean_recipients,
+            "message": f"Email sent to {len(clean_recipients)} recipient(s).",
+        }
+    except Exception:
+        logger.exception(
+            "Failed to send email. Subject=%s Recipients=%s",
+            subject,
+            clean_recipients,
+        )
+
+        return {
+            "sent": False,
+            "recipients": clean_recipients,
+            "message": "Failed to send email. Check backend SMTP logs.",
+        }
