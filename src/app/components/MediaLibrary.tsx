@@ -93,6 +93,49 @@ const socialPlatformOptions: Array<{
   { value: "other", label: "Other" },
 ];
 
+const multiPlatformVideoDrafts: Array<{
+  targetPlatform: "instagram" | "facebook" | "linkedin" | "youtube";
+  generatedPlatform: ClientGeneratedPostPlatform;
+  label: string;
+  titlePrefix: string;
+  tone: string;
+  hashtags: string[];
+}> = [
+  {
+    targetPlatform: "instagram",
+    generatedPlatform: "instagram",
+    label: "Instagram Reels",
+    titlePrefix: "Instagram Reel",
+    tone: "Create a short, high-energy real estate reel caption with a clear DM/call CTA.",
+    hashtags: ["realestate", "property", "reels", "homebuying", "sitevisit"],
+  },
+  {
+    targetPlatform: "youtube",
+    generatedPlatform: "other",
+    label: "YouTube Shorts",
+    titlePrefix: "YouTube Short",
+    tone: "Create a YouTube Shorts style title and description with a direct viewing CTA.",
+    hashtags: ["shorts", "realestate", "propertytour", "homebuyers", "investment"],
+  },
+  {
+    targetPlatform: "facebook",
+    generatedPlatform: "facebook",
+    label: "Facebook Video",
+    titlePrefix: "Facebook Video",
+    tone: "Create a local-awareness Facebook video post for buyers and families.",
+    hashtags: ["realestate", "property", "dreamhome", "investment", "location"],
+  },
+  {
+    targetPlatform: "linkedin",
+    generatedPlatform: "linkedin",
+    label: "LinkedIn Post",
+    titlePrefix: "LinkedIn Video",
+    tone: "Create a professional LinkedIn property update for investors and serious buyers.",
+    hashtags: ["realestate", "propertyinvestment", "realestateindia", "business", "growth"],
+  },
+];
+
+
 const creationModes: Array<{
   value: AssetMode;
   label: string;
@@ -573,6 +616,47 @@ export function MediaLibrary({
       .join("\n\n");
   }
 
+
+  function buildMultiPlatformVideoContent(
+    asset: ClientContentAsset,
+    config: (typeof multiPlatformVideoDrafts)[number],
+  ) {
+    const baseDescription =
+      asset.description ||
+      (typeof asset.metadata_json?.body === "string"
+        ? asset.metadata_json.body
+        : "");
+
+    const assetTags = getTags(asset)
+      .map((tag) => tag.trim().replace(/^#/, ""))
+      .filter(Boolean);
+
+    const combinedTags = Array.from(
+      new Set([...assetTags, ...config.hashtags]),
+    );
+
+    const hashtags = combinedTags.map((tag) => `#${tag}`).join(" ");
+
+    const platformCopy =
+      config.targetPlatform === "youtube"
+        ? `Title: ${asset.title} | Property Tour\n\nDescription: ${baseDescription || `Watch this quick property video for ${asset.title}.`}\n\nCall now to book a site visit or request pricing details.`
+        : config.targetPlatform === "linkedin"
+          ? `${asset.title}\n\n${baseDescription || `A quick professional property video update for buyers and investors.`}\n\nFor pricing, availability, and site visit details, connect with our team.`
+          : config.targetPlatform === "facebook"
+            ? `${asset.title}\n\n${baseDescription || `Take a closer look at this property and share it with someone looking for a new home or investment.`}\n\nMessage us for pricing, location details, and site visit availability.`
+            : `${asset.title}\n\n${baseDescription || `Quick property tour. DM us for pricing, location details, and site visit availability.`}`;
+
+    return [
+      config.tone,
+      "",
+      platformCopy,
+      "",
+      hashtags,
+    ]
+      .filter((part) => part.trim().length > 0)
+      .join("\n");
+  }
+
   function getMediaAssetIdsForGeneratedPost(asset: ClientContentAsset) {
     if (asset.asset_type === "image" || asset.asset_type === "video") {
       return [asset.id];
@@ -611,6 +695,60 @@ export function MediaLibrary({
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Failed to create draft post",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+
+  async function handleCreateMultiPlatformVideoCampaign(asset: ClientContentAsset) {
+    if (asset.asset_type !== "video") {
+      setMessage("Multi-platform campaigns are available for video assets only.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setMessage(null);
+
+      const assetTags = getTags(asset)
+        .map((tag) => tag.trim().replace(/^#/, ""))
+        .filter(Boolean);
+
+      const createdPosts = await Promise.all(
+        multiPlatformVideoDrafts.map((config) =>
+          createGeneratedPost({
+            title: `${config.titlePrefix}: ${asset.title}`,
+            content: buildMultiPlatformVideoContent(asset, config),
+            platform: config.generatedPlatform,
+            status: "draft",
+            property_id: asset.property_id || null,
+            hashtags: Array.from(new Set([...assetTags, ...config.hashtags])),
+            media_asset_ids: getMediaAssetIdsForGeneratedPost(asset),
+            metadata_json: {
+              source: "media_library_multi_platform_campaign",
+              source_asset_id: asset.id,
+              source_asset_type: asset.asset_type,
+              source_file_url: asset.file_url || null,
+              source_file_name: asset.file_name || null,
+              target_platform: config.targetPlatform,
+              platform_label: config.label,
+              campaign_type: "multi_platform_video",
+              requires_platform_credentials: true,
+            },
+          }),
+        ),
+      );
+
+      setMessage(
+        `Multi-platform campaign created: ${createdPosts.length} video drafts for Instagram, YouTube Shorts, Facebook, and LinkedIn. Open AI Studio > Generated Posts to review and schedule.`,
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to create multi-platform video campaign",
       );
     } finally {
       setSaving(false);
@@ -1179,6 +1317,91 @@ export function MediaLibrary({
                     Saves this media as a draft in AI Studio &gt; Generated Posts.
                   </p>
                 </div>
+
+
+                {selectedAsset.asset_type === "video" && (
+                  <div
+                    className="rounded-xl border p-4"
+                    style={{
+                      background: darkMode
+                        ? "rgba(99,102,241,0.08)"
+                        : "rgba(99,102,241,0.05)",
+                      borderColor: darkMode
+                        ? "rgba(99,102,241,0.18)"
+                        : "rgba(99,102,241,0.12)",
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="rounded-xl p-2"
+                        style={{
+                          background: "rgba(99,102,241,0.14)",
+                          color: "#818cf8",
+                        }}
+                      >
+                        <Video size={17} />
+                      </div>
+                      <div className="flex-1">
+                        <h3
+                          className="text-sm font-semibold"
+                          style={{ color: textPrimary }}
+                        >
+                          Multi-platform video campaign
+                        </h3>
+                        <p className="mt-1 text-xs leading-relaxed" style={{ color: textMuted }}>
+                          Create platform-specific drafts for Instagram Reels,
+                          YouTube Shorts, Facebook Video, and LinkedIn from this
+                          one uploaded video.
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {multiPlatformVideoDrafts.map((item) => (
+                            <span
+                              key={item.targetPlatform}
+                              className="rounded-full px-2 py-1 text-xs"
+                              style={{
+                                background: `${item.targetPlatform === "youtube" ? "#ef4444" : item.targetPlatform === "linkedin" ? "#0ea5e9" : item.targetPlatform === "facebook" ? "#3b82f6" : "#ec4899"}18`,
+                                color:
+                                  item.targetPlatform === "youtube"
+                                    ? "#ef4444"
+                                    : item.targetPlatform === "linkedin"
+                                      ? "#0ea5e9"
+                                      : item.targetPlatform === "facebook"
+                                        ? "#3b82f6"
+                                        : "#ec4899",
+                              }}
+                            >
+                              {item.label}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCreateMultiPlatformVideoCampaign(selectedAsset)}
+                      disabled={saving}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-60"
+                      style={{
+                        background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                        color: "#ffffff",
+                      }}
+                    >
+                      {saving ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Send size={14} />
+                      )}
+                      Create Multi-Platform Campaign
+                    </button>
+
+                    <p className="mt-2 text-xs" style={{ color: textSoft }}>
+                      Real publishing will use connected platform accounts later.
+                      These drafts are safe to review, schedule, and publish after
+                      credentials are configured.
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex flex-wrap gap-2">
                   {selectedAsset.file_url && (
