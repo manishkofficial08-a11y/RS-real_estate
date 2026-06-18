@@ -17,6 +17,7 @@ from app.models.generated_post import (
 )
 from app.models.property import Property
 from app.models.user import User
+from app.services.social_publisher import PublisherError, publish_generated_post_to_platform
 
 
 router = APIRouter(prefix="/generated-posts", tags=["Generated Posts"])
@@ -48,6 +49,11 @@ class GeneratedPostUpdate(BaseModel):
     scheduled_at: Optional[datetime] = None
     published_at: Optional[datetime] = None
     metadata_json: Optional[Dict[str, Any]] = None
+
+
+class GeneratedPostPublishRequest(BaseModel):
+    platform: Optional[GeneratedPostPlatform] = None
+    allow_mock_fallback: bool = True
 
 
 class GeneratedPostResponse(BaseModel):
@@ -343,6 +349,74 @@ async def update_generated_post(
 
     for key, value in updates.items():
         setattr(post, key, value)
+
+    await db.commit()
+    await db.refresh(post)
+
+    return await _serialize_generated_post(post, db)
+
+
+
+@router.post("/{post_id}/publish", response_model=GeneratedPostResponse)
+async def publish_generated_post(
+    post_id: str,
+    data: GeneratedPostPublishRequest = GeneratedPostPublishRequest(),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+):
+    result = await db.execute(
+        select(GeneratedPost).where(
+            GeneratedPost.id == post_id,
+            GeneratedPost.tenant_id == tenant_id,
+            GeneratedPost.is_active == True,
+        )
+    )
+    post = result.scalar_one_or_none()
+
+    if not post:
+        raise HTTPException(status_code=404, detail="Generated post not found")
+
+    if data.platform:
+        post.platform = data.platform.value
+
+    try:
+        publish_result = await publish_generated_post_to_platform(
+            post,
+            allow_mock_fallback=data.allow_mock_fallback,
+        )
+    except PublisherError as exc:
+        metadata = dict(post.metadata_json or {})
+        metadata["publisher"] = {
+            "mode": "failed",
+            "error": str(exc),
+            "attempted_at": datetime.now(timezone.utc).isoformat(),
+        }
+        post.metadata_json = metadata
+        post.status = GeneratedPostStatus.failed.value
+        await db.commit()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    metadata = dict(post.metadata_json or {})
+    metadata["publisher"] = {
+        "platform": publish_result.platform,
+        "mode": publish_result.mode,
+        "provider": publish_result.provider,
+        "external_post_id": publish_result.external_post_id,
+        "external_post_url": publish_result.external_post_url,
+        "warning": publish_result.warning,
+        "raw_response": publish_result.raw_response,
+        "published_by_user_id": current_user.id,
+        "published_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    post.metadata_json = metadata
+    post.status = GeneratedPostStatus.published.value
+    post.published_at = datetime.now(timezone.utc)
 
     await db.commit()
     await db.refresh(post)

@@ -610,6 +610,11 @@ export type CreateClientGeneratedPostPayload = {
 export type UpdateClientGeneratedPostPayload =
   Partial<CreateClientGeneratedPostPayload>;
 
+export type PublishClientGeneratedPostPayload = {
+  platform?: ClientGeneratedPostPlatform;
+  allow_mock_fallback?: boolean;
+};
+
 export type GetClientGeneratedPostsParams = {
   status?: ClientGeneratedPostStatus | "all";
   platform?: ClientGeneratedPostPlatform | "all";
@@ -675,6 +680,17 @@ export async function updateGeneratedPost(
     body: JSON.stringify(payload),
   });
 }
+
+export async function publishGeneratedPost(
+  postId: string,
+  payload: PublishClientGeneratedPostPayload = {},
+): Promise<ClientGeneratedPost> {
+  return clientFetch<ClientGeneratedPost>(`/generated-posts/${postId}/publish`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 
 export async function deleteGeneratedPost(postId: string): Promise<void> {
   await clientFetch<void>(`/generated-posts/${postId}`, {
