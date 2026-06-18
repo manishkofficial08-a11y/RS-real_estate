@@ -28,6 +28,7 @@ import {
   campaignPublishGeneratedPost,
   createClientAIJob,
   createScheduledPost,
+  deleteGeneratedPost,
   getMyClientAIJobs,
   getMyGeneratedPosts,
   publishGeneratedPost,
@@ -117,6 +118,16 @@ const platforms = [
   "YouTube",
   "WhatsApp",
 ];
+
+const aiStudioApiOrigin = (
+  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/v1"
+).replace(/\/api\/v1\/?$/, "");
+
+const resolveGeneratedPostAssetUrl = (url?: string | null) => {
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${aiStudioApiOrigin}${url.startsWith("/") ? "" : "/"}${url}`;
+};
 
 const templates = [
   {
@@ -417,6 +428,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
   const [generatedPostActionTone, setGeneratedPostActionTone] =
     useState<"success" | "error">("success");
   const [generatedPostActionKey, setGeneratedPostActionKey] = useState<string | null>(null);
+  const [previewTargetPost, setPreviewTargetPost] = useState<GeneratedPost | null>(null);
   const [scheduleTargetPost, setScheduleTargetPost] = useState<GeneratedPost | null>(null);
   const [schedulePlatform, setSchedulePlatform] =
     useState<ClientScheduledPostPlatform>("instagram");
@@ -553,6 +565,31 @@ export function AIStudio({ darkMode }: AIStudioProps) {
     } catch (err) {
       showGeneratedPostActionMessage(
         err instanceof Error ? err.message : "Failed to copy post.",
+        "error",
+      );
+    } finally {
+      setGeneratedPostActionKey(null);
+    }
+  };
+
+  const handleDeleteGeneratedPost = async (post: GeneratedPost) => {
+    const confirmed = window.confirm(
+      `Delete this ${post.platform} campaign draft? This cannot be undone.`,
+    );
+
+    if (!confirmed) return;
+
+    const actionKey = `${post.id}:delete`;
+
+    try {
+      setGeneratedPostActionKey(actionKey);
+      await deleteGeneratedPost(post.id);
+      setPreviewTargetPost((current) => (current?.id === post.id ? null : current));
+      await loadGeneratedPosts();
+      showGeneratedPostActionMessage("Campaign draft deleted.");
+    } catch (err) {
+      showGeneratedPostActionMessage(
+        err instanceof Error ? err.message : "Failed to delete campaign draft.",
         "error",
       );
     } finally {
@@ -794,7 +831,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
               <Sparkles size={15} className="text-white" />
             </div>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: textPrimary }}>
-              AI Studio
+              Campaign Studio
             </h1>
             <span
               className="rounded-full px-2 py-1 text-xs"
@@ -807,7 +844,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
             </span>
           </div>
           <p className="ml-11 text-sm" style={{ color: textSoft }}>
-            Create AI jobs, track progress, and review generated outputs from one place.
+            Create, review, schedule, and publish real estate video campaigns from one simple workspace.
           </p>
         </motion.div>
 
@@ -825,7 +862,68 @@ export function AIStudio({ darkMode }: AIStudioProps) {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <section
+          className="rounded-2xl border p-5"
+          style={{
+            background: darkMode
+              ? "linear-gradient(135deg, rgba(99,102,241,0.14), rgba(6,182,212,0.08))"
+              : "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(6,182,212,0.05))",
+            borderColor: darkMode
+              ? "rgba(99,102,241,0.20)"
+              : "rgba(99,102,241,0.14)",
+          }}
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-3">
+              <div
+                className="flex h-11 w-11 items-center justify-center rounded-2xl"
+                style={{
+                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  color: "#ffffff",
+                  boxShadow: "0 8px 22px rgba(99,102,241,0.28)",
+                }}
+              >
+                <Video size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold" style={{ color: textPrimary }}>
+                  Campaign workflow
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm leading-6" style={{ color: textMuted }}>
+                  Upload a property video, generate platform-ready drafts automatically,
+                  then publish to connected social accounts from one clean workflow.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:min-w-[520px]">
+              {[
+                { label: "1. Upload", value: "Media Library" },
+                { label: "2. Drafts", value: "Auto-created" },
+                { label: "3. Publish", value: "Needs account" },
+                { label: "4. Analytics", value: "Next step" },
+              ].map((step) => (
+                <div
+                  key={step.label}
+                  className="rounded-xl border p-3"
+                  style={{
+                    background: darkMode ? "rgba(255,255,255,0.04)" : "#ffffff",
+                    borderColor: cardStyle.borderColor,
+                  }}
+                >
+                  <p className="text-[11px]" style={{ color: textSoft }}>
+                    {step.label}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold" style={{ color: textPrimary }}>
+                    {step.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <div className="hidden">
           {[
             { label: "Total AI Jobs", value: stats.total, color: "#6366f1" },
             { label: "Running", value: stats.running, color: "#8b5cf6" },
@@ -850,7 +948,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="hidden">
           {tools.map((tool, index) => (
             <motion.button
               key={tool.id}
@@ -901,10 +999,10 @@ export function AIStudio({ darkMode }: AIStudioProps) {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="space-y-4 lg:col-span-2">
+        <div className="grid grid-cols-1 gap-4">
+          <div className="space-y-4">
             <div
-              className="flex gap-1 rounded-xl p-1"
+              className="hidden"
               style={{
                 background: darkMode
                   ? "rgba(99,102,241,0.06)"
@@ -937,7 +1035,11 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                 >
                   {tab === "history" && <History size={11} className="mr-1 inline" />}
                   {tab === "templates" && <Bookmark size={11} className="mr-1 inline" />}
-                  {tab}
+                  {tab === "generate"
+                    ? "Campaign Drafts"
+                    : tab === "history"
+                      ? "AI Job History"
+                      : "Prompt Templates"}
                 </button>
               ))}
             </div>
@@ -952,7 +1054,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                   className="space-y-4"
                 >
                   <div
-                    className="rounded-2xl border p-4"
+                    className="hidden"
                     style={{ background: cardStyle.background, borderColor: cardStyle.borderColor }}
                   >
                     <div className="mb-4 flex items-start gap-3">
@@ -1127,10 +1229,10 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                               className="text-sm font-semibold"
                               style={{ color: textPrimary }}
                             >
-                              Generated Posts
+                              Campaign Drafts & Publishing
                             </h2>
                             <p className="text-xs" style={{ color: textSoft }}>
-                              Saved AI captions and post drafts will appear here.
+                              Review platform-ready drafts, schedule posts, or publish with connected accounts.
                             </p>
                           </div>
                         </div>
@@ -1425,6 +1527,135 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                       </div>
                     )}
 
+                    {previewTargetPost && (
+                      <div
+                        className="mt-4 rounded-2xl border p-4"
+                        style={{
+                          background: darkMode ? "rgba(99,102,241,0.06)" : "#ffffff",
+                          borderColor: darkMode
+                            ? "rgba(99,102,241,0.18)"
+                            : "rgba(15,23,42,0.08)",
+                        }}
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className="rounded-full border px-2.5 py-1 text-xs font-medium"
+                                style={{
+                                  color: "#6366f1",
+                                  background: darkMode
+                                    ? "rgba(99,102,241,0.12)"
+                                    : "rgba(99,102,241,0.08)",
+                                  borderColor: "rgba(99,102,241,0.18)",
+                                }}
+                              >
+                                {previewTargetPost.platform}
+                              </span>
+                              <span className="text-xs" style={{ color: textSoft }}>
+                                {previewTargetPost.createdAt}
+                              </span>
+                            </div>
+                            <h3 className="mt-3 text-sm font-semibold" style={{ color: textPrimary }}>
+                              Generated post preview
+                            </h3>
+                            <p className="mt-1 text-xs" style={{ color: textMuted }}>
+                              This is the exact platform-ready content the client can review before publishing.
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setPreviewTargetPost(null)}
+                            className="rounded-lg border px-2 py-1 text-xs transition-all hover:opacity-80"
+                            style={{
+                              borderColor: cardStyle.borderColor,
+                              color: textSoft,
+                            }}
+                          >
+                            Close
+                          </button>
+                        </div>
+
+                        {previewTargetPost.hasVideoAsset && previewTargetPost.sourceFileUrl && (
+                          <div
+                            className="mb-4 overflow-hidden rounded-xl border"
+                            style={{ borderColor: cardStyle.borderColor }}
+                          >
+                            <div
+                              className="flex items-center justify-between px-3 py-2 text-xs"
+                              style={{
+                                background: darkMode
+                                  ? "rgba(239,68,68,0.08)"
+                                  : "rgba(239,68,68,0.06)",
+                                color: textMuted,
+                              }}
+                            >
+                              <span>Attached video preview</span>
+                              <span>{previewTargetPost.sourceFileName || "Video asset"}</span>
+                            </div>
+                            <video
+                              src={resolveGeneratedPostAssetUrl(previewTargetPost.sourceFileUrl) || ""}
+                              controls
+                              className="h-64 w-full object-cover"
+                            />
+                          </div>
+                        )}
+
+                        <div
+                          className="max-h-80 overflow-y-auto whitespace-pre-wrap rounded-xl border p-4 text-sm leading-6"
+                          style={{
+                            background: darkMode ? "rgba(255,255,255,0.04)" : "#f8fafc",
+                            borderColor: cardStyle.borderColor,
+                            color: textPrimary,
+                          }}
+                        >
+                          {previewTargetPost.caption}
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openScheduleGeneratedPost(previewTargetPost)}
+                            className="rounded-xl px-4 py-2 text-xs font-medium"
+                            style={{
+                              background: "rgba(99,102,241,0.12)",
+                              color: "#6366f1",
+                            }}
+                          >
+                            Schedule this draft
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openCampaignPublisher(previewTargetPost)}
+                            className="rounded-xl px-4 py-2 text-xs font-medium"
+                            style={{
+                              background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                              color: "#ffffff",
+                            }}
+                          >
+                            Publish / Select Platforms
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteGeneratedPost(previewTargetPost)}
+                            disabled={Boolean(generatedPostActionKey)}
+                            className="rounded-xl border px-4 py-2 text-xs font-medium disabled:opacity-60"
+                            style={{
+                              background: darkMode
+                                ? "rgba(239,68,68,0.08)"
+                                : "rgba(239,68,68,0.06)",
+                              borderColor: "rgba(239,68,68,0.20)",
+                              color: "#ef4444",
+                            }}
+                          >
+                            Delete this draft
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="mt-4">
                       {loadingGeneratedPosts ? (
                         <div
@@ -1514,7 +1745,8 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                             return (
                               <article
                                 key={post.id}
-                                className="rounded-2xl border p-4"
+                                onClick={() => setPreviewTargetPost(post)}
+                                className="cursor-pointer rounded-2xl border p-4"
                                 style={{
                                   background: darkMode ? "rgba(99,102,241,0.04)" : "#f8fafc",
                                   borderColor: cardStyle.borderColor,
@@ -1552,7 +1784,10 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                                   {post.caption}
                                 </p>
 
-                                <div className="mt-4 flex flex-wrap gap-2">
+                                <div
+                                  className="mt-4 flex flex-wrap gap-2"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
                                   {(["Edit", "Copy", "Schedule", "Publish"] as const).map((action) => (
                                     <button
                                       key={action}
@@ -1743,7 +1978,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
             </AnimatePresence>
           </div>
 
-          <div className="space-y-4">
+          <div className="hidden">
             <div
               className="rounded-2xl border p-4"
               style={{ background: cardStyle.background, borderColor: cardStyle.borderColor }}
