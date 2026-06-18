@@ -615,6 +615,34 @@ export type PublishClientGeneratedPostPayload = {
   allow_mock_fallback?: boolean;
 };
 
+export type ClientCampaignPublishPlatform =
+  | "youtube"
+  | "instagram"
+  | "facebook"
+  | "linkedin";
+
+export type CampaignPublishGeneratedPostPayload = {
+  platforms: ClientCampaignPublishPlatform[];
+  allow_mock_fallback?: boolean;
+  campaign_metadata?: Record<string, unknown>;
+};
+
+export type ClientCampaignPublishResult = {
+  platform: ClientCampaignPublishPlatform | string;
+  status: "success" | "failed" | "mock_fallback" | string;
+  mode: "real" | "mock" | "failed" | string;
+  external_post_id?: string | null;
+  external_post_url?: string | null;
+  warning?: string | null;
+  error?: string | null;
+};
+
+export type ClientCampaignPublishResponse = {
+  generated_post_id: string;
+  campaign_id: string;
+  results: ClientCampaignPublishResult[];
+};
+
 export type GetClientGeneratedPostsParams = {
   status?: ClientGeneratedPostStatus | "all";
   platform?: ClientGeneratedPostPlatform | "all";
@@ -689,6 +717,19 @@ export async function publishGeneratedPost(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function campaignPublishGeneratedPost(
+  postId: string,
+  payload: CampaignPublishGeneratedPostPayload,
+): Promise<ClientCampaignPublishResponse> {
+  return clientFetch<ClientCampaignPublishResponse>(
+    `/generated-posts/${postId}/campaign-publish`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 

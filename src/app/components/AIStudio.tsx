@@ -7,6 +7,7 @@ import {
   Clock,
   Copy,
   Download,
+  ExternalLink,
   FileText,
   Hash,
   History,
@@ -17,12 +18,14 @@ import {
   Share2,
   Sparkles,
   Subtitles,
+  Video,
   Wand2,
   XCircle,
   Zap,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
+  campaignPublishGeneratedPost,
   createClientAIJob,
   createScheduledPost,
   getMyClientAIJobs,
@@ -31,6 +34,8 @@ import {
   updateGeneratedPost,
   type ClientAIJob,
   type ClientAIJobType,
+  type ClientCampaignPublishPlatform,
+  type ClientCampaignPublishResponse,
   type ClientGeneratedPost,
   type ClientGeneratedPostPlatform,
   type ClientScheduledPostPlatform,
@@ -134,6 +139,36 @@ const templates = [
     prompt:
       "Write an Instagram caption for a luxury apartment listing with urgency and lifestyle positioning.",
   },
+  {
+    title: "YouTube Shorts video script",
+    prompt:
+      "Create a YouTube Shorts property video pack with a scroll-stopping title, SEO description, tags, a 3-second hook, 30-45 second voiceover, shot cues, and a direct site-visit CTA.",
+  },
+  {
+    title: "Instagram Reels caption",
+    prompt:
+      "Write an Instagram Reels caption for a real estate walkthrough with a strong opening hook, concise property highlights, location and price placeholders, lead CTA, and targeted hashtags.",
+  },
+  {
+    title: "Facebook video post",
+    prompt:
+      "Create a Facebook video caption for a property tour that highlights buyer benefits, amenities, location, price placeholder, trust-building details, and a WhatsApp enquiry CTA.",
+  },
+  {
+    title: "LinkedIn property campaign post",
+    prompt:
+      "Write a professional LinkedIn property campaign post for investors and end users, covering the opportunity, location advantage, value proposition, credibility points, and a consultation CTA.",
+  },
+  {
+    title: "Multi-platform campaign pack",
+    prompt:
+      "Create a coordinated property campaign pack: YouTube Shorts title, description, tags, hook and voiceover; Instagram Reels caption and hashtags; Facebook video caption; LinkedIn professional post; and a WhatsApp lead follow-up message.",
+  },
+  {
+    title: "Luxury property launch reel/shorts pack",
+    prompt:
+      "Build a luxury property launch Reel and Shorts pack with cinematic hook options, premium 30-45 second voiceover, shot sequence, YouTube title/description/tags, Instagram caption/hashtags, Facebook caption, LinkedIn launch post, and WhatsApp VIP follow-up.",
+  },
 ];
 
 type GeneratedPostStatus = "draft" | "scheduled" | "published";
@@ -147,7 +182,35 @@ type GeneratedPost = {
   apiPlatform: ClientGeneratedPostPlatform;
   status: GeneratedPostStatus;
   createdAt: string;
+  hasVideoAsset: boolean;
 };
+
+const campaignPlatformOptions: Array<{
+  label: string;
+  value: ClientCampaignPublishPlatform;
+  description: string;
+}> = [
+  {
+    label: "YouTube Shorts",
+    value: "youtube",
+    description: "Uploads the linked video as a Short-ready YouTube video.",
+  },
+  {
+    label: "Instagram Reels",
+    value: "instagram",
+    description: "Publishes linked video as a Reel, or linked image as a post.",
+  },
+  {
+    label: "Facebook Video",
+    value: "facebook",
+    description: "Publishes linked video, media post, or caption-only fallback.",
+  },
+  {
+    label: "LinkedIn",
+    value: "linkedin",
+    description: "Publishes the professional caption; video support follows later.",
+  },
+];
 
 const generatedPostFilters: Array<{ label: string; value: GeneratedPostFilter }> = [
   { label: "All", value: "all" },
@@ -256,6 +319,25 @@ const normalizeGeneratedPostStatus = (
   return "draft";
 };
 
+const generatedPostHasVideo = (post: ClientGeneratedPost) => {
+  const metadata = post.metadata_json || {};
+  const assetType =
+    typeof metadata.source_asset_type === "string"
+      ? metadata.source_asset_type.toLowerCase()
+      : "";
+  const sourceUrl =
+    typeof metadata.source_file_url === "string"
+      ? metadata.source_file_url.toLowerCase()
+      : "";
+
+  return (
+    assetType === "video" ||
+    [".mp4", ".mov", ".webm"].some((extension) =>
+      sourceUrl.split("?")[0].endsWith(extension),
+    )
+  );
+};
+
 const mapGeneratedPostToCard = (post: ClientGeneratedPost): GeneratedPost => ({
   id: post.id,
   caption: post.content || post.title,
@@ -263,6 +345,7 @@ const mapGeneratedPostToCard = (post: ClientGeneratedPost): GeneratedPost => ({
   apiPlatform: normalizeGeneratedPostPlatform(post.platform),
   status: normalizeGeneratedPostStatus(post.status),
   createdAt: formatDateTime(post.created_at),
+  hasVideoAsset: generatedPostHasVideo(post),
 });
 
 const getStatusConfig = (status: string) => {
@@ -342,6 +425,14 @@ export function AIStudio({ darkMode }: AIStudioProps) {
   const [editTargetPost, setEditTargetPost] = useState<GeneratedPost | null>(null);
   const [editedCaption, setEditedCaption] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
+  const [campaignTargetPost, setCampaignTargetPost] =
+    useState<GeneratedPost | null>(null);
+  const [campaignPlatforms, setCampaignPlatforms] = useState<
+    ClientCampaignPublishPlatform[]
+  >(campaignPlatformOptions.map((platform) => platform.value));
+  const [campaignResult, setCampaignResult] =
+    useState<ClientCampaignPublishResponse | null>(null);
+  const [campaignError, setCampaignError] = useState<string | null>(null);
   const [loadingGeneratedPosts, setLoadingGeneratedPosts] = useState(true);
   const [generatedPostsError, setGeneratedPostsError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -547,6 +638,84 @@ export function AIStudio({ darkMode }: AIStudioProps) {
         err instanceof Error ? err.message : "Failed to publish post.",
         "error",
       );
+    } finally {
+      setGeneratedPostActionKey(null);
+    }
+  };
+
+  const openCampaignPublisher = (post: GeneratedPost) => {
+    setCampaignTargetPost(post);
+    setCampaignPlatforms(campaignPlatformOptions.map((platform) => platform.value));
+    setCampaignResult(null);
+    setCampaignError(null);
+  };
+
+  const closeCampaignPublisher = () => {
+    if (
+      campaignTargetPost &&
+      generatedPostActionKey === `${campaignTargetPost.id}:campaign`
+    ) {
+      return;
+    }
+
+    setCampaignTargetPost(null);
+    setCampaignResult(null);
+    setCampaignError(null);
+  };
+
+  const toggleCampaignPlatform = (platform: ClientCampaignPublishPlatform) => {
+    setCampaignPlatforms((current) =>
+      current.includes(platform)
+        ? current.filter((value) => value !== platform)
+        : [...current, platform],
+    );
+    setCampaignError(null);
+  };
+
+  const handlePublishCampaign = async () => {
+    if (!campaignTargetPost) return;
+
+    if (!campaignPlatforms.length) {
+      setCampaignError("Select at least one platform.");
+      return;
+    }
+
+    const actionKey = `${campaignTargetPost.id}:campaign`;
+
+    try {
+      setGeneratedPostActionKey(actionKey);
+      setCampaignError(null);
+      setCampaignResult(null);
+
+      const result = await campaignPublishGeneratedPost(campaignTargetPost.id, {
+        platforms: campaignPlatforms,
+        allow_mock_fallback: true,
+        campaign_metadata: {
+          source: "ai_studio",
+          action: "publish_everywhere",
+        },
+      });
+
+      setCampaignResult(result);
+      await loadGeneratedPosts();
+
+      const failedCount = result.results.filter(
+        (platformResult) => platformResult.status === "failed",
+      ).length;
+
+      showGeneratedPostActionMessage(
+        failedCount === result.results.length
+          ? "Campaign completed with platform errors. Review the results."
+          : failedCount
+            ? "Campaign published with some platform warnings."
+            : "Campaign publish completed.",
+        failedCount === result.results.length ? "error" : "success",
+      );
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to publish campaign.";
+      setCampaignError(message);
+      showGeneratedPostActionMessage(message, "error");
     } finally {
       setGeneratedPostActionKey(null);
     }
@@ -1434,6 +1603,26 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                                       )}
                                     </button>
                                   ))}
+                                  <button
+                                    type="button"
+                                    onClick={() => openCampaignPublisher(post)}
+                                    disabled={Boolean(generatedPostActionKey)}
+                                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all hover:scale-[1.02] disabled:hover:scale-100"
+                                    style={{
+                                      background:
+                                        "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                                      color: "#ffffff",
+                                      cursor: generatedPostActionKey
+                                        ? "not-allowed"
+                                        : "pointer",
+                                      opacity: generatedPostActionKey ? 0.6 : 1,
+                                      boxShadow: "0 4px 12px rgba(99,102,241,0.2)",
+                                    }}
+                                    aria-label={`Publish ${post.platform} post as a multi-platform campaign`}
+                                  >
+                                    <Share2 size={12} />
+                                    Publish Everywhere
+                                  </button>
                                 </div>
                               </article>
                             );
@@ -1718,6 +1907,313 @@ export function AIStudio({ darkMode }: AIStudioProps) {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {campaignTargetPost && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4"
+            style={{ background: "rgba(2, 6, 23, 0.72)" }}
+            onClick={closeCampaignPublisher}
+          >
+            <motion.section
+              initial={{ opacity: 0, scale: 0.97, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 12 }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="campaign-publisher-title"
+              onClick={(event) => event.stopPropagation()}
+              className="my-auto w-full max-w-2xl rounded-3xl border p-5 shadow-2xl"
+              style={{
+                background: darkMode ? "#0b1026" : "#ffffff",
+                borderColor: darkMode
+                  ? "rgba(129,140,248,0.24)"
+                  : "rgba(15,23,42,0.10)",
+              }}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="mb-2 flex items-center gap-2">
+                    <div
+                      className="flex h-9 w-9 items-center justify-center rounded-xl"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, rgba(99,102,241,0.22), rgba(139,92,246,0.18))",
+                      }}
+                    >
+                      <Share2 size={16} style={{ color: "#818cf8" }} />
+                    </div>
+                    <div>
+                      <h2
+                        id="campaign-publisher-title"
+                        className="text-base font-semibold"
+                        style={{ color: textPrimary }}
+                      >
+                        Publish Campaign
+                      </h2>
+                      <p className="text-xs" style={{ color: textSoft }}>
+                        One action, platform-by-platform results.
+                      </p>
+                    </div>
+                  </div>
+                  <p
+                    className="line-clamp-2 max-w-xl text-xs leading-5"
+                    style={{ color: textMuted }}
+                  >
+                    {campaignTargetPost.caption}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeCampaignPublisher}
+                  disabled={
+                    generatedPostActionKey ===
+                    `${campaignTargetPost.id}:campaign`
+                  }
+                  className="rounded-xl border px-3 py-1.5 text-xs transition-all hover:opacity-80 disabled:opacity-50"
+                  style={{
+                    borderColor: cardStyle.borderColor,
+                    color: textSoft,
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+
+              {!campaignTargetPost.hasVideoAsset &&
+                campaignPlatforms.some((platform) =>
+                  ["youtube", "instagram", "facebook"].includes(platform),
+                ) && (
+                  <div
+                    className="mt-4 flex items-start gap-3 rounded-2xl border p-3"
+                    style={{
+                      background: darkMode
+                        ? "rgba(245,158,11,0.10)"
+                        : "rgba(245,158,11,0.07)",
+                      borderColor: "rgba(245,158,11,0.22)",
+                    }}
+                  >
+                    <Video
+                      size={17}
+                      className="mt-0.5 shrink-0"
+                      style={{ color: "#f59e0b" }}
+                    />
+                    <p className="text-xs leading-5" style={{ color: textMuted }}>
+                      No linked video was detected. YouTube Shorts requires video.
+                      Instagram Reels and Facebook Video also need a public video
+                      asset for real video publishing; hybrid mode can return mock
+                      fallback results.
+                    </p>
+                  </div>
+                )}
+
+              <div className="mt-5">
+                <p className="mb-2 text-xs font-semibold" style={{ color: textPrimary }}>
+                  Select platforms
+                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {campaignPlatformOptions.map((platform) => {
+                    const checked = campaignPlatforms.includes(platform.value);
+
+                    return (
+                      <label
+                        key={platform.value}
+                        className="flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition-all"
+                        style={{
+                          background: checked
+                            ? darkMode
+                              ? "rgba(99,102,241,0.12)"
+                              : "rgba(99,102,241,0.06)"
+                            : darkMode
+                              ? "rgba(255,255,255,0.025)"
+                              : "#f8fafc",
+                          borderColor: checked
+                            ? "rgba(99,102,241,0.34)"
+                            : cardStyle.borderColor,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleCampaignPlatform(platform.value)}
+                          disabled={
+                            generatedPostActionKey ===
+                            `${campaignTargetPost.id}:campaign`
+                          }
+                          className="mt-0.5 h-4 w-4 accent-indigo-500"
+                        />
+                        <span>
+                          <span
+                            className="block text-xs font-semibold"
+                            style={{ color: textPrimary }}
+                          >
+                            {platform.label}
+                          </span>
+                          <span
+                            className="mt-1 block text-xs leading-4"
+                            style={{ color: textSoft }}
+                          >
+                            {platform.description}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {campaignError && (
+                <div
+                  className="mt-4 rounded-2xl border p-3 text-xs"
+                  style={{
+                    background: "rgba(239,68,68,0.08)",
+                    borderColor: "rgba(239,68,68,0.20)",
+                    color: "#ef4444",
+                  }}
+                >
+                  {campaignError}
+                </div>
+              )}
+
+              {campaignResult && (
+                <div className="mt-5">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p
+                      className="text-xs font-semibold"
+                      style={{ color: textPrimary }}
+                    >
+                      Campaign results
+                    </p>
+                    <span className="text-xs font-mono" style={{ color: textSoft }}>
+                      {campaignResult.campaign_id.slice(0, 8).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {campaignResult.results.map((result) => {
+                      const platformLabel =
+                        campaignPlatformOptions.find(
+                          (platform) => platform.value === result.platform,
+                        )?.label || result.platform;
+                      const isFailed = result.status === "failed";
+                      const isMock = result.status === "mock_fallback";
+                      const resultColor = isFailed
+                        ? "#ef4444"
+                        : isMock
+                          ? "#f59e0b"
+                          : "#10b981";
+
+                      return (
+                        <div
+                          key={result.platform}
+                          className="rounded-2xl border p-3"
+                          style={{
+                            background: darkMode
+                              ? "rgba(255,255,255,0.025)"
+                              : "#f8fafc",
+                            borderColor: cardStyle.borderColor,
+                          }}
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p
+                              className="text-xs font-semibold"
+                              style={{ color: textPrimary }}
+                            >
+                              {platformLabel}
+                            </p>
+                            <span
+                              className="rounded-full px-2 py-0.5 text-xs font-medium"
+                              style={{
+                                color: resultColor,
+                                background: `${resultColor}14`,
+                              }}
+                            >
+                              {isFailed
+                                ? "Failed"
+                                : isMock
+                                  ? "Mock fallback"
+                                  : "Success"}
+                            </span>
+                            <span className="text-xs" style={{ color: textSoft }}>
+                              {result.mode}
+                            </span>
+                            {result.external_post_url && (
+                              <a
+                                href={result.external_post_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="ml-auto inline-flex items-center gap-1 text-xs font-medium"
+                                style={{ color: "#6366f1" }}
+                              >
+                                Open post
+                                <ExternalLink size={11} />
+                              </a>
+                            )}
+                          </div>
+                          {(result.warning || result.error) && (
+                            <p
+                              className="mt-2 text-xs leading-5"
+                              style={{
+                                color: result.error ? "#ef4444" : textMuted,
+                              }}
+                            >
+                              {result.error || result.warning}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeCampaignPublisher}
+                  disabled={
+                    generatedPostActionKey ===
+                    `${campaignTargetPost.id}:campaign`
+                  }
+                  className="rounded-xl border px-4 py-2.5 text-xs font-medium transition-all hover:opacity-80 disabled:opacity-50"
+                  style={{
+                    borderColor: cardStyle.borderColor,
+                    color: textMuted,
+                  }}
+                >
+                  Done
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handlePublishCampaign()}
+                  disabled={
+                    !campaignPlatforms.length ||
+                    generatedPostActionKey ===
+                      `${campaignTargetPost.id}:campaign`
+                  }
+                  className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all hover:opacity-90 disabled:opacity-50"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                    color: "#ffffff",
+                    boxShadow: "0 6px 18px rgba(99,102,241,0.28)",
+                  }}
+                >
+                  {generatedPostActionKey ===
+                  `${campaignTargetPost.id}:campaign` ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Share2 size={13} />
+                  )}
+                  {campaignResult ? "Publish Again" : "Publish Campaign"}
+                </button>
+              </div>
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

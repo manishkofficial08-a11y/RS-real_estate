@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user, get_tenant_id
 from app.database.session import get_db
 from app.models.ai_job import AIJob
+from app.models.content_asset import ContentAsset
 from app.models.generated_post import (
     GeneratedPost,
     GeneratedPostPlatform,
@@ -17,7 +18,11 @@ from app.models.generated_post import (
 )
 from app.models.property import Property
 from app.models.user import User
-from app.services.social_publisher import PublisherError, publish_generated_post_to_platform
+from app.services.social_publisher import (
+    PublisherError,
+    get_publisher_mode,
+    publish_generated_post_to_platform,
+)
 
 
 router = APIRouter(prefix="/generated-posts", tags=["Generated Posts"])
@@ -54,6 +59,31 @@ class GeneratedPostUpdate(BaseModel):
 class GeneratedPostPublishRequest(BaseModel):
     platform: Optional[GeneratedPostPlatform] = None
     allow_mock_fallback: bool = True
+
+
+class CampaignPublishRequest(BaseModel):
+    platforms: List[str] = Field(
+        default_factory=lambda: ["youtube", "instagram", "facebook", "linkedin"],
+        min_length=1,
+    )
+    allow_mock_fallback: bool = True
+    campaign_metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class CampaignPublishResult(BaseModel):
+    platform: str
+    status: str
+    mode: str
+    external_post_id: Optional[str] = None
+    external_post_url: Optional[str] = None
+    warning: Optional[str] = None
+    error: Optional[str] = None
+
+
+class CampaignPublishResponse(BaseModel):
+    generated_post_id: str
+    campaign_id: str
+    results: List[CampaignPublishResult]
 
 
 class GeneratedPostResponse(BaseModel):
@@ -154,6 +184,42 @@ async def _get_tenant_ai_job(
         )
 
     return ai_job
+
+
+async def _get_linked_media_asset(
+    db: AsyncSession,
+    tenant_id: str,
+    post: GeneratedPost,
+) -> Optional[ContentAsset]:
+    asset_ids = _clean_string_list(post.media_asset_ids)
+    metadata = post.metadata_json or {}
+    source_asset_id = metadata.get("source_asset_id")
+
+    if isinstance(source_asset_id, str) and source_asset_id.strip():
+        source_asset_id = source_asset_id.strip()
+        if source_asset_id not in asset_ids:
+            asset_ids.append(source_asset_id)
+
+    if not asset_ids:
+        return None
+
+    result = await db.execute(
+        select(ContentAsset).where(
+            ContentAsset.id.in_(asset_ids),
+            ContentAsset.tenant_id == tenant_id,
+            ContentAsset.is_active == True,
+        )
+    )
+    assets_by_id = {asset.id: asset for asset in result.scalars().all()}
+
+    ordered_assets = [
+        assets_by_id[asset_id] for asset_id in asset_ids if asset_id in assets_by_id
+    ]
+
+    return next(
+        (asset for asset in ordered_assets if asset.asset_type == "video"),
+        ordered_assets[0] if ordered_assets else None,
+    )
 
 
 async def _serialize_generated_post(
@@ -380,9 +446,12 @@ async def publish_generated_post(
     if data.platform:
         post.platform = data.platform.value
 
+    media_asset = await _get_linked_media_asset(db, tenant_id, post)
+
     try:
         publish_result = await publish_generated_post_to_platform(
             post,
+            media_asset=media_asset,
             allow_mock_fallback=data.allow_mock_fallback,
         )
     except PublisherError as exc:
@@ -422,6 +491,112 @@ async def publish_generated_post(
     await db.refresh(post)
 
     return await _serialize_generated_post(post, db)
+
+
+@router.post(
+    "/{post_id}/campaign-publish",
+    response_model=CampaignPublishResponse,
+)
+async def campaign_publish_generated_post(
+    post_id: str,
+    data: CampaignPublishRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+):
+    query_result = await db.execute(
+        select(GeneratedPost).where(
+            GeneratedPost.id == post_id,
+            GeneratedPost.tenant_id == tenant_id,
+            GeneratedPost.is_active == True,
+        )
+    )
+    post = query_result.scalar_one_or_none()
+
+    if not post:
+        raise HTTPException(status_code=404, detail="Generated post not found")
+
+    supported_platforms = {"youtube", "instagram", "facebook", "linkedin"}
+    platforms: List[str] = []
+
+    for requested_platform in data.platforms:
+        normalized = requested_platform.strip().lower().replace("youtube shorts", "youtube")
+        if normalized not in supported_platforms:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported campaign platform: {requested_platform}",
+            )
+        if normalized not in platforms:
+            platforms.append(normalized)
+
+    media_asset = await _get_linked_media_asset(db, tenant_id, post)
+    campaign_id = str(uuid.uuid4())
+    published_at = datetime.now(timezone.utc)
+    publisher_mode = get_publisher_mode()
+    results: List[CampaignPublishResult] = []
+
+    for platform in platforms:
+        try:
+            publish_result = await publish_generated_post_to_platform(
+                post,
+                platform=platform,
+                media_asset=media_asset,
+                allow_mock_fallback=data.allow_mock_fallback,
+            )
+            results.append(
+                CampaignPublishResult(
+                    platform=platform,
+                    status=(
+                        "mock_fallback"
+                        if publish_result.mode == "mock"
+                        else "success"
+                    ),
+                    mode=publish_result.mode,
+                    external_post_id=publish_result.external_post_id,
+                    external_post_url=publish_result.external_post_url,
+                    warning=publish_result.warning,
+                )
+            )
+        except PublisherError as exc:
+            results.append(
+                CampaignPublishResult(
+                    platform=platform,
+                    status="failed",
+                    mode=publisher_mode,
+                    error=str(exc),
+                )
+            )
+
+    campaign_record = {
+        "campaign_id": campaign_id,
+        "platforms": platforms,
+        "allow_mock_fallback": data.allow_mock_fallback,
+        "campaign_metadata": data.campaign_metadata,
+        "published_by_user_id": current_user.id,
+        "published_at": published_at.isoformat(),
+        "results": [result.model_dump() for result in results],
+    }
+    metadata = dict(post.metadata_json or {})
+    previous_campaigns = metadata.get("campaigns")
+    campaigns = list(previous_campaigns) if isinstance(previous_campaigns, list) else []
+    campaigns.append(campaign_record)
+    metadata["campaigns"] = campaigns[-20:]
+    metadata["latest_campaign"] = campaign_record
+    post.metadata_json = metadata
+
+    if any(result.status != "failed" for result in results):
+        post.status = GeneratedPostStatus.published.value
+        post.published_at = published_at
+    else:
+        post.status = GeneratedPostStatus.failed.value
+
+    await db.commit()
+
+    return CampaignPublishResponse(
+        generated_post_id=post.id,
+        campaign_id=campaign_id,
+        results=results,
+    )
 
 
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
