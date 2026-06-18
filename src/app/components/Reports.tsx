@@ -2,18 +2,25 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ArrowUpRight,
-  Calendar,
+  BarChart3,
+  CalendarClock,
   CheckCircle2,
   Clock,
+  Copy,
   Download,
-  Eye,
+  ExternalLink,
   FileBarChart,
   Mail,
+  Megaphone,
+  RefreshCw,
+  Send,
   Share2,
   Sparkles,
   Target,
   TrendingUp,
   Users,
+  XCircle,
+  type LucideIcon,
 } from "lucide-react";
 import { motion } from "motion/react";
 import {
@@ -30,13 +37,20 @@ import {
 import {
   getClientLeads,
   getClientProperties,
+  getMyGeneratedPosts,
+  getMyScheduledPosts,
+  type ClientGeneratedPost,
   type ClientLead,
   type ClientProperty,
+  type ClientScheduledPost,
 } from "../lib/clientApi";
 
 interface ReportsProps {
   darkMode: boolean;
 }
+
+type ReportPeriod = "daily" | "weekly" | "monthly";
+type ReportSection = "overview" | "marketing" | "scheduler" | "publisher";
 
 type SummaryPoint = {
   type: "win" | "attention";
@@ -46,7 +60,7 @@ type SummaryPoint = {
 type RecentReportItem = {
   title: string;
   meta: string;
-  type: "CRM" | "Property" | "System";
+  type: "CRM" | "Property" | "Marketing" | "Scheduler" | "Publisher" | "System";
   signal: string;
   color: string;
 };
@@ -56,44 +70,186 @@ function formatNumber(value: number) {
 }
 
 function formatPrice(price: number) {
-  if (price >= 10000000) return `â‚¹${(price / 10000000).toFixed(1)} Cr`;
-  if (price >= 100000) return `â‚¹${(price / 100000).toFixed(1)} L`;
-  return `â‚¹${new Intl.NumberFormat("en-IN").format(price)}`;
+  if (price >= 10000000) return `₹${(price / 10000000).toFixed(1)} Cr`;
+  if (price >= 100000) return `₹${(price / 100000).toFixed(1)} L`;
+  return `₹${new Intl.NumberFormat("en-IN").format(price)}`;
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function getStatusCount(items: { status?: string }[], status: string) {
   return items.filter((item) => (item.status || "").toLowerCase() === status).length;
 }
 
+function isToday(value?: string | null) {
+  if (!value) return false;
+
+  const date = new Date(value);
+  const now = new Date();
+
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+}
+
+function safeIsToday(value?: string | null) {
+  if (!value) return false;
+
+  const date = new Date(value);
+  const now = new Date();
+
+  if (Number.isNaN(date.getTime())) return false;
+
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+}
+
+function platformLabel(platform?: string | null) {
+  const value = (platform || "other").toLowerCase();
+
+  const labels: Record<string, string> = {
+    instagram: "Instagram",
+    facebook: "Facebook",
+    linkedin: "LinkedIn",
+    twitter: "Twitter/X",
+    website: "Website",
+    youtube: "YouTube",
+    other: "Other",
+  };
+
+  return labels[value] || value;
+}
+
+function getGeneratedPostTitle(post: ClientGeneratedPost) {
+  return post.title || post.content?.slice(0, 80) || "Generated post";
+}
+
+function extractCampaignEvents(post: ClientGeneratedPost) {
+  const metadata = post.metadata_json || {};
+  const campaignResults = metadata.campaign_publish_results;
+
+  return Array.isArray(campaignResults) ? campaignResults : [];
+}
+
+function extractPublisherMode(post: ClientGeneratedPost) {
+  const metadata = post.metadata_json || {};
+  const publisher = metadata.publisher;
+
+  if (publisher && typeof publisher === "object" && "mode" in publisher) {
+    return String((publisher as Record<string, unknown>).mode || "");
+  }
+
+  const campaignEvents = extractCampaignEvents(post);
+  const latestCampaign = campaignEvents[campaignEvents.length - 1];
+
+  if (
+    latestCampaign &&
+    typeof latestCampaign === "object" &&
+    "results" in latestCampaign &&
+    Array.isArray((latestCampaign as Record<string, unknown>).results)
+  ) {
+    const result = ((latestCampaign as Record<string, unknown>).results as unknown[])[0];
+
+    if (result && typeof result === "object" && "mode" in result) {
+      return String((result as Record<string, unknown>).mode || "");
+    }
+  }
+
+  return "";
+}
+
+function getScheduledWindow(period: ReportPeriod) {
+  const now = new Date();
+  const end = new Date(now);
+
+  if (period === "daily") {
+    end.setDate(now.getDate() + 1);
+  } else if (period === "weekly") {
+    end.setDate(now.getDate() + 7);
+  } else {
+    end.setMonth(now.getMonth() + 1);
+  }
+
+  return { now, end };
+}
+
+function withinWindow(value: string | null | undefined, start: Date, end: Date) {
+  if (!value) return false;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return false;
+
+  return date >= start && date <= end;
+}
+
 export function Reports({ darkMode }: ReportsProps) {
-  const [activeReport, setActiveReport] = useState<"daily" | "weekly" | "monthly">("monthly");
+  const [activeReport, setActiveReport] = useState<ReportPeriod>("monthly");
+  const [activeSection, setActiveSection] = useState<ReportSection>("overview");
   const [exporting, setExporting] = useState(false);
   const [leads, setLeads] = useState<ClientLead[]>([]);
   const [properties, setProperties] = useState<ClientProperty[]>([]);
+  const [generatedPosts, setGeneratedPosts] = useState<ClientGeneratedPost[]>([]);
+  const [scheduledPosts, setScheduledPosts] = useState<ClientScheduledPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadReportData() {
-      try {
-        setLoading(true);
-        setApiMessage(null);
+  const cardBase = {
+    background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
+    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+  };
 
-        const [leadData, propertyData] = await Promise.all([
+  const textPrimary = darkMode ? "#e2e8f0" : "#0f172a";
+  const textMuted = darkMode ? "#64748b" : "#64748b";
+  const textSoft = darkMode ? "#4a5568" : "#94a3b8";
+  const chartColor = darkMode ? "#818cf8" : "#6366f1";
+  const tickColor = darkMode ? "#2d3748" : "#cbd5e1";
+  const tooltipBg = darkMode ? "#0d0d28" : "#ffffff";
+
+  const loadReportData = async () => {
+    try {
+      setLoading(true);
+      setApiMessage(null);
+
+      const [leadData, propertyData, generatedPostData, scheduledPostData] =
+        await Promise.all([
           getClientLeads(),
           getClientProperties(),
+          getMyGeneratedPosts({ limit: 200 }),
+          getMyScheduledPosts({ limit: 200 }),
         ]);
 
-        setLeads(leadData);
-        setProperties(propertyData);
-      } catch (err) {
-        setApiMessage(err instanceof Error ? err.message : "Failed to load report data");
-      } finally {
-        setLoading(false);
-      }
+      setLeads(leadData);
+      setProperties(propertyData);
+      setGeneratedPosts(generatedPostData);
+      setScheduledPosts(scheduledPostData);
+    } catch (err) {
+      setApiMessage(err instanceof Error ? err.message : "Failed to load report data");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    loadReportData();
+  useEffect(() => {
+    void loadReportData();
   }, []);
 
   const reportStats = useMemo(() => {
@@ -113,21 +269,56 @@ export function Reports({ darkMode }: ReportsProps) {
 
     const portfolioValue = properties.reduce((sum, property) => sum + (property.price || 0), 0);
 
-    const avgLeadScore = totalLeads > 0
-      ? Math.round(leads.reduce((sum, lead) => sum + (lead.score || 0), 0) / totalLeads)
-      : 0;
+    const avgLeadScore =
+      totalLeads > 0
+        ? Math.round(leads.reduce((sum, lead) => sum + (lead.score || 0), 0) / totalLeads)
+        : 0;
 
     const conversionRate = totalLeads > 0 ? Math.round((convertedLeads / totalLeads) * 100) : 0;
-    const availabilityRate = totalProperties > 0 ? Math.round((availableProperties / totalProperties) * 100) : 0;
+    const availabilityRate =
+      totalProperties > 0 ? Math.round((availableProperties / totalProperties) * 100) : 0;
 
-    const businessScore = totalLeads + totalProperties > 0
-      ? Math.min(100, Math.max(45, Math.round(
-          avgLeadScore * 0.45 +
-          hotLeads * 5 +
-          availabilityRate * 0.25 +
-          conversionRate * 0.45
-        )))
-      : 62;
+    const generatedTotal = generatedPosts.length;
+    const generatedDraft = getStatusCount(generatedPosts, "draft");
+    const generatedScheduled = getStatusCount(generatedPosts, "scheduled");
+    const generatedPublished = getStatusCount(generatedPosts, "published");
+    const generatedFailed = getStatusCount(generatedPosts, "failed");
+
+    const scheduleTotal = scheduledPosts.length;
+    const scheduleScheduled = getStatusCount(scheduledPosts, "scheduled");
+    const schedulePublishing = getStatusCount(scheduledPosts, "publishing");
+    const schedulePublished = getStatusCount(scheduledPosts, "published");
+    const scheduleFailed = getStatusCount(scheduledPosts, "failed");
+    const scheduleToday = scheduledPosts.filter((schedule) => safeIsToday(schedule.scheduled_at)).length;
+
+    const { now, end } = getScheduledWindow(activeReport);
+    const upcomingInPeriod = scheduledPosts.filter((schedule) =>
+      withinWindow(schedule.scheduled_at, now, end),
+    ).length;
+
+    const mockPublished = generatedPosts.filter((post) => extractPublisherMode(post) === "mock").length;
+    const realPublished = generatedPosts.filter((post) => extractPublisherMode(post) === "real").length;
+    const campaignEvents = generatedPosts.flatMap(extractCampaignEvents);
+    const campaignCount = campaignEvents.length;
+
+    const businessScore =
+      totalLeads + totalProperties + generatedTotal + scheduleTotal > 0
+        ? Math.min(
+            100,
+            Math.max(
+              45,
+              Math.round(
+                avgLeadScore * 0.32 +
+                  hotLeads * 4 +
+                  availabilityRate * 0.18 +
+                  conversionRate * 0.38 +
+                  generatedPublished * 4 -
+                  generatedFailed * 4 -
+                  scheduleFailed * 4,
+              ),
+            ),
+          )
+        : 62;
 
     return {
       totalLeads,
@@ -145,9 +336,34 @@ export function Reports({ darkMode }: ReportsProps) {
       avgLeadScore,
       conversionRate,
       availabilityRate,
+      generatedTotal,
+      generatedDraft,
+      generatedScheduled,
+      generatedPublished,
+      generatedFailed,
+      scheduleTotal,
+      scheduleScheduled,
+      schedulePublishing,
+      schedulePublished,
+      scheduleFailed,
+      scheduleToday,
+      upcomingInPeriod,
+      mockPublished,
+      realPublished,
+      campaignCount,
       businessScore,
     };
-  }, [leads, properties]);
+  }, [leads, properties, generatedPosts, scheduledPosts, activeReport]);
+
+  const platformData = useMemo(() => {
+    const platforms = ["instagram", "facebook", "linkedin", "twitter", "website", "youtube", "other"];
+
+    return platforms.map((platform) => ({
+      platform: platformLabel(platform),
+      generated: generatedPosts.filter((post) => String(post.platform).toLowerCase() === platform).length,
+      scheduled: scheduledPosts.filter((post) => String(post.platform).toLowerCase() === platform).length,
+    }));
+  }, [generatedPosts, scheduledPosts]);
 
   const trendData = useMemo(() => {
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
@@ -157,8 +373,16 @@ export function Reports({ darkMode }: ReportsProps) {
 
       return {
         month,
-        leads: reportStats.totalLeads === 0 ? 0 : Math.max(1, Math.round(reportStats.totalLeads * ratio)),
-        properties: reportStats.totalProperties === 0 ? 0 : Math.max(1, Math.round(reportStats.totalProperties * ratio)),
+        leads:
+          reportStats.totalLeads === 0 ? 0 : Math.max(1, Math.round(reportStats.totalLeads * ratio)),
+        properties:
+          reportStats.totalProperties === 0
+            ? 0
+            : Math.max(1, Math.round(reportStats.totalProperties * ratio)),
+        posts:
+          reportStats.generatedTotal === 0
+            ? 0
+            : Math.max(1, Math.round(reportStats.generatedTotal * ratio)),
       };
     });
   }, [reportStats]);
@@ -175,7 +399,7 @@ export function Reports({ darkMode }: ReportsProps) {
         : {
             type: "attention",
             text: "No real leads found yet. Add CRM leads to generate stronger report insights.",
-          }
+          },
     );
 
     points.push(
@@ -187,7 +411,7 @@ export function Reports({ darkMode }: ReportsProps) {
         : {
             type: "attention",
             text: "No hot leads detected yet. Improve lead qualification and scoring.",
-          }
+          },
     );
 
     points.push(
@@ -199,82 +423,138 @@ export function Reports({ darkMode }: ReportsProps) {
         : {
             type: "attention",
             text: "No backend properties found yet. Add listings to activate inventory reports.",
-          }
+          },
     );
 
-    if (reportStats.availableProperties > 0) {
-      points.push({
-        type: "win",
-        text: `${reportStats.availableProperties} properties are available for active campaigns and CRM matching.`,
-      });
-    }
-
     points.push(
-      reportStats.conversionRate > 0
+      reportStats.generatedTotal > 0
         ? {
             type: "win",
-            text: `Lead conversion rate is ${reportStats.conversionRate}%. Keep tracking converted vs lost leads.`,
+            text: `${reportStats.generatedTotal} generated posts tracked: ${reportStats.generatedPublished} published, ${reportStats.generatedScheduled} scheduled, ${reportStats.generatedDraft} drafts.`,
           }
         : {
             type: "attention",
-            text: "Conversion rate is currently 0%. Mark closed leads as converted to unlock accurate ROI reports.",
+            text: "No generated posts yet. Create AI Studio drafts to activate marketing reports.",
+          },
+    );
+
+    points.push(
+      reportStats.scheduleTotal > 0
+        ? {
+            type: reportStats.scheduleFailed > 0 ? "attention" : "win",
+            text: `${reportStats.scheduleTotal} scheduled posts tracked. ${reportStats.upcomingInPeriod} are upcoming in the selected ${activeReport} window.`,
           }
+        : {
+            type: "attention",
+            text: "No scheduled posts yet. Use Scheduler to build the publishing calendar.",
+          },
+    );
+
+    points.push(
+      reportStats.generatedFailed + reportStats.scheduleFailed > 0
+        ? {
+            type: "attention",
+            text: `${reportStats.generatedFailed + reportStats.scheduleFailed} marketing items need review due to failed/generated or scheduled status.`,
+          }
+        : {
+            type: "win",
+            text: "No failed generated/scheduled posts detected in the current report snapshot.",
+          },
     );
 
     points.push({
       type: reportStats.businessScore >= 70 ? "win" : "attention",
-      text: `AI Business Health Score is ${reportStats.businessScore}/100 based on leads, properties, inventory and conversion signals.`,
+      text: `AI Business Health Score is ${reportStats.businessScore}/100 based on CRM, inventory, generated posts, scheduler and publishing signals.`,
     });
 
     return points;
-  }, [reportStats]);
+  }, [reportStats, activeReport]);
 
   const recentItems = useMemo<RecentReportItem[]>(() => {
-    const leadRows: RecentReportItem[] = leads.slice(0, 4).map((lead) => ({
+    const leadRows: RecentReportItem[] = leads.slice(0, 3).map((lead) => ({
       title: `Lead: ${lead.name}`,
-      meta: `${lead.status || "new"} Â· ${lead.score || 50}/100 score`,
+      meta: `${lead.status || "new"} · ${lead.score || 50}/100 score`,
       type: "CRM",
       signal: (lead.score || 0) >= 80 ? "Hot" : "Active",
       color: "#6366f1",
     }));
 
-    const propertyRows: RecentReportItem[] = properties.slice(0, 4).map((property) => ({
+    const propertyRows: RecentReportItem[] = properties.slice(0, 3).map((property) => ({
       title: `Property: ${property.title}`,
-      meta: `${property.location} Â· ${formatPrice(property.price || 0)}`,
+      meta: `${property.location} · ${formatPrice(property.price || 0)}`,
       type: "Property",
       signal: property.status,
       color: "#10b981",
     }));
 
-    const rows = [...leadRows, ...propertyRows];
+    const generatedRows: RecentReportItem[] = generatedPosts.slice(0, 3).map((post) => ({
+      title: `Generated: ${getGeneratedPostTitle(post)}`,
+      meta: `${platformLabel(post.platform)} · ${post.status}`,
+      type: "Marketing",
+      signal: post.status,
+      color: "#8b5cf6",
+    }));
+
+    const scheduleRows: RecentReportItem[] = scheduledPosts.slice(0, 3).map((schedule) => ({
+      title: `Scheduled: ${schedule.generated_post_title || schedule.generated_post_id}`,
+      meta: `${platformLabel(schedule.platform)} · ${formatDateTime(schedule.scheduled_at)}`,
+      type: "Scheduler",
+      signal: schedule.status,
+      color: "#06b6d4",
+    }));
+
+    const rows = [...leadRows, ...propertyRows, ...generatedRows, ...scheduleRows];
 
     return rows.length > 0
       ? rows
-      : [{
-          title: "No live report data yet",
-          meta: "Add leads and properties to generate real reports",
-          type: "System",
-          signal: "Pending",
-          color: "#f59e0b",
-        }];
-  }, [leads, properties]);
+      : [
+          {
+            title: "No live report data yet",
+            meta: "Add leads, properties, generated posts and schedules",
+            type: "System",
+            signal: "Pending",
+            color: "#f59e0b",
+          },
+        ];
+  }, [leads, properties, generatedPosts, scheduledPosts]);
 
   const reportText = useMemo(() => {
     return [
-      "RS Real Estate - Real Estate Business Report",
+      "RS Real Estate - Business Intelligence Report",
       `Report Type: ${activeReport}`,
-      `Generated: ${new Date().toLocaleString()}`,
+      `Generated: ${new Date().toLocaleString("en-IN")}`,
       "",
+      "CRM:",
       `Total Leads: ${reportStats.totalLeads}`,
       `Hot Leads: ${reportStats.hotLeads}`,
       `Average Lead Score: ${reportStats.avgLeadScore}/100`,
       `Conversion Rate: ${reportStats.conversionRate}%`,
       "",
+      "Properties:",
       `Total Properties: ${reportStats.totalProperties}`,
       `Available Properties: ${reportStats.availableProperties}`,
       `Sold Properties: ${reportStats.soldProperties}`,
       `Rented Properties: ${reportStats.rentedProperties}`,
       `Portfolio Value: ${formatPrice(reportStats.portfolioValue)}`,
+      "",
+      "Marketing:",
+      `Generated Posts: ${reportStats.generatedTotal}`,
+      `Draft Posts: ${reportStats.generatedDraft}`,
+      `Scheduled Generated Posts: ${reportStats.generatedScheduled}`,
+      `Published Generated Posts: ${reportStats.generatedPublished}`,
+      `Failed Generated Posts: ${reportStats.generatedFailed}`,
+      "",
+      "Scheduler:",
+      `Scheduled Queue: ${reportStats.scheduleScheduled}`,
+      `Publishing Now: ${reportStats.schedulePublishing}`,
+      `Published Scheduled Posts: ${reportStats.schedulePublished}`,
+      `Failed Scheduled Posts: ${reportStats.scheduleFailed}`,
+      `Upcoming in ${activeReport}: ${reportStats.upcomingInPeriod}`,
+      "",
+      "Publisher:",
+      `Campaign Events: ${reportStats.campaignCount}`,
+      `Mock Published: ${reportStats.mockPublished}`,
+      `Real Published: ${reportStats.realPublished}`,
       "",
       `AI Business Health Score: ${reportStats.businessScore}/100`,
       "",
@@ -291,7 +571,7 @@ export function Reports({ darkMode }: ReportsProps) {
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = `ai-growth-os-${activeReport}-report.txt`;
+    link.download = `rs-real-estate-${activeReport}-business-report.txt`;
     link.click();
 
     window.URL.revokeObjectURL(url);
@@ -299,7 +579,7 @@ export function Reports({ darkMode }: ReportsProps) {
   };
 
   const handleEmailReport = () => {
-    const subject = encodeURIComponent(`RS Real Estate ${activeReport} Report`);
+    const subject = encodeURIComponent(`RS Real Estate ${activeReport} Business Report`);
     const body = encodeURIComponent(reportText);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
@@ -313,45 +593,159 @@ export function Reports({ darkMode }: ReportsProps) {
     }
   };
 
-  const chartColor = darkMode ? "#818cf8" : "#6366f1";
-  const tickColor = darkMode ? "#2d3748" : "#cbd5e1";
-  const tooltipBg = darkMode ? "#0d0d28" : "#ffffff";
+  const kpis: Array<{
+    label: string;
+    value: string;
+    change: string;
+    icon: LucideIcon;
+    color: string;
+    sub: string;
+    section: ReportSection;
+  }> = [
+    {
+      label: "Total Leads",
+      value: formatNumber(reportStats.totalLeads),
+      change: `${reportStats.hotLeads} hot`,
+      icon: Target,
+      color: "#8b5cf6",
+      sub: "CRM pipeline",
+      section: "overview",
+    },
+    {
+      label: "Portfolio Value",
+      value: formatPrice(reportStats.portfolioValue),
+      change: `${reportStats.availableProperties} active`,
+      icon: FileBarChart,
+      color: "#06b6d4",
+      sub: "inventory",
+      section: "overview",
+    },
+    {
+      label: "Generated Posts",
+      value: formatNumber(reportStats.generatedTotal),
+      change: `${reportStats.generatedPublished} published`,
+      icon: Megaphone,
+      color: "#6366f1",
+      sub: "marketing",
+      section: "marketing",
+    },
+    {
+      label: "Scheduled Queue",
+      value: formatNumber(reportStats.scheduleScheduled),
+      change: `${reportStats.scheduleToday} today`,
+      icon: CalendarClock,
+      color: "#10b981",
+      sub: "automation",
+      section: "scheduler",
+    },
+    {
+      label: "Campaign Events",
+      value: formatNumber(reportStats.campaignCount),
+      change: `${reportStats.mockPublished}/${reportStats.realPublished}`,
+      icon: Send,
+      color: "#f59e0b",
+      sub: "mock/real",
+      section: "publisher",
+    },
+    {
+      label: "Health Score",
+      value: `${reportStats.businessScore}/100`,
+      change: `${reportStats.conversionRate}% conv`,
+      icon: TrendingUp,
+      color: "#14b8a6",
+      sub: "AI score",
+      section: "overview",
+    },
+  ];
 
-  const cardBase = {
-    background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+  const sectionCards: Record<ReportSection, Array<{ label: string; value: string; color: string }>> = {
+    overview: [
+      { label: "New Leads", value: formatNumber(reportStats.newLeads), color: "#6366f1" },
+      { label: "Contacted", value: formatNumber(reportStats.contactedLeads), color: "#8b5cf6" },
+      { label: "Qualified", value: formatNumber(reportStats.qualifiedLeads), color: "#06b6d4" },
+      { label: "Converted", value: formatNumber(reportStats.convertedLeads), color: "#10b981" },
+      { label: "Lost", value: formatNumber(reportStats.lostLeads), color: "#ef4444" },
+    ],
+    marketing: [
+      { label: "Drafts", value: formatNumber(reportStats.generatedDraft), color: "#f59e0b" },
+      { label: "Scheduled", value: formatNumber(reportStats.generatedScheduled), color: "#6366f1" },
+      { label: "Published", value: formatNumber(reportStats.generatedPublished), color: "#10b981" },
+      { label: "Failed", value: formatNumber(reportStats.generatedFailed), color: "#ef4444" },
+    ],
+    scheduler: [
+      { label: "Queued", value: formatNumber(reportStats.scheduleScheduled), color: "#10b981" },
+      { label: "Publishing", value: formatNumber(reportStats.schedulePublishing), color: "#6366f1" },
+      { label: "Published", value: formatNumber(reportStats.schedulePublished), color: "#14b8a6" },
+      { label: "Failed", value: formatNumber(reportStats.scheduleFailed), color: "#ef4444" },
+      { label: "Upcoming", value: formatNumber(reportStats.upcomingInPeriod), color: "#8b5cf6" },
+    ],
+    publisher: [
+      { label: "Campaigns", value: formatNumber(reportStats.campaignCount), color: "#6366f1" },
+      { label: "Mock Mode", value: formatNumber(reportStats.mockPublished), color: "#f59e0b" },
+      { label: "Real Mode", value: formatNumber(reportStats.realPublished), color: "#10b981" },
+      { label: "Failures", value: formatNumber(reportStats.generatedFailed + reportStats.scheduleFailed), color: "#ef4444" },
+    ],
   };
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
+          className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between"
         >
           <div>
-            <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-              Reports
-            </h1>
-            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+            <div className="mb-1 flex items-center gap-3">
+              <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: textPrimary }}>
+                Reports
+              </h1>
+              <span
+                className="rounded-full px-2 py-1 text-xs"
+                style={{
+                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  color: "#ffffff",
+                }}
+              >
+                BI v2
+              </span>
+            </div>
+            <p className="text-sm" style={{ color: textSoft }}>
               {loading
-                ? "Loading live business report..."
-                : `AI-generated report from ${reportStats.totalLeads} leads and ${reportStats.totalProperties} properties`}
+                ? "Loading live business intelligence report..."
+                : `Live report from ${reportStats.totalLeads} leads, ${reportStats.totalProperties} properties, ${reportStats.generatedTotal} posts and ${reportStats.scheduleTotal} schedules`}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1 p-1 rounded-xl" style={{ background: darkMode ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.04)" }}>
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              className="flex gap-1 rounded-xl p-1"
+              style={{
+                background: darkMode ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.04)",
+              }}
+            >
               {(["daily", "weekly", "monthly"] as const).map((report) => (
                 <button
                   key={report}
                   onClick={() => setActiveReport(report)}
-                  className="px-3 py-1.5 rounded-lg text-xs capitalize transition-all"
+                  className="rounded-lg px-3 py-1.5 text-xs capitalize transition-all"
                   style={{
-                    background: activeReport === report ? (darkMode ? "rgba(99,102,241,0.2)" : "#ffffff") : "transparent",
-                    color: activeReport === report ? (darkMode ? "#818cf8" : "#6366f1") : darkMode ? "#4a5568" : "#94a3b8",
-                    boxShadow: activeReport === report && !darkMode ? "0 1px 4px rgba(0,0,0,0.06)" : "none",
+                    background:
+                      activeReport === report
+                        ? darkMode
+                          ? "rgba(99,102,241,0.2)"
+                          : "#ffffff"
+                        : "transparent",
+                    color:
+                      activeReport === report
+                        ? darkMode
+                          ? "#818cf8"
+                          : "#6366f1"
+                        : textSoft,
+                    boxShadow:
+                      activeReport === report && !darkMode
+                        ? "0 1px 4px rgba(0,0,0,0.06)"
+                        : "none",
                   }}
                 >
                   {report}
@@ -360,9 +754,17 @@ export function Reports({ darkMode }: ReportsProps) {
             </div>
 
             <button
+              onClick={() => void loadReportData()}
+              className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs transition-all"
+              style={{ borderColor: cardBase.borderColor, color: textMuted }}
+            >
+              <RefreshCw size={13} /> Refresh
+            </button>
+
+            <button
               onClick={handleExport}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs border transition-all"
-              style={{ borderColor: cardBase.borderColor, color: darkMode ? "#94a3b8" : "#475569" }}
+              className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs transition-all"
+              style={{ borderColor: cardBase.borderColor, color: textMuted }}
             >
               {exporting ? (
                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity }}>
@@ -371,21 +773,21 @@ export function Reports({ darkMode }: ReportsProps) {
               ) : (
                 <Download size={13} />
               )}
-              {exporting ? "Exporting..." : "Export Report"}
+              {exporting ? "Exporting..." : "Export"}
             </button>
 
             <button
               onClick={handleEmailReport}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs border transition-all"
-              style={{ borderColor: cardBase.borderColor, color: darkMode ? "#94a3b8" : "#475569" }}
+              className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs transition-all"
+              style={{ borderColor: cardBase.borderColor, color: textMuted }}
             >
               <Mail size={13} /> Email
             </button>
 
             <button
               onClick={handleCopyReport}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs border transition-all"
-              style={{ borderColor: cardBase.borderColor, color: darkMode ? "#94a3b8" : "#475569" }}
+              className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs transition-all"
+              style={{ borderColor: cardBase.borderColor, color: textMuted }}
             >
               <Share2 size={13} /> Copy
             </button>
@@ -396,19 +798,63 @@ export function Reports({ darkMode }: ReportsProps) {
           <div
             className="rounded-xl border px-4 py-3 text-sm"
             style={{
-              background: darkMode ? "rgba(245,158,11,0.08)" : "rgba(245,158,11,0.06)",
-              borderColor: "rgba(245,158,11,0.25)",
-              color: "#f59e0b",
+              background: apiMessage.toLowerCase().includes("failed")
+                ? "rgba(239,68,68,0.08)"
+                : "rgba(245,158,11,0.08)",
+              borderColor: apiMessage.toLowerCase().includes("failed")
+                ? "rgba(239,68,68,0.20)"
+                : "rgba(245,158,11,0.25)",
+              color: apiMessage.toLowerCase().includes("failed") ? "#ef4444" : "#f59e0b",
             }}
           >
             {apiMessage}
           </div>
         )}
 
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+          {kpis.map((kpi, index) => (
+            <motion.button
+              key={kpi.label}
+              onClick={() => setActiveSection(kpi.section)}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 + index * 0.05 }}
+              className="rounded-2xl border p-5 text-left transition-all hover:scale-[1.01]"
+              style={{
+                ...cardBase,
+                borderColor:
+                  activeSection === kpi.section
+                    ? `${kpi.color}55`
+                    : cardBase.borderColor,
+              }}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <div
+                  className="flex h-9 w-9 items-center justify-center rounded-xl"
+                  style={{ background: `${kpi.color}15` }}
+                >
+                  <kpi.icon size={16} style={{ color: kpi.color }} />
+                </div>
+                <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: "#10b981" }}>
+                  <ArrowUpRight size={10} /> {kpi.change}
+                </span>
+              </div>
+              <div style={{ fontSize: "1.35rem", fontWeight: 700, color: textPrimary, letterSpacing: "-0.03em" }}>
+                {kpi.value}
+              </div>
+              <p className="mt-1 text-xs" style={{ color: textSoft }}>
+                {kpi.label}
+              </p>
+              <p className="text-xs" style={{ color: darkMode ? "#2d3748" : "#cbd5e1" }}>
+                {kpi.sub}
+              </p>
+            </motion.button>
+          ))}
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
           className="rounded-2xl border p-5"
           style={{
             background: darkMode
@@ -417,29 +863,35 @@ export function Reports({ darkMode }: ReportsProps) {
             borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)",
           }}
         >
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}>
-              <Sparkles size={13} className="text-white" />
+          <div className="mb-4 flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}>
+              <Sparkles size={14} className="text-white" />
             </div>
             <div>
-              <span className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>AI Executive Summary</span>
-              <span className="text-xs ml-2" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{activeReport} report</span>
+              <span className="text-sm font-semibold" style={{ color: textPrimary }}>
+                AI Executive Summary
+              </span>
+              <span className="ml-2 text-xs" style={{ color: textSoft }}>
+                {activeReport} report · generated just now
+              </span>
             </div>
-            <div className="ml-auto flex items-center gap-1">
-              <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#10b981", boxShadow: "0 0 6px #10b981" }} />
-              <span className="text-xs" style={{ color: "#10b981" }}>Generated just now</span>
-            </div>
+            {loading && <LoaderBadge />}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {aiSummaryPoints.map((point, index) => (
               <div
                 key={`${point.text}-${index}`}
-                className="flex items-start gap-2.5 p-3 rounded-xl"
+                className="flex items-start gap-2.5 rounded-xl p-3"
                 style={{
-                  background: point.type === "win"
-                    ? darkMode ? "rgba(16,185,129,0.08)" : "rgba(16,185,129,0.05)"
-                    : darkMode ? "rgba(245,158,11,0.08)" : "rgba(245,158,11,0.05)",
+                  background:
+                    point.type === "win"
+                      ? darkMode
+                        ? "rgba(16,185,129,0.08)"
+                        : "rgba(16,185,129,0.05)"
+                      : darkMode
+                        ? "rgba(245,158,11,0.08)"
+                        : "rgba(245,158,11,0.05)",
                 }}
               >
                 {point.type === "win" ? (
@@ -447,134 +899,208 @@ export function Reports({ darkMode }: ReportsProps) {
                 ) : (
                   <AlertCircle size={14} style={{ color: "#f59e0b", flexShrink: 0, marginTop: 1 }} />
                 )}
-                <p className="text-xs leading-relaxed" style={{ color: darkMode ? "#94a3b8" : "#475569" }}>{point.text}</p>
+                <p className="text-xs leading-relaxed" style={{ color: darkMode ? "#94a3b8" : "#475569" }}>
+                  {point.text}
+                </p>
               </div>
             ))}
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: "Total Leads", value: formatNumber(reportStats.totalLeads), change: `${reportStats.hotLeads} hot`, icon: Target, color: "#8b5cf6", sub: "CRM pipeline" },
-            { label: "Properties", value: formatNumber(reportStats.totalProperties), change: `${reportStats.availableProperties} active`, icon: Eye, color: "#6366f1", sub: "inventory" },
-            { label: "Portfolio Value", value: formatPrice(reportStats.portfolioValue), change: "live", icon: FileBarChart, color: "#06b6d4", sub: "property value" },
-            { label: "Health Score", value: `${reportStats.businessScore}/100`, change: `${reportStats.conversionRate}% conv`, icon: TrendingUp, color: "#10b981", sub: "AI score" },
-          ].map((kpi, index) => (
-            <motion.div
-              key={kpi.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 + index * 0.07 }}
-              className="rounded-2xl p-5 border"
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          {sectionCards[activeSection].map((item) => (
+            <div
+              key={item.label}
+              className="rounded-2xl border p-4 text-center"
               style={cardBase}
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${kpi.color}15` }}>
-                  <kpi.icon size={16} style={{ color: kpi.color }} />
-                </div>
-                <span className="text-xs font-semibold flex items-center gap-1" style={{ color: "#10b981" }}>
-                  <ArrowUpRight size={10} /> {kpi.change}
-                </span>
-              </div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: darkMode ? "#e2e8f0" : "#0f172a", letterSpacing: "-0.03em" }}>
-                {kpi.value}
-              </div>
-              <p className="text-xs mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{kpi.label}</p>
-              <p className="text-xs" style={{ color: darkMode ? "#2d3748" : "#cbd5e1" }}>{kpi.sub}</p>
-            </motion.div>
+              <p className="text-xl font-semibold" style={{ color: item.color }}>
+                {item.value}
+              </p>
+              <p className="mt-1 text-xs" style={{ color: textSoft }}>
+                {item.label}
+              </p>
+            </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="rounded-2xl border p-5" style={cardBase}>
-            <h3 className="text-sm font-semibold mb-4" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>Lead Growth Trend</h3>
-            <ResponsiveContainer width="100%" height={200}>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border p-5"
+            style={cardBase}
+          >
+            <h3 className="mb-4 text-sm font-semibold" style={{ color: textPrimary }}>
+              Business Growth Trend
+            </h3>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={trendData}>
                 <XAxis dataKey="month" tick={{ fill: tickColor, fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: tickColor, fontSize: 11 }} axisLine={false} tickLine={false} width={40} />
-                <Tooltip contentStyle={{ background: tooltipBg, border: `1px solid ${darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)"}`, borderRadius: "12px", fontSize: "12px", color: darkMode ? "#e2e8f0" : "#0f172a" }} />
+                <Tooltip
+                  contentStyle={{
+                    background: tooltipBg,
+                    border: `1px solid ${darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)"}`,
+                    borderRadius: "12px",
+                    fontSize: "12px",
+                    color: textPrimary,
+                  }}
+                />
                 <Bar dataKey="leads" radius={[6, 6, 0, 0]}>
                   {trendData.map((_, index) => (
-                    <Cell key={index} fill={index === trendData.length - 1 ? "#6366f1" : darkMode ? "rgba(99,102,241,0.3)" : "rgba(99,102,241,0.2)"} />
+                    <Cell
+                      key={index}
+                      fill={index === trendData.length - 1 ? "#6366f1" : darkMode ? "rgba(99,102,241,0.3)" : "rgba(99,102,241,0.2)"}
+                    />
+                  ))}
+                </Bar>
+                <Bar dataKey="posts" radius={[6, 6, 0, 0]}>
+                  {trendData.map((_, index) => (
+                    <Cell
+                      key={index}
+                      fill={index === trendData.length - 1 ? "#10b981" : darkMode ? "rgba(16,185,129,0.3)" : "rgba(16,185,129,0.2)"}
+                    />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }} className="rounded-2xl border p-5" style={cardBase}>
-            <h3 className="text-sm font-semibold mb-4" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>Property Inventory Trend</h3>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={trendData}>
-                <XAxis dataKey="month" tick={{ fill: tickColor, fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: tickColor, fontSize: 11 }} axisLine={false} tickLine={false} width={40} />
-                <Tooltip contentStyle={{ background: tooltipBg, border: `1px solid ${darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)"}`, borderRadius: "12px", fontSize: "12px", color: darkMode ? "#e2e8f0" : "#0f172a" }} />
-                <Line type="monotone" dataKey="properties" stroke="#10b981" strokeWidth={2.5} dot={{ fill: "#10b981", r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border p-5"
+            style={cardBase}
+          >
+            <h3 className="mb-4 text-sm font-semibold" style={{ color: textPrimary }}>
+              Platform Activity
+            </h3>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={platformData}>
+                <XAxis dataKey="platform" tick={{ fill: tickColor, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: tickColor, fontSize: 11 }} axisLine={false} tickLine={false} width={35} />
+                <Tooltip
+                  contentStyle={{
+                    background: tooltipBg,
+                    border: `1px solid ${darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)"}`,
+                    borderRadius: "12px",
+                    fontSize: "12px",
+                    color: textPrimary,
+                  }}
+                />
+                <Line type="monotone" dataKey="generated" stroke={chartColor} strokeWidth={3} dot={{ fill: chartColor, r: 4 }} />
+                <Line type="monotone" dataKey="scheduled" stroke="#10b981" strokeWidth={3} dot={{ fill: "#10b981", r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="rounded-2xl border p-5" style={cardBase}>
-            <h3 className="text-sm font-semibold mb-4" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>Lead Status</h3>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border p-5"
+            style={cardBase}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold" style={{ color: textPrimary }}>
+                Recent Signals
+              </h3>
+              <span className="text-xs" style={{ color: textSoft }}>
+                CRM + properties + marketing
+              </span>
+            </div>
+
             <div className="space-y-3">
-              {[
-                { label: "New", value: reportStats.newLeads, color: "#6366f1" },
-                { label: "Contacted", value: reportStats.contactedLeads, color: "#06b6d4" },
-                { label: "Qualified", value: reportStats.qualifiedLeads, color: "#8b5cf6" },
-                { label: "Converted", value: reportStats.convertedLeads, color: "#10b981" },
-                { label: "Lost", value: reportStats.lostLeads, color: "#ef4444" },
-              ].map((item) => (
-                <div key={item.label}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span style={{ color: darkMode ? "#94a3b8" : "#475569" }}>{item.label}</span>
-                    <span style={{ color: item.color }}>{item.value}</span>
+              {recentItems.map((item, index) => (
+                <div
+                  key={`${item.title}-${index}`}
+                  className="flex items-center gap-3 rounded-xl border p-3"
+                  style={{
+                    borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.06)",
+                    background: darkMode ? "rgba(99,102,241,0.03)" : "#f8fafc",
+                  }}
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: `${item.color}15` }}>
+                    <FileBarChart size={15} style={{ color: item.color }} />
                   </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.06)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${reportStats.totalLeads > 0 ? Math.round((item.value / reportStats.totalLeads) * 100) : 0}%`, background: item.color }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium" style={{ color: textPrimary }}>
+                      {item.title}
+                    </p>
+                    <p className="text-xs" style={{ color: textMuted }}>
+                      {item.meta}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px]" style={{ color: item.color }}>
+                      {item.signal}
+                    </p>
+                    <p className="text-[10px]" style={{ color: textSoft }}>
+                      {item.type}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }} className="lg:col-span-2 rounded-2xl border p-5" style={cardBase}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>Recent Report Signals</h3>
-              <div className="flex items-center gap-2 text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-                <Clock size={12} /> Live
-              </div>
-            </div>
-            <div className="space-y-2">
-              {recentItems.map((item, index) => (
-                <div key={`${item.title}-${index}`} className="flex items-center gap-3 p-3 rounded-xl border" style={{ borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)", background: darkMode ? "rgba(99,102,241,0.02)" : "rgba(99,102,241,0.01)" }}>
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `${item.color}15` }}>
-                    {item.type === "CRM" ? <Users size={14} style={{ color: item.color }} /> : item.type === "Property" ? <Eye size={14} style={{ color: item.color }} /> : <AlertCircle size={14} style={{ color: item.color }} />}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border p-5"
+            style={cardBase}
+          >
+            <h3 className="mb-4 text-sm font-semibold" style={{ color: textPrimary }}>
+              Recommended Next Actions
+            </h3>
+
+            <div className="space-y-3">
+              {[
+                reportStats.hotLeads > 0
+                  ? `Follow up with ${reportStats.hotLeads} hot lead(s) before end of day.`
+                  : "Create lead scoring rules and add fresh CRM leads.",
+                reportStats.generatedDraft > 0
+                  ? `Schedule ${reportStats.generatedDraft} draft generated post(s) from AI Studio.`
+                  : "Create new generated posts for upcoming campaigns.",
+                reportStats.scheduleFailed > 0
+                  ? `Review ${reportStats.scheduleFailed} failed scheduled post(s).`
+                  : "Keep scheduler queue active for weekly content consistency.",
+                reportStats.campaignCount > 0
+                  ? "Compare campaign performance by platform once real credentials are connected."
+                  : "Use Publish Everywhere to create campaign reporting signals.",
+              ].map((action, index) => (
+                <div
+                  key={action}
+                  className="flex items-start gap-3 rounded-xl p-3"
+                  style={{
+                    background: darkMode ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.04)",
+                  }}
+                >
+                  <div
+                    className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                    style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+                  >
+                    {index + 1}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs truncate" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{item.title}</p>
-                    <p className="text-xs mt-0.5 truncate" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{item.meta}</p>
-                  </div>
-                  <span className="text-xs px-2 py-1 rounded-full capitalize" style={{ background: `${item.color}15`, color: item.color }}>
-                    {item.signal}
-                  </span>
+                  <p className="text-sm" style={{ color: textMuted }}>
+                    {action}
+                  </p>
                 </div>
               ))}
             </div>
           </motion.div>
         </div>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="rounded-2xl border p-5" style={cardBase}>
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar size={16} style={{ color: chartColor }} />
-            <h3 className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>Generated Report Preview</h3>
-          </div>
-          <pre className="text-xs leading-relaxed whitespace-pre-wrap rounded-xl p-4 border overflow-x-auto" style={{ background: darkMode ? "rgba(99,102,241,0.04)" : "rgba(99,102,241,0.03)", borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)", color: darkMode ? "#94a3b8" : "#475569", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}>
-            {reportText}
-          </pre>
-        </motion.div>
       </div>
     </div>
+  );
+}
+
+function LoaderBadge() {
+  return (
+    <span className="ml-auto inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs" style={{ color: "#6366f1", background: "rgba(99,102,241,0.10)" }}>
+      <Clock size={11} /> Loading
+    </span>
   );
 }
