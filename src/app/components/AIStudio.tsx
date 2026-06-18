@@ -27,6 +27,7 @@ import {
   createScheduledPost,
   getMyClientAIJobs,
   getMyGeneratedPosts,
+  publishGeneratedPost,
   updateGeneratedPost,
   type ClientAIJob,
   type ClientAIJobType,
@@ -527,16 +528,23 @@ export function AIStudio({ darkMode }: AIStudioProps) {
     try {
       setGeneratedPostActionKey(actionKey);
 
-      await updateGeneratedPost(post.id, {
-        status: "published",
-        published_at: new Date().toISOString(),
+      const published = await publishGeneratedPost(post.id, {
+        platform: post.apiPlatform,
+        allow_mock_fallback: true,
       });
 
       await loadGeneratedPosts();
-      showGeneratedPostActionMessage("Post marked as published.");
+      const publisherMode = published.metadata_json?.publisher && typeof published.metadata_json.publisher === "object"
+        ? (published.metadata_json.publisher as Record<string, unknown>).mode
+        : null;
+      showGeneratedPostActionMessage(
+        publisherMode === "mock"
+          ? "Post published in mock mode. Configure real platform tokens for live publishing."
+          : "Post published successfully.",
+      );
     } catch (err) {
       showGeneratedPostActionMessage(
-        err instanceof Error ? err.message : "Failed to mark post as published.",
+        err instanceof Error ? err.message : "Failed to publish post.",
         "error",
       );
     } finally {
