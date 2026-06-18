@@ -52,10 +52,10 @@ const demoPlatformData = [
 ];
 
 const upcomingPosts = [
-  { time: "Today 3:00 PM", platform: "Instagram", content: "5 AI trends reshaping B2B marketing in 2025", status: "scheduled" },
-  { time: "Today 6:00 PM", platform: "LinkedIn", content: "How we 10x'd our lead gen using AI automation", status: "scheduled" },
-  { time: "Tomorrow 9:00 AM", platform: "Twitter", content: "Thread: The future of content creation is here", status: "draft" },
-  { time: "Tomorrow 2:00 PM", platform: "YouTube", content: "Full tutorial: RS Real Estate walkthrough", status: "processing" },
+  { time: "Today 3:00 PM", platform: "Instagram", content: "New luxury apartment walkthrough reel", status: "scheduled" },
+  { time: "Today 6:00 PM", platform: "LinkedIn", content: "Weekend open-house campaign update", status: "scheduled" },
+  { time: "Tomorrow 9:00 AM", platform: "Twitter", content: "Buyer follow-up sequence for premium leads", status: "draft" },
+  { time: "Tomorrow 2:00 PM", platform: "YouTube", content: "YouTube Shorts property tour export", status: "processing" },
 ];
 
 interface DashboardProps {
@@ -176,6 +176,157 @@ function MetricCard({
     </motion.div>
   );
 }
+
+
+function SmartBuildingScene({
+  darkMode,
+  stats,
+}: {
+  darkMode: boolean;
+  stats: { healthScore: number; activeLeads: number; hotLeads: number; conversionRate: number };
+}) {
+  const floorLabels = ["New Leads", "Site Visits", "Negotiation", "Closings"];
+  const accent = darkMode ? "#818cf8" : "#6366f1";
+  const glass = darkMode ? "rgba(15,23,42,0.72)" : "rgba(255,255,255,0.78)";
+  const border = darkMode ? "rgba(129,140,248,0.22)" : "rgba(99,102,241,0.16)";
+
+  return (
+    <div
+      className="relative min-h-[240px] overflow-hidden rounded-[2rem] border p-4"
+      style={{ background: glass, borderColor: border }}
+    >
+      <div
+        className="absolute inset-0"
+        style={{
+          background: darkMode
+            ? "radial-gradient(circle at 20% 20%, rgba(99,102,241,0.24), transparent 30%), radial-gradient(circle at 88% 18%, rgba(6,182,212,0.18), transparent 28%), linear-gradient(135deg, rgba(15,23,42,0.42), rgba(30,41,59,0.30))"
+            : "radial-gradient(circle at 20% 20%, rgba(99,102,241,0.14), transparent 30%), radial-gradient(circle at 88% 18%, rgba(6,182,212,0.12), transparent 28%), linear-gradient(135deg, rgba(248,250,252,0.96), rgba(238,242,255,0.78))",
+        }}
+      />
+
+      <div className="relative z-10 grid grid-cols-[1fr_0.9fr] gap-4">
+        <div>
+          <div
+            className="mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-medium"
+            style={{ color: accent, background: `${accent}14`, border: `1px solid ${accent}22` }}
+          >
+            <Brain size={13} />
+            AI Property Assistant
+          </div>
+
+          <h2 className="text-lg font-semibold leading-tight" style={{ color: darkMode ? "#f8fafc" : "#0f172a" }}>
+            Smart Building Command View
+          </h2>
+
+          <p className="mt-2 text-xs leading-5" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+            The AI elevator is tracking buyer leads, property demand, follow-ups, and deal movement across your real estate pipeline.
+          </p>
+
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            {[
+              { label: "Growth", value: `${stats.healthScore}/100` },
+              { label: "Active", value: stats.activeLeads },
+              { label: "Hot", value: stats.hotLeads },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="rounded-2xl border p-3"
+                style={{
+                  background: darkMode ? "rgba(15,23,42,0.48)" : "rgba(255,255,255,0.74)",
+                  borderColor: border,
+                }}
+              >
+                <p className="text-[10px] uppercase tracking-wide" style={{ color: darkMode ? "#64748b" : "#94a3b8" }}>
+                  {item.label}
+                </p>
+                <p className="mt-1 text-sm font-semibold" style={{ color: accent }}>
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative h-[210px]">
+          <div
+            className="absolute bottom-0 left-2 h-[190px] w-[132px] rounded-t-[2rem] border"
+            style={{
+              background: darkMode
+                ? "linear-gradient(180deg, rgba(30,41,59,0.92), rgba(15,23,42,0.86))"
+                : "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(224,231,255,0.88))",
+              borderColor: border,
+              boxShadow: darkMode ? "0 24px 70px rgba(0,0,0,0.45)" : "0 24px 70px rgba(99,102,241,0.20)",
+            }}
+          >
+            <div
+              className="absolute left-1/2 top-4 h-[154px] w-[34px] -translate-x-1/2 rounded-full"
+              style={{ background: darkMode ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.10)" }}
+            />
+
+            <motion.div
+              className="absolute left-1/2 top-5 flex h-8 w-9 -translate-x-1/2 items-center justify-center rounded-xl text-[10px] font-semibold"
+              animate={{ y: [0, 118, 58, 0] }}
+              transition={{ duration: 5.2, repeat: Infinity, ease: "easeInOut" }}
+              style={{
+                background: "linear-gradient(135deg, #6366f1, #06b6d4)",
+                color: "#fff",
+                boxShadow: "0 0 24px rgba(99,102,241,0.55)",
+              }}
+            >
+              AI
+            </motion.div>
+
+            <div className="absolute right-3 top-4 space-y-4">
+              {floorLabels.map((floor, index) => (
+                <div key={floor} className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: index < 2 ? "#10b981" : "#f59e0b" }} />
+                  <span className="text-[9px]" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                    {floor}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <motion.div
+            className="absolute right-0 top-2 h-20 w-20 rounded-3xl border p-3"
+            animate={{ y: [0, -8, 0], rotate: [0, 1.5, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            style={{
+              background: darkMode ? "rgba(15,23,42,0.78)" : "rgba(255,255,255,0.86)",
+              borderColor: border,
+              boxShadow: darkMode ? "0 18px 45px rgba(0,0,0,0.38)" : "0 18px 45px rgba(99,102,241,0.22)",
+            }}
+          >
+            <div className="flex h-full flex-col items-center justify-center">
+              <div className="mb-1 flex gap-1">
+                <span className="h-2 w-2 rounded-full" style={{ background: "#06b6d4" }} />
+                <span className="h-2 w-2 rounded-full" style={{ background: "#8b5cf6" }} />
+              </div>
+              <p className="text-[10px] font-semibold" style={{ color: accent }}>
+                BOT
+              </p>
+              <p className="text-[8px]" style={{ color: darkMode ? "#64748b" : "#94a3b8" }}>
+                assistant
+              </p>
+            </div>
+          </motion.div>
+
+          <div
+            className="absolute bottom-2 right-1 h-10 w-24 rounded-2xl border"
+            style={{ background: darkMode ? "rgba(16,185,129,0.10)" : "rgba(16,185,129,0.12)", borderColor: "rgba(16,185,129,0.20)" }}
+          >
+            <div className="flex h-full items-center justify-center gap-1 text-[10px] font-medium" style={{ color: "#10b981" }}>
+              <Zap size={11} />
+              Live pipeline
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 const platformIcons: Record<string, React.ElementType> = {
   Instagram,
@@ -325,174 +476,108 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
     <div className="h-full overflow-y-auto">
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -14 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
-        >
-          <div>
-            <h1
-              className="tracking-tight"
-              style={{ color: darkMode ? "#e2e8f0" : "#0f172a", fontSize: "1.5rem", fontWeight: 600 }}
-            >
-              Good morning ðŸ‘‹
-            </h1>
-
-            <p className="text-sm mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-              {loadingLeads
-                ? "Loading your real dashboard data..."
-                : leadError
-                  ? `Backend data unavailable Â· ${leadError}`
-                  : `Your AI health score is ${stats.healthScore}/100 â€” ${stats.activeLeads} active leads need attention.`}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onNavigate("ai-studio")}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all hover:opacity-90"
-              style={{
-                background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
-                color: "#ffffff",
-                boxShadow: "0 4px 14px rgba(99,102,241,0.35)",
-              }}
-            >
-              <Sparkles size={14} />
-              Create with AI
-            </button>
-
-            <button
-              onClick={() => window.location.reload()}
-              className="p-2 rounded-xl border transition-all hover:bg-primary/5"
-              style={{
-                borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
-                color: darkMode ? "#4a5568" : "#94a3b8",
-              }}
-            >
-              <RefreshCw size={14} />
-            </button>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="relative rounded-2xl p-5 overflow-hidden border"
+          transition={{ duration: 0.45 }}
+          className="relative overflow-hidden rounded-[2rem] border p-5"
           style={{
             background: darkMode
-              ? "linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.08) 50%, rgba(6,182,212,0.06) 100%)"
-              : "linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(139,92,246,0.04) 100%)",
-            borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)",
+              ? "linear-gradient(135deg, rgba(2,6,23,0.96), rgba(15,23,42,0.92) 48%, rgba(30,41,59,0.88))"
+              : "linear-gradient(135deg, #ffffff, #f8fafc 48%, #eef2ff)",
+            borderColor: darkMode ? "rgba(129,140,248,0.20)" : "rgba(99,102,241,0.14)",
+            boxShadow: darkMode ? "0 26px 80px rgba(0,0,0,0.45)" : "0 26px 80px rgba(99,102,241,0.16)",
           }}
         >
           <div
-            className="absolute top-0 right-0 w-64 h-32 pointer-events-none"
+            className="absolute inset-0 pointer-events-none"
             style={{
-              background: "radial-gradient(ellipse at 80% 20%, rgba(99,102,241,0.15) 0%, transparent 60%)",
+              background:
+                "linear-gradient(90deg, rgba(99,102,241,0.08) 1px, transparent 1px), linear-gradient(0deg, rgba(99,102,241,0.08) 1px, transparent 1px)",
+              backgroundSize: "36px 36px",
+              opacity: darkMode ? 0.28 : 0.38,
             }}
           />
 
-          <div className="flex items-center gap-6">
-            <div className="relative w-20 h-20 flex-shrink-0">
-              <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
-                <circle
-                  cx="40"
-                  cy="40"
-                  r="34"
-                  fill="none"
-                  stroke={darkMode ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.08)"}
-                  strokeWidth="6"
-                />
-                <circle
-                  cx="40"
-                  cy="40"
-                  r="34"
-                  fill="none"
-                  stroke="url(#healthGrad)"
-                  strokeWidth="6"
-                  strokeDasharray={`${2 * Math.PI * 34 * (stats.healthScore / 100)} ${2 * Math.PI * 34}`}
-                  strokeLinecap="round"
-                />
-                <defs>
-                  <linearGradient id="healthGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#6366f1" />
-                    <stop offset="100%" stopColor="#06b6d4" />
-                  </linearGradient>
-                </defs>
-              </svg>
+          <div className="relative z-10 grid gap-6 xl:grid-cols-[1.05fr_0.95fr] xl:items-center">
+            <div>
+              <div
+                className="mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1"
+                style={{
+                  background: darkMode ? "rgba(99,102,241,0.16)" : "rgba(99,102,241,0.10)",
+                  border: darkMode ? "1px solid rgba(129,140,248,0.24)" : "1px solid rgba(99,102,241,0.14)",
+                  color: darkMode ? "#a5b4fc" : "#4f46e5",
+                }}
+              >
+                <Sparkles size={14} />
+                <span className="text-xs font-medium">RS Real Estate Command Center</span>
+              </div>
 
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span
+              <h1
+                className="tracking-tight"
+                style={{
+                  color: darkMode ? "#f8fafc" : "#0f172a",
+                  fontSize: "2rem",
+                  fontWeight: 750,
+                  lineHeight: 1.05,
+                  letterSpacing: "-0.045em",
+                }}
+              >
+                Smart property growth dashboard
+              </h1>
+
+              <p className="mt-3 max-w-2xl text-sm leading-6" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                Track buyer leads, active pipeline, site-visit readiness, and campaign momentum from one AI-powered real estate workspace.
+              </p>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                <button
+                  onClick={() => onNavigate("ai-studio")}
+                  className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm transition-all hover:opacity-90"
                   style={{
-                    fontSize: "1.1rem",
-                    fontWeight: 700,
-                    color: darkMode ? "#e2e8f0" : "#0f172a",
-                    lineHeight: 1,
+                    background: "linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)",
+                    color: "#ffffff",
+                    boxShadow: "0 12px 30px rgba(99,102,241,0.35)",
                   }}
                 >
-                  {stats.healthScore}
-                </span>
-                <span className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-                  / 100
-                </span>
+                  <Sparkles size={14} />
+                  Create property campaign
+                </button>
+
+                <button
+                  onClick={() => onNavigate("crm")}
+                  className="flex items-center gap-2 rounded-xl border px-4 py-2 text-sm transition-all hover:bg-primary/5"
+                  style={{
+                    borderColor: darkMode ? "rgba(129,140,248,0.24)" : "rgba(99,102,241,0.16)",
+                    color: darkMode ? "#a5b4fc" : "#4f46e5",
+                    background: darkMode ? "rgba(99,102,241,0.06)" : "rgba(255,255,255,0.68)",
+                  }}
+                >
+                  <Users size={14} />
+                  Review buyer leads
+                </button>
+
+                <button
+                  onClick={() => window.location.reload()}
+                  className="rounded-xl border p-2 transition-all hover:bg-primary/5"
+                  style={{
+                    borderColor: darkMode ? "rgba(129,140,248,0.20)" : "rgba(99,102,241,0.14)",
+                    color: darkMode ? "#94a3b8" : "#64748b",
+                    background: darkMode ? "rgba(15,23,42,0.45)" : "rgba(255,255,255,0.68)",
+                  }}
+                  aria-label="Refresh dashboard"
+                >
+                  <RefreshCw size={14} />
+                </button>
               </div>
             </div>
 
-            <div className="flex-1 grid grid-cols-3 gap-4">
-              {[
-                { label: "Lead Quality", value: `${stats.avgScore || 0}%`, color: "#10b981" },
-                { label: "Active Pipeline", value: `${stats.activeLeads}`, color: "#6366f1" },
-                { label: "Conversion", value: `${stats.conversionRate}%`, color: "#f59e0b" },
-              ].map((item) => (
-                <div key={item.label}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-                      {item.label}
-                    </span>
-                    <span className="text-xs font-semibold" style={{ color: item.color }}>
-                      {item.value}
-                    </span>
-                  </div>
-
-                  <div
-                    className="h-1.5 rounded-full overflow-hidden"
-                    style={{ background: darkMode ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.06)" }}
-                  >
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{
-                        width:
-                          item.label === "Active Pipeline"
-                            ? `${Math.min(100, stats.activeLeads * 12)}%`
-                            : item.value,
-                      }}
-                      transition={{ duration: 1, delay: 0.4, ease: "easeOut" }}
-                      className="h-full rounded-full"
-                      style={{ background: item.color }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex-shrink-0">
-              <button
-                onClick={() => onNavigate("analytics")}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs border transition-all hover:bg-primary/5"
-                style={{
-                  borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)",
-                  color: darkMode ? "#818cf8" : "#6366f1",
-                }}
-              >
-                Full Report <ArrowRight size={12} />
-              </button>
-            </div>
+            <SmartBuildingScene darkMode={darkMode} stats={stats} />
           </div>
         </motion.div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
-            label="Total Leads"
+            label="Buyer Leads"
             value={loadingLeads ? "..." : formatNumber(stats.totalLeads)}
             change={stats.totalLeads > 0 ? "Live" : "0"}
             positive={stats.totalLeads > 0}
@@ -502,7 +587,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             delay={0.1}
           />
           <MetricCard
-            label="Hot Leads"
+            label="Hot Buyer Leads"
             value={loadingLeads ? "..." : formatNumber(stats.hotLeads)}
             change={stats.hotLeads > 0 ? "Priority" : "None"}
             positive={stats.hotLeads > 0}
@@ -512,7 +597,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             delay={0.15}
           />
           <MetricCard
-            label="Average Score"
+            label="Lead Quality Score"
             value={loadingLeads ? "..." : `${stats.avgScore || 0}/100`}
             change={stats.avgScore >= 60 ? "Healthy" : "Needs data"}
             positive={stats.avgScore >= 60}
@@ -522,7 +607,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             delay={0.2}
           />
           <MetricCard
-            label="Active Pipeline"
+            label="Active Deal Pipeline"
             value={loadingLeads ? "..." : formatNumber(stats.activeLeads)}
             change={stats.activeLeads > 0 ? "Follow-up" : "Empty"}
             positive={stats.activeLeads > 0}
@@ -548,10 +633,10 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                  Performance Overview
+                  Property Demand Trend
                 </h3>
                 <p className="text-xs mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-                  Lead trend + marketing performance
+                  Buyer enquiry, reach and campaign movement
                 </p>
               </div>
 
@@ -629,7 +714,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             }}
           >
             <h3 className="text-sm font-semibold mb-1" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-              Lead Source Share
+              Buyer Enquiry Sources
             </h3>
             <p className="text-xs mb-4" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
               Backend source distribution
@@ -680,7 +765,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                 <Brain size={12} className="text-white" />
               </div>
               <h3 className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                AI Recommendations
+                AI Property Assistant
               </h3>
               <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(99,102,241,0.1)", color: "#818cf8" }}>
                 live
@@ -736,7 +821,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                   <Clock size={12} style={{ color: "#06b6d4" }} />
                 </div>
                 <h3 className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                  Recent Leads
+                  Hot Buyer Follow-ups
                 </h3>
               </div>
 
