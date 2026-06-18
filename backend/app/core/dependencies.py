@@ -36,7 +36,14 @@ async def get_current_user(
 async def get_current_admin(
     current_user: User = Depends(get_current_user)
 ) -> User:
-    if current_user.role not in [UserRole.admin, UserRole.superadmin]:
+    is_platform_admin = (
+        current_user.role == UserRole.superadmin.value
+        or (
+            current_user.role == UserRole.admin.value
+            and current_user.tenant_id is None
+        )
+    )
+    if not is_platform_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
@@ -52,3 +59,25 @@ async def get_tenant_id(
             detail="User has no tenant assigned"
         )
     return current_user.tenant_id
+
+
+async def get_current_tenant_manager(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if current_user.role not in {
+        UserRole.owner.value,
+        UserRole.admin.value,
+        UserRole.client.value,
+    }:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Owner or admin access required",
+        )
+
+    if not current_user.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User has no tenant assigned",
+        )
+
+    return current_user

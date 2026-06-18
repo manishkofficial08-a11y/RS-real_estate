@@ -5,8 +5,10 @@ from app.database.session import get_db
 from app.models.user import User, UserRole
 from app.models.tenant import Tenant, BusinessType, PlanType
 from app.models.password_reset_token import PasswordResetToken
+from app.models.billing import BillingCycle, Subscription, SubscriptionStatus
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from app.services.email_service import send_password_reset_email
+from app.services.billing_service import calculate_period_end
 from app.core.dependencies import get_current_user
 from pydantic import BaseModel, EmailStr
 import hashlib
@@ -87,13 +89,31 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
     db.add(tenant)
     await db.flush()
 
+    now = datetime.now(timezone.utc)
+    subscription = Subscription(
+        id=str(uuid.uuid4()),
+        tenant_id=tenant.id,
+        plan=PlanType.free.value,
+        status=SubscriptionStatus.active.value,
+        billing_cycle=BillingCycle.monthly.value,
+        current_period_start=now,
+        current_period_end=calculate_period_end(
+            now,
+            BillingCycle.monthly.value,
+        ),
+        cancel_at_period_end=False,
+        provider="mock",
+        metadata_json={"created_by": "registration"},
+    )
+    db.add(subscription)
+
     # Create user
     user = User(
         id=str(uuid.uuid4()),
         email=data.email,
         full_name=data.full_name,
         password_hash=hash_password(data.password),
-        role=UserRole.client.value,
+        role=UserRole.owner.value,
         tenant_id=tenant.id
     )
     db.add(user)

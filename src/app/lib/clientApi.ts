@@ -104,7 +104,7 @@ export async function clientFetch<T>(
     },
   });
 
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     clearClientSession();
     throw new Error("Client session expired. Please login again.");
   }
@@ -266,6 +266,179 @@ export type ClientProfile = {
 
 export async function getClientProfile(): Promise<ClientProfile> {
   return clientFetch<ClientProfile>("/auth/me");
+}
+
+export type ClientTeamRole =
+  | "owner"
+  | "admin"
+  | "marketer"
+  | "sales"
+  | "viewer";
+
+export type ClientTeamMember = {
+  id: string;
+  tenant_id: string;
+  full_name: string;
+  email: string;
+  role: ClientTeamRole;
+  is_active: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type ClientTeamInvitation = {
+  id: string;
+  tenant_id: string;
+  email: string;
+  role: ClientTeamRole;
+  status: "pending" | "accepted" | "expired" | "cancelled" | string;
+  invited_by_user_id: string;
+  expires_at: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type InviteClientTeamMemberResponse = {
+  invitation: ClientTeamInvitation;
+  email_sent: boolean;
+  message: string;
+  preview_url?: string | null;
+};
+
+export async function getClientTeamMembers(): Promise<ClientTeamMember[]> {
+  return clientFetch<ClientTeamMember[]>("/team/members");
+}
+
+export async function getClientTeamInvitations(): Promise<ClientTeamInvitation[]> {
+  return clientFetch<ClientTeamInvitation[]>("/team/invitations");
+}
+
+export async function inviteClientTeamMember(payload: {
+  email: string;
+  role: ClientTeamRole;
+}): Promise<InviteClientTeamMemberResponse> {
+  return clientFetch<InviteClientTeamMemberResponse>("/team/invitations", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateClientTeamMember(
+  memberId: string,
+  payload: { role?: ClientTeamRole; is_active?: boolean },
+): Promise<ClientTeamMember> {
+  return clientFetch<ClientTeamMember>(`/team/members/${memberId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deactivateClientTeamMember(
+  memberId: string,
+): Promise<{ message: string }> {
+  return clientFetch<{ message: string }>(`/team/members/${memberId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function cancelClientTeamInvitation(
+  invitationId: string,
+): Promise<ClientTeamInvitation> {
+  return clientFetch<ClientTeamInvitation>(
+    `/team/invitations/${invitationId}/cancel`,
+    { method: "PATCH" },
+  );
+}
+
+export type ClientBillingCycle = "monthly" | "yearly";
+export type ClientSubscriptionPlan = "free" | "pro" | "enterprise";
+export type ClientSubscriptionStatus =
+  | "active"
+  | "trialing"
+  | "past_due"
+  | "cancelled"
+  | "inactive";
+
+export type ClientBillingPlan = {
+  id: ClientSubscriptionPlan;
+  name: string;
+  currency: string;
+  monthly_price?: number | null;
+  yearly_price?: number | null;
+  limits: Record<string, number | null>;
+  features: string[];
+};
+
+export type ClientSubscription = {
+  id: string;
+  tenant_id: string;
+  plan: ClientSubscriptionPlan;
+  status: ClientSubscriptionStatus;
+  billing_cycle: ClientBillingCycle;
+  current_period_start: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+  provider: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type ClientInvoice = {
+  id: string;
+  tenant_id: string;
+  subscription_id?: string | null;
+  invoice_number: string;
+  amount: number;
+  currency: string;
+  status: "paid" | "pending" | "failed" | "void" | string;
+  invoice_url?: string | null;
+  issued_at: string;
+  due_at: string;
+  paid_at?: string | null;
+  created_at?: string | null;
+};
+
+export type ClientBillingUsageItem = {
+  used: number;
+  limit?: number | null;
+};
+
+export type ClientBillingSummary = {
+  subscription: ClientSubscription;
+  plan: ClientBillingPlan;
+  usage: Record<string, ClientBillingUsageItem>;
+  billing_mode: string;
+  message: string;
+};
+
+export async function getClientBillingPlans(): Promise<ClientBillingPlan[]> {
+  return clientFetch<ClientBillingPlan[]>("/billing/plans");
+}
+
+export async function getClientBillingSubscription(): Promise<ClientSubscription> {
+  return clientFetch<ClientSubscription>("/billing/subscription");
+}
+
+export async function getClientBillingSummary(): Promise<ClientBillingSummary> {
+  return clientFetch<ClientBillingSummary>("/billing/summary");
+}
+
+export async function updateClientBillingSubscription(payload: {
+  plan?: ClientSubscriptionPlan;
+  billing_cycle?: ClientBillingCycle;
+  cancel_at_period_end?: boolean;
+}): Promise<{ subscription: ClientSubscription; message: string }> {
+  return clientFetch<{ subscription: ClientSubscription; message: string }>(
+    "/billing/subscription",
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function getClientBillingInvoices(): Promise<ClientInvoice[]> {
+  return clientFetch<ClientInvoice[]>("/billing/invoices");
 }
 
 export type SupportTicketStatus =
