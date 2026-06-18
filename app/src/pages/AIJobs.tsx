@@ -80,7 +80,7 @@ const agentCatalog = [
 ];
 
 
-const publisherPipelineStats = [
+export const publisherPipelineStats = [
   {
     label: "Generated drafts",
     value: "Preview",
@@ -111,7 +111,7 @@ const publisherPipelineStats = [
   },
 ];
 
-const publisherPlatforms = [
+export const publisherPlatforms = [
   {
     name: "YouTube Shorts",
     purpose: "Short-form property video distribution",
@@ -149,7 +149,7 @@ const publisherPlatforms = [
   },
 ];
 
-const publisherEvents = [
+export const publisherEvents = [
   "Campaign publish requested",
   "Instagram Reels adapter pending credentials",
   "YouTube Shorts upload requires OAuth",
@@ -252,7 +252,7 @@ const getRuntimeLabel = (job: AdminAIJob) => {
     new Date().toISOString();
   const end = new Date(endValue).getTime();
 
-  if (Number.isNaN(start) || Number.isNaN(end) || end < start) return "â€”";
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start) return "Ã¢â‚¬â€";
 
   const diffSeconds = Math.max(0, Math.round((end - start) / 1000));
 
@@ -694,7 +694,7 @@ export default function AIJobs() {
                     className="font-mono text-data font-medium"
                     style={{ color: "#F0EDE6" }}
                   >
-                    {loading ? "â€”" : card.value}
+                    {loading ? "Ã¢â‚¬â€" : card.value}
                   </p>
                   <p className="mt-2 text-xs" style={{ color: "#55555C" }}>
                     {card.sub}
@@ -797,7 +797,7 @@ export default function AIJobs() {
                         {item.label}
                       </p>
                       <p className="mt-2 text-lg font-medium" style={{ color: "#F0EDE6" }}>
-                        {publisherOpsLoading ? "—" : item.value}
+                        {publisherOpsLoading ? "â€”" : item.value}
                       </p>
                       <p className="mt-1 text-xs" style={{ color: "#55555C" }}>
                         {item.detail}
@@ -860,7 +860,7 @@ export default function AIJobs() {
                           {platform.platform}
                         </h4>
                         <p className="mt-1 text-xs" style={{ color: "#8A8A93" }}>
-                          {platform.total} total · {platform.success_rate}% success
+                          {platform.total} total Â· {platform.success_rate}% success
                         </p>
                       </div>
                       <Gauge size={18} style={{ color: platform.failed ? "#FF8A5C" : "#4ADE80" }} />
@@ -919,7 +919,7 @@ export default function AIJobs() {
                           {event.generated_post_title || "Untitled post"}
                         </p>
                         <p className="mt-1 text-xs" style={{ color: "#FFB28A" }}>
-                          {event.business_name || "Unknown company"} · {event.platform}
+                          {event.business_name || "Unknown company"} Â· {event.platform}
                         </p>
                         <p className="mt-1 text-xs" style={{ color: "#8A8A93" }}>
                           {event.failure_reason || "No failure reason stored yet."}
@@ -988,7 +988,7 @@ export default function AIJobs() {
                             {event.generated_post_title || "Untitled post"}
                           </p>
                           <p className="mt-1 text-xs" style={{ color: "#8A8A93" }}>
-                            {event.business_name || "Unknown company"} · {event.platform} · {event.status}
+                            {event.business_name || "Unknown company"} Â· {event.platform} Â· {event.status}
                           </p>
                         </div>
                         <span className="text-xs font-mono" style={{ color: "#55555C" }}>

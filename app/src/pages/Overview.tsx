@@ -1,17 +1,19 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import TopographyHero from '@/components/TopographyHero';
-import { activities, platformStatuses } from '@/data/mock';
 import { getAdminDashboardStats, type AdminDashboardStats } from '@/lib/adminApi';
 import {
   Building2,
-  UserPlus,
+  CheckCircle2,
   CreditCard,
-  Ticket,
-  Zap,
   Database,
-  Server,
-  Layers,
   HardDrive,
+  Layers,
+  Mail,
+  Server,
+  Ticket,
+  UserPlus,
+  Users,
+  Zap,
 } from 'lucide-react';
 
 function Sparkline({
@@ -41,20 +43,111 @@ function Sparkline({
   );
 }
 
-const quickActions = [
-  { label: 'Add Company', icon: Building2 },
-  { label: 'Add Team Member', icon: UserPlus },
-  { label: 'Create Subscription', icon: CreditCard },
-  { label: 'Open Support', icon: Ticket },
+const platformHealth = [
+  {
+    label: 'Backend API',
+    status: 'Operational',
+    note: 'Core admin and client APIs are available from the live backend.',
+    icon: Server,
+    color: '#4ADE80',
+  },
+  {
+    label: 'Database',
+    status: 'Connected',
+    note: 'Tenant, user, CRM, property, and content data are backed by Postgres.',
+    icon: Database,
+    color: '#4ADE80',
+  },
+  {
+    label: 'AI jobs queue',
+    status: 'Monitoring',
+    note: 'AI Jobs page tracks queued, running, completed, and failed jobs.',
+    icon: Layers,
+    color: '#6B8AFF',
+  },
+  {
+    label: 'Publisher worker',
+    status: 'Setup pending',
+    note: 'Publishing workers are being prepared for campaign deployment.',
+    icon: Zap,
+    color: '#FF8A5C',
+  },
+  {
+    label: 'Email/SMTP',
+    status: 'Operational',
+    note: 'Password reset and account email flow are ready for client access.',
+    icon: Mail,
+    color: '#4ADE80',
+  },
 ];
 
-const statusIcons: Record<string, ReactNode> = {
-  Backend: <Server size={14} />,
-  Database: <Database size={14} />,
-  'AI Services': <Zap size={14} />,
-  Queue: <Layers size={14} />,
-  Storage: <HardDrive size={14} />,
-};
+const founderActivities = [
+  {
+    label: 'New company onboarded',
+    detail: 'Preview: tenant workspace created and ready for client setup.',
+    time: 'Today',
+    icon: Building2,
+    color: '#6B8AFF',
+  },
+  {
+    label: 'User created',
+    detail: 'Preview: client user access added to a company workspace.',
+    time: 'Today',
+    icon: UserPlus,
+    color: '#4ADE80',
+  },
+  {
+    label: 'Support ticket opened',
+    detail: 'Preview: client request waiting for founder/admin review.',
+    time: '1h ago',
+    icon: Ticket,
+    color: '#FF8A5C',
+  },
+  {
+    label: 'AI job completed',
+    detail: 'Preview: generated content job completed from AI Studio.',
+    time: '2h ago',
+    icon: CheckCircle2,
+    color: '#4ADE80',
+  },
+  {
+    label: 'Publisher worker ran',
+    detail: 'Preview: publishing readiness check completed; credentials still pending.',
+    time: '3h ago',
+    icon: Zap,
+    color: '#6B8AFF',
+  },
+];
+
+const quickActions = [
+  { label: 'Review Companies', icon: Building2, hint: 'Audit tenant accounts' },
+  { label: 'Review Users', icon: Users, hint: 'Check user access' },
+  { label: 'Open Support', icon: Ticket, hint: 'Review client tickets' },
+  { label: 'Check AI Jobs', icon: Zap, hint: 'Monitor automation queue' },
+  { label: 'View Subscriptions', icon: CreditCard, hint: 'Review plan status' },
+];
+
+const launchReadiness = [
+  { label: 'Auth working', status: 'Ready', ready: true },
+  { label: 'Media Library ready', status: 'Ready', ready: true },
+  { label: 'Generated Posts ready', status: 'Ready', ready: true },
+  { label: 'Scheduler ready', status: 'Ready', ready: true },
+  { label: 'Publisher setup pending', status: 'Pending', ready: false },
+  { label: 'Social tokens pending', status: 'Pending', ready: false },
+];
+
+function getStatusBadgeStyle(status: string, color: string) {
+  const isPending = status.toLowerCase().includes('pending');
+
+  return {
+    background: isPending ? 'rgba(255, 138, 92, 0.12)' : `${color}18`,
+    color: isPending ? '#FF8A5C' : color,
+    border: `1px solid ${
+      isPending ? 'rgba(255, 138, 92, 0.24)' : `${color}30`
+    }`,
+  };
+}
+
 
 export default function Overview() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
@@ -115,7 +208,7 @@ export default function Overview() {
   ];
 
   return (
-    <div className="p-8" style={{ maxWidth: '100%' }}>
+    <div className="p-4 sm:p-6 lg:p-8" style={{ maxWidth: '100%' }}>
       <TopographyHero />
 
       {fetchError && (
@@ -175,7 +268,7 @@ export default function Overview() {
           />
         </div>
 
-        <div className="relative z-[1] grid grid-cols-4 gap-5 px-0">
+        <div className="relative z-[1] grid grid-cols-1 gap-5 px-0 sm:grid-cols-2 xl:grid-cols-4">
           {kpis.map((kpi) => (
             <div
               key={kpi.label}
@@ -213,147 +306,272 @@ export default function Overview() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mt-8">
-        <div className="surface-card p-6">
-          <div className="flex items-center justify-between mb-5">
+      <section className="surface-card mt-8 p-6">
+        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p
+              className="mb-2 text-xs font-mono uppercase tracking-[0.2em]"
+              style={{ color: '#6B8AFF' }}
+            >
+              Operations Snapshot
+            </p>
             <h2
               className="font-display text-section font-medium tracking-[-0.03em]"
               style={{ color: '#F0EDE6' }}
             >
-              Recent Activity
+              Platform Health
             </h2>
+            <p className="mt-1 max-w-2xl text-sm" style={{ color: '#8A8A93' }}>
+              Founder readiness view for core SaaS systems. Values are a clean
+              operations snapshot and avoid storing secrets or touching backend services.
+            </p>
+          </div>
+          <span
+            className="rounded-full px-3 py-1 text-xs font-mono"
+            style={{
+              background: 'rgba(107, 138, 255, 0.10)',
+              color: '#6B8AFF',
+              border: '1px solid rgba(107, 138, 255, 0.18)',
+            }}
+          >
+            Founder preview
+          </span>
+        </div>
 
-            <button className="text-sm" style={{ color: '#6B8AFF' }}>
-              View all
-            </button>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {platformHealth.map((item) => {
+            const Icon = item.icon;
+            const badgeStyle = getStatusBadgeStyle(item.status, item.color);
+
+            return (
+              <div
+                key={item.label}
+                className="rounded-2xl p-4"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                }}
+              >
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div
+                    className="rounded-xl p-2.5"
+                    style={{
+                      background: `${item.color}14`,
+                      color: item.color,
+                      border: `1px solid ${item.color}26`,
+                    }}
+                  >
+                    <Icon size={18} />
+                  </div>
+                  <span
+                    className="rounded-full px-2.5 py-1 text-xs font-mono"
+                    style={badgeStyle}
+                  >
+                    {item.status}
+                  </span>
+                </div>
+                <h3 className="text-sm font-medium" style={{ color: '#F0EDE6' }}>
+                  {item.label}
+                </h3>
+                <p className="mt-2 text-xs leading-5" style={{ color: '#8A8A93' }}>
+                  {item.note}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-6 mt-8 xl:grid-cols-[1.3fr_1fr]">
+        <section className="surface-card p-6">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <h2
+                className="font-display text-section font-medium tracking-[-0.03em]"
+                style={{ color: '#F0EDE6' }}
+              >
+                Recent Founder Activity
+              </h2>
+              <p className="mt-1 text-xs" style={{ color: '#8A8A93' }}>
+                Preview of platform actions founders should monitor.
+              </p>
+            </div>
+
+            <span
+              className="rounded-full px-3 py-1 text-xs font-mono"
+              style={{
+                background: 'rgba(255, 255, 255, 0.04)',
+                color: '#8A8A93',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+              }}
+            >
+              Demo activity
+            </span>
           </div>
 
           <div className="space-y-0">
-            {activities.map((activity, idx) => (
-              <div
-                key={activity.id}
-                className="flex items-center gap-4 py-4 transition-colors duration-200 rounded-lg px-2 -mx-2"
-                style={{
-                  borderBottom:
-                    idx < activities.length - 1
-                      ? '1px solid rgba(255, 255, 255, 0.04)'
-                      : 'none',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
+            {founderActivities.map((activity, idx) => {
+              const Icon = activity.icon;
+
+              return (
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                  key={activity.label}
+                  className="flex items-start gap-4 rounded-lg px-2 py-4 transition-colors duration-200 -mx-2"
                   style={{
-                    background: activity.color + '20',
-                    color: activity.color,
+                    borderBottom:
+                      idx < founderActivities.length - 1
+                        ? '1px solid rgba(255, 255, 255, 0.04)'
+                        : 'none',
                   }}
                 >
-                  {activity.initial}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm" style={{ color: '#F0EDE6' }}>
-                    {activity.text}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: '#55555C' }}>
-                    {activity.timestamp}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="surface-card p-6">
-            <h2
-              className="font-display text-section font-medium tracking-[-0.03em] mb-5"
-              style={{ color: '#F0EDE6' }}
-            >
-              Quick Actions
-            </h2>
-
-            <div className="grid grid-cols-2 gap-3">
-              {quickActions.map((action) => {
-                const Icon = action.icon;
-
-                return (
-                  <button
-                    key={action.label}
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-200"
+                  <div
+                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl"
                     style={{
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      background: 'transparent',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#6B8AFF';
-                      e.currentTarget.style.background = 'rgba(107, 138, 255, 0.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                      e.currentTarget.style.background = 'transparent';
+                      background: `${activity.color}18`,
+                      color: activity.color,
+                      border: `1px solid ${activity.color}26`,
                     }}
                   >
-                    <Icon size={20} style={{ color: '#6B8AFF' }} />
-                    <span className="text-xs" style={{ color: '#F0EDE6' }}>
-                      {action.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="surface-card p-6">
-            <h2
-              className="font-display text-section font-medium tracking-[-0.03em] mb-5"
-              style={{ color: '#F0EDE6' }}
-            >
-              Platform Status
-            </h2>
-
-            <div className="space-y-3">
-              {platformStatuses.map((status) => (
-                <div
-                  key={status.name}
-                  className="flex items-center justify-between py-1"
-                >
-                  <div className="flex items-center gap-3">
-                    <span style={{ color: '#8A8A93' }}>
-                      {statusIcons[status.name]}
-                    </span>
-                    <span className="text-sm" style={{ color: '#F0EDE6' }}>
-                      {status.name}
-                    </span>
+                    <Icon size={16} />
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{
-                        background:
-                          status.status === 'Operational'
-                            ? '#4ADE80'
-                            : status.status === 'Degraded'
-                              ? '#FF8A5C'
-                              : '#FF5A5A',
-                      }}
-                    />
-                    <span className="text-xs font-mono" style={{ color: '#8A8A93' }}>
-                      {status.status}
-                    </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium" style={{ color: '#F0EDE6' }}>
+                        {activity.label}
+                      </p>
+                      <span className="text-xs font-mono" style={{ color: '#55555C' }}>
+                        {activity.time}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs leading-5" style={{ color: '#8A8A93' }}>
+                      {activity.detail}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        </div>
+        </section>
+
+        <section className="surface-card p-6">
+          <h2
+            className="font-display text-section font-medium tracking-[-0.03em] mb-2"
+            style={{ color: '#F0EDE6' }}
+          >
+            Founder Quick Actions
+          </h2>
+          <p className="mb-5 text-xs" style={{ color: '#8A8A93' }}>
+            Shortcuts for daily SaaS operations review.
+          </p>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {quickActions.map((action) => {
+              const Icon = action.icon;
+
+              return (
+                <button
+                  key={action.label}
+                  className="flex items-start gap-3 rounded-xl p-4 text-left transition-all duration-200"
+                  style={{
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                  }}
+                  onMouseEnter={(event) => {
+                    event.currentTarget.style.borderColor = '#6B8AFF';
+                    event.currentTarget.style.background = 'rgba(107, 138, 255, 0.05)';
+                  }}
+                  onMouseLeave={(event) => {
+                    event.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                    event.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                  }}
+                >
+                  <Icon size={18} style={{ color: '#6B8AFF' }} />
+                  <span>
+                    <span className="block text-sm font-medium" style={{ color: '#F0EDE6' }}>
+                      {action.label}
+                    </span>
+                    <span className="mt-1 block text-xs" style={{ color: '#55555C' }}>
+                      {action.hint}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       </div>
+
+      <section className="surface-card mt-8 p-6">
+        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2
+              className="font-display text-section font-medium tracking-[-0.03em]"
+              style={{ color: '#F0EDE6' }}
+            >
+              Client Launch Readiness
+            </h2>
+            <p className="mt-1 text-sm" style={{ color: '#8A8A93' }}>
+              Founder checklist for moving client workspaces from setup to live launch.
+            </p>
+          </div>
+          <span
+            className="rounded-full px-3 py-1 text-xs font-mono"
+            style={{
+              background: 'rgba(74, 222, 128, 0.10)',
+              color: '#4ADE80',
+              border: '1px solid rgba(74, 222, 128, 0.18)',
+            }}
+          >
+            4 / 6 ready
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {launchReadiness.map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center justify-between gap-4 rounded-xl p-4"
+              style={{
+                background: item.ready
+                  ? 'rgba(74, 222, 128, 0.05)'
+                  : 'rgba(255, 138, 92, 0.06)',
+                border: item.ready
+                  ? '1px solid rgba(74, 222, 128, 0.12)'
+                  : '1px solid rgba(255, 138, 92, 0.14)',
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <span
+                  className="flex h-8 w-8 items-center justify-center rounded-full"
+                  style={{
+                    background: item.ready
+                      ? 'rgba(74, 222, 128, 0.12)'
+                      : 'rgba(255, 138, 92, 0.12)',
+                    color: item.ready ? '#4ADE80' : '#FF8A5C',
+                  }}
+                >
+                  {item.ready ? <CheckCircle2 size={15} /> : <HardDrive size={15} />}
+                </span>
+                <span className="text-sm font-medium" style={{ color: '#F0EDE6' }}>
+                  {item.label}
+                </span>
+              </div>
+              <span
+                className="rounded-full px-2.5 py-1 text-xs font-mono"
+                style={{
+                  background: item.ready
+                    ? 'rgba(74, 222, 128, 0.12)'
+                    : 'rgba(255, 138, 92, 0.12)',
+                  color: item.ready ? '#4ADE80' : '#FF8A5C',
+                }}
+              >
+                {item.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div
         className="flex items-center justify-between mt-8 pt-4"
