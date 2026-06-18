@@ -76,6 +76,84 @@ const agentCatalog = [
   },
 ];
 
+
+const publisherPipelineStats = [
+  {
+    label: "Generated drafts",
+    value: "Preview",
+    detail: "Draft queue readiness",
+    icon: FileText,
+    color: "#6B8AFF",
+  },
+  {
+    label: "Scheduled posts",
+    value: "Preview",
+    detail: "Calendar pipeline",
+    icon: Clock,
+    color: "#4ADE80",
+  },
+  {
+    label: "Published posts",
+    value: "Preview",
+    detail: "Deployment dependent",
+    icon: CheckCircle2,
+    color: "#6B8AFF",
+  },
+  {
+    label: "Failed publishes",
+    value: "Preview",
+    detail: "Needs adapter logs",
+    icon: AlertTriangle,
+    color: "#FF8A5A",
+  },
+];
+
+const publisherPlatforms = [
+  {
+    name: "YouTube Shorts",
+    purpose: "Short-form property video distribution",
+    readiness: "Backend in progress",
+    icon: Play,
+    color: "#FF5A5A",
+  },
+  {
+    name: "Instagram Reels",
+    purpose: "Discovery and lead generation",
+    readiness: "Token required",
+    icon: Sparkles,
+    color: "#FF8A5C",
+  },
+  {
+    name: "Facebook Video",
+    purpose: "Local audience and page publishing",
+    readiness: "Token required",
+    icon: Send,
+    color: "#6B8AFF",
+  },
+  {
+    name: "LinkedIn",
+    purpose: "Professional/investor positioning",
+    readiness: "Campaign-ready soon",
+    icon: Activity,
+    color: "#4ADE80",
+  },
+  {
+    name: "Twitter/X",
+    purpose: "Lightweight announcement distribution",
+    readiness: "Token required",
+    icon: MessageSquareText,
+    color: "#8A8A93",
+  },
+];
+
+const publisherEvents = [
+  "Campaign publish requested",
+  "Instagram Reels adapter pending credentials",
+  "YouTube Shorts upload requires OAuth",
+  "Facebook Page token required",
+  "LinkedIn text publishing ready after token setup",
+];
+
 const statusLabelMap: Record<string, string> = {
   queued: "Queued",
   running: "Running",
@@ -544,6 +622,219 @@ export default function AIJobs() {
           );
         })}
       </div>
+
+
+      <section className="mb-8 space-y-5">
+        <div className="surface-card overflow-hidden">
+          <div
+            className="flex flex-col gap-4 p-5 lg:flex-row lg:items-start lg:justify-between"
+            style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)" }}
+          >
+            <div>
+              <div
+                className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1"
+                style={{
+                  background: "rgba(107, 138, 255, 0.08)",
+                  border: "1px solid rgba(107, 138, 255, 0.16)",
+                }}
+              >
+                <Send size={14} style={{ color: "#6B8AFF" }} />
+                <span className="text-xs font-mono" style={{ color: "#6B8AFF" }}>
+                  Publisher Readiness Preview
+                </span>
+              </div>
+              <h2 className="text-xl font-medium" style={{ color: "#F0EDE6" }}>
+                Publisher Operations
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6" style={{ color: "#8A8A93" }}>
+                Frontend-only monitoring view for campaign publishing readiness.
+                Values below are operational preview cards, not live publishing metrics.
+              </p>
+            </div>
+
+            <div
+              className="rounded-xl px-4 py-3 text-xs leading-5"
+              style={{
+                background: "rgba(255, 138, 92, 0.08)",
+                border: "1px solid rgba(255, 138, 92, 0.18)",
+                color: "#FFB28A",
+              }}
+            >
+              Real publishing depends on platform credentials and deployment config.
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">
+            {publisherPipelineStats.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <div
+                  key={item.label}
+                  className="rounded-2xl p-4"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.03)",
+                    border: "1px solid rgba(255, 255, 255, 0.06)",
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-mono" style={{ color: "#8A8A93" }}>
+                        {item.label}
+                      </p>
+                      <p className="mt-2 text-lg font-medium" style={{ color: "#F0EDE6" }}>
+                        {item.value}
+                      </p>
+                      <p className="mt-1 text-xs" style={{ color: "#55555C" }}>
+                        {item.detail}
+                      </p>
+                    </div>
+                    <div
+                      className="rounded-xl p-2.5"
+                      style={{
+                        background: `${item.color}14`,
+                        color: item.color,
+                        border: `1px solid ${item.color}26`,
+                      }}
+                    >
+                      <Icon size={17} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.5fr_1fr]">
+          <div className="surface-card p-5">
+            <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="text-base font-medium" style={{ color: "#F0EDE6" }}>
+                  Platform Readiness
+                </h3>
+                <p className="mt-1 text-xs" style={{ color: "#8A8A93" }}>
+                  Campaign adapters and credential requirements
+                </p>
+              </div>
+              <span
+                className="w-fit rounded-full px-3 py-1 text-xs font-mono"
+                style={{
+                  background: "rgba(255, 255, 255, 0.04)",
+                  color: "#8A8A93",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                }}
+              >
+                Readiness preview
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {publisherPlatforms.map((platform) => {
+                const Icon = platform.icon;
+
+                return (
+                  <div
+                    key={platform.name}
+                    className="rounded-2xl p-4"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.03)",
+                      border: "1px solid rgba(255, 255, 255, 0.06)",
+                    }}
+                  >
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="rounded-xl p-2.5"
+                          style={{
+                            background: `${platform.color}14`,
+                            color: platform.color,
+                            border: `1px solid ${platform.color}26`,
+                          }}
+                        >
+                          <Icon size={16} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium" style={{ color: "#F0EDE6" }}>
+                            {platform.name}
+                          </h4>
+                          <p className="mt-1 text-xs leading-5" style={{ color: "#8A8A93" }}>
+                            {platform.purpose}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className="rounded-full px-2.5 py-1 text-xs"
+                        style={{
+                          background: `${platform.color}12`,
+                          color: platform.color,
+                          border: `1px solid ${platform.color}24`,
+                        }}
+                      >
+                        {platform.readiness}
+                      </span>
+                    </div>
+
+                    <p className="mt-3 text-xs leading-5" style={{ color: "#55555C" }}>
+                      Real publishing depends on platform credentials and deployment config.
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="surface-card p-5">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-medium" style={{ color: "#F0EDE6" }}>
+                  Recent Publisher Events
+                </h3>
+                <p className="mt-1 text-xs" style={{ color: "#8A8A93" }}>
+                  Operational preview/demo list
+                </p>
+              </div>
+              <Activity size={18} style={{ color: "#4ADE80" }} />
+            </div>
+
+            <div className="space-y-3">
+              {publisherEvents.map((event, index) => (
+                <div
+                  key={event}
+                  className="rounded-xl p-3"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.03)",
+                    border: "1px solid rgba(255, 255, 255, 0.06)",
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <span
+                      className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-mono"
+                      style={{
+                        background: "rgba(107, 138, 255, 0.10)",
+                        color: "#6B8AFF",
+                      }}
+                    >
+                      {index + 1}
+                    </span>
+                    <div>
+                      <p className="text-sm" style={{ color: "#F0EDE6" }}>
+                        {event}
+                      </p>
+                      <p className="mt-1 text-xs" style={{ color: "#55555C" }}>
+                        Preview event - not live publisher telemetry.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-[1.7fr_1fr]">
         <div className="surface-card overflow-hidden">
