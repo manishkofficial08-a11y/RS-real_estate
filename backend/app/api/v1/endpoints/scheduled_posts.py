@@ -16,6 +16,7 @@ from app.models.scheduled_post import (
     ScheduledPostStatus,
 )
 from app.models.user import User
+from app.services.scheduled_publisher import process_due_scheduled_posts
 
 
 router = APIRouter(prefix="/scheduled-posts", tags=["Scheduled Posts"])
@@ -49,6 +50,30 @@ class ScheduledPostUpdate(BaseModel):
     retry_count: Optional[int] = None
     max_retries: Optional[int] = None
     metadata_json: Optional[Dict[str, Any]] = None
+
+
+class ProcessDueScheduledPostsRequest(BaseModel):
+    limit: int = Field(default=25, ge=1, le=100)
+    allow_mock_fallback: bool = True
+
+
+class ProcessDueScheduledPostResult(BaseModel):
+    schedule_id: str
+    generated_post_id: str
+    platform: str
+    status: str
+    mode: Optional[str] = None
+    external_post_id: Optional[str] = None
+    external_post_url: Optional[str] = None
+    warning: Optional[str] = None
+    error: Optional[str] = None
+
+
+class ProcessDueScheduledPostsResponse(BaseModel):
+    checked_at: str
+    due_count: int
+    processed_count: int
+    results: List[ProcessDueScheduledPostResult]
 
 
 class ScheduledPostResponse(BaseModel):
@@ -238,6 +263,21 @@ async def get_my_scheduled_posts(
     schedules = result.scalars().all()
 
     return [await _serialize_scheduled_post(schedule, db) for schedule in schedules]
+
+
+
+@router.post("/process-due", response_model=ProcessDueScheduledPostsResponse)
+async def process_due_scheduled_posts_endpoint(
+    data: ProcessDueScheduledPostsRequest = ProcessDueScheduledPostsRequest(),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id),
+):
+    return await process_due_scheduled_posts(
+        db,
+        tenant_id=tenant_id,
+        limit=data.limit,
+        allow_mock_fallback=data.allow_mock_fallback,
+    )
 
 
 @router.get("/{schedule_id}", response_model=ScheduledPostResponse)
