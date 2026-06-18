@@ -194,6 +194,8 @@ type GeneratedPost = {
   status: GeneratedPostStatus;
   createdAt: string;
   hasVideoAsset: boolean;
+  sourceFileUrl?: string | null;
+  sourceFileName?: string | null;
 };
 
 const campaignPlatformOptions: Array<{
@@ -349,15 +351,27 @@ const generatedPostHasVideo = (post: ClientGeneratedPost) => {
   );
 };
 
-const mapGeneratedPostToCard = (post: ClientGeneratedPost): GeneratedPost => ({
-  id: post.id,
-  caption: post.content || post.title,
-  platform: formatGeneratedPostPlatform(String(post.platform || "instagram")),
-  apiPlatform: normalizeGeneratedPostPlatform(post.platform),
-  status: normalizeGeneratedPostStatus(post.status),
-  createdAt: formatDateTime(post.created_at),
-  hasVideoAsset: generatedPostHasVideo(post),
-});
+const mapGeneratedPostToCard = (post: ClientGeneratedPost): GeneratedPost => {
+  const metadata = post.metadata_json || {};
+
+  return {
+    id: post.id,
+    caption: post.content || post.title,
+    platform: formatGeneratedPostPlatform(String(post.platform || "instagram")),
+    apiPlatform: normalizeGeneratedPostPlatform(post.platform),
+    status: normalizeGeneratedPostStatus(post.status),
+    createdAt: formatDateTime(post.created_at),
+    hasVideoAsset: generatedPostHasVideo(post),
+    sourceFileUrl:
+      typeof metadata.source_file_url === "string"
+        ? resolveGeneratedPostAssetUrl(metadata.source_file_url)
+        : null,
+    sourceFileName:
+      typeof metadata.source_file_name === "string"
+        ? metadata.source_file_name
+        : null,
+  };
+};
 
 const getStatusConfig = (status: string) => {
   if (status === "completed") {
