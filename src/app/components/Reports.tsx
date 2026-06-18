@@ -1,5 +1,4 @@
-import {
-  emailReport, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -36,6 +35,7 @@ import {
   YAxis,
 } from "recharts";
 import {
+  emailReport,
   getClientLeads,
   getClientProperties,
   getMyGeneratedPosts,
