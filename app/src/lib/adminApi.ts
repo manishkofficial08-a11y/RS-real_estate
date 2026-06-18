@@ -343,3 +343,81 @@ export async function updateAIJob(
     body: JSON.stringify(payload),
   });
 }
+
+export type AdminPublisherOperationsSummary = {
+  total: number;
+  scheduled: number;
+  publishing: number;
+  published: number;
+  failed: number;
+  cancelled: number;
+  due_now: number;
+  retry_ready: number;
+  success_rate: number;
+};
+
+export type AdminPublisherPlatformMetric = {
+  platform: string;
+  total: number;
+  scheduled: number;
+  publishing: number;
+  published: number;
+  failed: number;
+  success_rate: number;
+};
+
+export type AdminPublisherEvent = {
+  id: string;
+  tenant_id: string;
+  business_name?: string | null;
+  generated_post_title?: string | null;
+  platform: string;
+  status: string;
+  scheduled_at?: string | null;
+  published_at?: string | null;
+  failed_at?: string | null;
+  failure_reason?: string | null;
+  external_post_url?: string | null;
+  retry_count: number;
+  max_retries: number;
+};
+
+export type AdminPublisherOperations = {
+  checked_at: string;
+  summary: AdminPublisherOperationsSummary;
+  platforms: AdminPublisherPlatformMetric[];
+  recent_events: AdminPublisherEvent[];
+  failed_events: AdminPublisherEvent[];
+};
+
+export type AdminPublisherProcessDuePayload = {
+  tenant_id?: string;
+  limit?: number;
+  allow_mock_fallback?: boolean;
+};
+
+export type AdminPublisherProcessDueResponse = {
+  checked_at: string;
+  tenant_count: number;
+  due_count: number;
+  processed_count: number;
+  results: Array<Record<string, unknown>>;
+};
+
+export async function getAdminPublisherOperations(): Promise<AdminPublisherOperations> {
+  return adminFetch<AdminPublisherOperations>("/admin/publisher-operations");
+}
+
+export async function processAdminDuePublisherPosts(
+  payload: AdminPublisherProcessDuePayload = {},
+): Promise<AdminPublisherProcessDueResponse> {
+  return adminFetch<AdminPublisherProcessDueResponse>("/admin/publisher-operations/process-due", {
+    method: "POST",
+    body: JSON.stringify({
+      limit: payload.limit ?? 25,
+      allow_mock_fallback: payload.allow_mock_fallback ?? true,
+      ...(payload.tenant_id ? { tenant_id: payload.tenant_id } : {}),
+    }),
+  });
+}
+
