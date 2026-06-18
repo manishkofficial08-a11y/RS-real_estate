@@ -2,13 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ArrowUpRight,
-  BarChart3,
   CalendarClock,
   CheckCircle2,
   Clock,
-  Copy,
   Download,
-  ExternalLink,
   FileBarChart,
   Mail,
   Megaphone,
@@ -18,8 +15,6 @@ import {
   Sparkles,
   Target,
   TrendingUp,
-  Users,
-  XCircle,
   type LucideIcon,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -35,6 +30,7 @@ import {
   YAxis,
 } from "recharts";
 import {
+  emailReport,
   getClientLeads,
   getClientProperties,
   getMyGeneratedPosts,
@@ -92,19 +88,6 @@ function formatDateTime(value?: string | null) {
 
 function getStatusCount(items: { status?: string }[], status: string) {
   return items.filter((item) => (item.status || "").toLowerCase() === status).length;
-}
-
-function isToday(value?: string | null) {
-  if (!value) return false;
-
-  const date = new Date(value);
-  const now = new Date();
-
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
 }
 
 function safeIsToday(value?: string | null) {
@@ -211,6 +194,10 @@ export function Reports({ darkMode }: ReportsProps) {
   const [scheduledPosts, setScheduledPosts] = useState<ClientScheduledPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailRecipients, setEmailRecipients] = useState("");
+  const [sendCopyToMe, setSendCopyToMe] = useState(true);
+  const [emailSending, setEmailSending] = useState(false);
 
   const cardBase = {
     background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
@@ -579,9 +566,33 @@ export function Reports({ darkMode }: ReportsProps) {
   };
 
   const handleEmailReport = () => {
-    const subject = encodeURIComponent(`RS Real Estate ${activeReport} Business Report`);
-    const body = encodeURIComponent(reportText);
-    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    setEmailModalOpen(true);
+  };
+
+  const handleSendEmailReport = async () => {
+    try {
+      setEmailSending(true);
+      setApiMessage(null);
+
+      const recipients = emailRecipients
+        .split(",")
+        .map((email) => email.trim())
+        .filter(Boolean);
+
+      const result = await emailReport({
+        recipients,
+        subject: `RS Real Estate ${activeReport} Business Report`,
+        body: reportText,
+        send_copy_to_me: sendCopyToMe,
+      });
+
+      setApiMessage(result.message);
+      setEmailModalOpen(false);
+    } catch (err) {
+      setApiMessage(err instanceof Error ? err.message : "Failed to send report email.");
+    } finally {
+      setEmailSending(false);
+    }
   };
 
   const handleCopyReport = async () => {
@@ -1092,6 +1103,100 @@ export function Reports({ darkMode }: ReportsProps) {
             </div>
           </motion.div>
         </div>
+
+        {emailModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div
+              className="w-full max-w-lg rounded-2xl border p-5 shadow-2xl"
+              style={{
+                background: darkMode ? "rgba(13,13,40,0.98)" : "#ffffff",
+                borderColor: darkMode ? "rgba(99,102,241,0.18)" : "rgba(15,23,42,0.08)",
+              }}
+            >
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-semibold" style={{ color: textPrimary }}>
+                    Email Report
+                  </h3>
+                  <p className="mt-1 text-xs" style={{ color: textSoft }}>
+                    Login email gets a copy by default. Add extra recipients for owner, sales, marketing or accounts team.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setEmailModalOpen(false)}
+                  className="rounded-lg px-2 py-1 text-xs"
+                  style={{ color: textMuted }}
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <label className="flex items-center gap-2 text-sm" style={{ color: textMuted }}>
+                  <input
+                    type="checkbox"
+                    checked={sendCopyToMe}
+                    onChange={(event) => setSendCopyToMe(event.target.checked)}
+                  />
+                  Send copy to login email
+                </label>
+
+                <div>
+                  <label className="mb-1 block text-xs" style={{ color: textSoft }}>
+                    Extra recipients
+                  </label>
+                  <input
+                    value={emailRecipients}
+                    onChange={(event) => setEmailRecipients(event.target.value)}
+                    placeholder="owner@company.com, sales@company.com"
+                    className="w-full rounded-xl border px-3 py-2 text-sm"
+                    style={{
+                      background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                      borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                      color: textPrimary,
+                    }}
+                  />
+                  <p className="mt-1 text-xs" style={{ color: textSoft }}>
+                    Use comma-separated emails.
+                  </p>
+                </div>
+
+                <div
+                  className="rounded-xl border p-3 text-xs"
+                  style={{
+                    background: darkMode ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.04)",
+                    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                    color: textMuted,
+                  }}
+                >
+                  <strong style={{ color: textPrimary }}>Subject:</strong> RS Real Estate {activeReport} Business Report
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => setEmailModalOpen(false)}
+                    className="flex-1 rounded-xl border px-4 py-2 text-sm"
+                    style={{
+                      borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                      color: textMuted,
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSendEmailReport}
+                    disabled={emailSending}
+                    className="flex-1 rounded-xl px-4 py-2 text-sm font-medium text-white"
+                    style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+                  >
+                    {emailSending ? "Sending..." : "Send Report"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

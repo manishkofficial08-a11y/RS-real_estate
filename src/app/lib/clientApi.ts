@@ -882,3 +882,26 @@ export async function deleteScheduledPost(scheduleId: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+
+export type EmailReportPayload = {
+  recipients?: string[];
+  subject: string;
+  body: string;
+  send_copy_to_me?: boolean;
+};
+
+export type EmailReportResponse = {
+  sent: boolean;
+  recipients: string[];
+  message: string;
+};
+
+export async function emailReport(
+  payload: EmailReportPayload,
+): Promise<EmailReportResponse> {
+  return clientFetch<EmailReportResponse>("/reports/email", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
