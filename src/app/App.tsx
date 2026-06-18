@@ -23,6 +23,7 @@ import { Bell, Search, Sparkles } from "lucide-react";
 import { ClientLogin } from "./components/ClientLogin";
 import { ResetPassword } from "./components/ResetPassword";
 import {
+  CLIENT_SESSION_EXPIRED_EVENT,
   clearClientSession,
   getClientNotificationUnreadCount,
   getClientNotifications,
@@ -97,6 +98,28 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    const handleClientSessionExpired = () => {
+      setClientProfile(null);
+      setNotifications([]);
+      setUnreadCount(0);
+      setNotifOpen(false);
+      setClientLoggedIn(false);
+    };
+
+    window.addEventListener(
+      CLIENT_SESSION_EXPIRED_EVENT,
+      handleClientSessionExpired,
+    );
+
+    return () => {
+      window.removeEventListener(
+        CLIENT_SESSION_EXPIRED_EVENT,
+        handleClientSessionExpired,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     if (!clientLoggedIn) {

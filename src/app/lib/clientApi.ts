@@ -4,6 +4,8 @@ const API_BASE_URL =
 const CLIENT_ACCESS_TOKEN_KEY = "client_access_token";
 const CLIENT_REFRESH_TOKEN_KEY = "client_refresh_token";
 
+export const CLIENT_SESSION_EXPIRED_EVENT = "client-session-expired";
+
 export function getClientToken(): string | null {
   return localStorage.getItem(CLIENT_ACCESS_TOKEN_KEY);
 }
@@ -23,6 +25,10 @@ export function saveClientSession(accessToken: string, refreshToken?: string) {
 export function clearClientSession() {
   localStorage.removeItem(CLIENT_ACCESS_TOKEN_KEY);
   localStorage.removeItem(CLIENT_REFRESH_TOKEN_KEY);
+}
+
+function notifyClientSessionExpired() {
+  window.dispatchEvent(new Event(CLIENT_SESSION_EXPIRED_EVENT));
 }
 
 export async function loginClient(email: string, password: string) {
@@ -92,6 +98,7 @@ export async function clientFetch<T>(
 
   if (!token) {
     clearClientSession();
+    notifyClientSessionExpired();
     throw new Error("Client session missing. Please login again.");
   }
 
@@ -106,6 +113,7 @@ export async function clientFetch<T>(
 
   if (response.status === 401) {
     clearClientSession();
+    notifyClientSessionExpired();
     throw new Error("Client session expired. Please login again.");
   }
 
@@ -653,6 +661,7 @@ export async function uploadClientAssetFile(
 
   if (!token) {
     clearClientSession();
+    notifyClientSessionExpired();
     throw new Error("Client session missing. Please login again.");
   }
 
