@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.api.v1.router import api_router
 from app.config import settings
+from app.services.scheduled_publisher import register_scheduled_publisher_worker
 import os
 
 app = FastAPI(
@@ -29,6 +30,9 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 # Include routers
 app.include_router(api_router)
 
+# Background workers
+register_scheduled_publisher_worker(app)
+
 @app.get("/")
 async def root():
     return {"message": f"{settings.APP_NAME} is running! 🚀"}
@@ -36,4 +40,3 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "version": "1.0.0"}
-
