@@ -1,3 +1,4 @@
+import "./styles/sidebar.css";
 import { Properties } from "./components/Properties";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
@@ -567,3 +568,4 @@ export default function App() {
     </div>
   );
 }
+
