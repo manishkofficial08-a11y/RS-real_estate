@@ -105,77 +105,112 @@ function MetricCard({
   darkMode: boolean;
   delay?: number;
 }) {
+  const floorLabel =
+    label.includes("Buyer")
+      ? "Lead Floor"
+      : label.includes("Quality")
+        ? "Scoring Floor"
+        : label.includes("Pipeline")
+          ? "Deal Floor"
+          : "Control Floor";
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay }}
-      className="relative rounded-2xl p-5 border overflow-hidden group cursor-default"
+      initial={{ opacity: 0, y: 28, rotateX: -6 }}
+      animate={{ opacity: 1, y: 0, rotateX: 0 }}
+      whileHover={{ y: -6, scale: 1.015 }}
+      transition={{ duration: 0.45, delay, ease: "easeOut" }}
+      className="relative min-h-[154px] overflow-hidden rounded-[1.7rem] border p-5 group cursor-default"
       style={{
-        background: darkMode ? "rgba(13, 13, 40, 0.8)" : "#ffffff",
-        borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
-        backdropFilter: "blur(16px)",
+        background: darkMode
+          ? "linear-gradient(145deg, rgba(15,23,42,0.90), rgba(30,41,59,0.72))"
+          : "linear-gradient(145deg, rgba(255,255,255,0.96), rgba(238,242,255,0.82))",
+        borderColor: darkMode ? "rgba(129,140,248,0.20)" : "rgba(99,102,241,0.16)",
         boxShadow: darkMode
-          ? "0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)"
-          : "0 1px 3px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.04)",
+          ? "0 22px 60px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)"
+          : "0 22px 50px rgba(99,102,241,0.14), inset 0 1px 0 rgba(255,255,255,0.85)",
+        transformStyle: "preserve-3d",
       }}
     >
       <div
-        className="absolute -top-6 -right-6 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-opacity duration-500"
-        style={{ background: `radial-gradient(circle, ${color} 0%, transparent 70%)` }}
+        className="absolute inset-0 opacity-60"
+        style={{
+          background:
+            "linear-gradient(90deg, rgba(99,102,241,0.08) 1px, transparent 1px), linear-gradient(0deg, rgba(99,102,241,0.06) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+        }}
       />
 
       <div
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"
-        style={{ background: `linear-gradient(135deg, ${color}08 0%, transparent 60%)` }}
+        className="absolute -right-10 -top-10 h-32 w-32 rounded-full blur-2xl transition-opacity duration-500 group-hover:opacity-100"
+        style={{ background: color, opacity: darkMode ? 0.16 : 0.12 }}
       />
 
-      <div className="relative flex items-start justify-between">
-        <div>
-          <p className="text-xs mb-3" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
-            {label}
-          </p>
+      <div
+        className="absolute bottom-0 left-0 h-1.5 w-full"
+        style={{ background: `linear-gradient(90deg, ${color}, transparent)` }}
+      />
 
-          <p
-            className="mb-1"
+      <div className="relative z-10 flex h-full flex-col justify-between">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div
+              className="mb-3 inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-medium"
+              style={{ background: `${color}16`, color }}
+            >
+              {floorLabel}
+            </div>
+
+            <p className="text-xs" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+              {label}
+            </p>
+
+            <p
+              className="mt-2"
+              style={{
+                fontSize: "2rem",
+                fontWeight: 780,
+                letterSpacing: "-0.055em",
+                color: darkMode ? "#f8fafc" : "#0f172a",
+                lineHeight: 1,
+              }}
+            >
+              {value}
+            </p>
+          </div>
+
+          <div
+            className="flex h-12 w-12 items-center justify-center rounded-2xl border"
             style={{
-              fontSize: "1.75rem",
-              fontWeight: 600,
-              letterSpacing: "-0.03em",
-              color: darkMode ? "#e2e8f0" : "#0f172a",
-              lineHeight: 1,
+              background: `${color}18`,
+              borderColor: `${color}30`,
+              boxShadow: `0 12px 28px ${color}22`,
             }}
           >
-            {value}
-          </p>
-
-          <div className="flex items-center gap-1 mt-2">
-            {positive ? (
-              <TrendingUp size={11} style={{ color: "#10b981" }} />
-            ) : (
-              <TrendingDown size={11} style={{ color: "#ef4444" }} />
-            )}
-
-            <span className="text-xs" style={{ color: positive ? "#10b981" : "#ef4444" }}>
-              {change}
-            </span>
-
-            <span className="text-xs" style={{ color: darkMode ? "#2d3748" : "#cbd5e0" }}>
-              live
-            </span>
+            <Icon size={20} style={{ color }} />
           </div>
         </div>
 
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: `${color}18`, boxShadow: `0 0 12px ${color}20` }}
-        >
-          <Icon size={18} style={{ color }} />
+        <div className="mt-4 flex items-center gap-1.5">
+          {positive ? (
+            <TrendingUp size={12} style={{ color: "#10b981" }} />
+          ) : (
+            <TrendingDown size={12} style={{ color: "#ef4444" }} />
+          )}
+
+          <span className="text-xs font-medium" style={{ color: positive ? "#10b981" : "#ef4444" }}>
+            {change}
+          </span>
+
+          <span className="text-xs" style={{ color: darkMode ? "#475569" : "#94a3b8" }}>
+            live
+          </span>
         </div>
       </div>
     </motion.div>
   );
 }
+
 
 
 function SmartBuildingScene({
@@ -185,147 +220,155 @@ function SmartBuildingScene({
   darkMode: boolean;
   stats: { healthScore: number; activeLeads: number; hotLeads: number; conversionRate: number };
 }) {
-  const floorLabels = ["New Leads", "Site Visits", "Negotiation", "Closings"];
-  const accent = darkMode ? "#818cf8" : "#6366f1";
-  const glass = darkMode ? "rgba(15,23,42,0.72)" : "rgba(255,255,255,0.78)";
-  const border = darkMode ? "rgba(129,140,248,0.22)" : "rgba(99,102,241,0.16)";
+  const floors = [
+    { name: "Lead Lobby", value: stats.activeLeads, color: "#6366f1" },
+    { name: "Site Visit Deck", value: stats.hotLeads, color: "#06b6d4" },
+    { name: "Negotiation Suite", value: stats.conversionRate, color: "#f59e0b" },
+    { name: "Closing Floor", value: stats.healthScore, color: "#10b981" },
+  ];
 
   return (
     <div
-      className="relative min-h-[240px] overflow-hidden rounded-[2rem] border p-4"
-      style={{ background: glass, borderColor: border }}
+      className="relative min-h-[360px] overflow-hidden rounded-[2rem] border p-5"
+      style={{
+        background: darkMode
+          ? "linear-gradient(145deg, rgba(15,23,42,0.96), rgba(2,6,23,0.88))"
+          : "linear-gradient(145deg, rgba(255,255,255,0.95), rgba(224,231,255,0.72))",
+        borderColor: darkMode ? "rgba(129,140,248,0.24)" : "rgba(99,102,241,0.18)",
+        boxShadow: darkMode ? "0 30px 90px rgba(0,0,0,0.5)" : "0 30px 90px rgba(99,102,241,0.22)",
+      }}
     >
       <div
         className="absolute inset-0"
         style={{
-          background: darkMode
-            ? "radial-gradient(circle at 20% 20%, rgba(99,102,241,0.24), transparent 30%), radial-gradient(circle at 88% 18%, rgba(6,182,212,0.18), transparent 28%), linear-gradient(135deg, rgba(15,23,42,0.42), rgba(30,41,59,0.30))"
-            : "radial-gradient(circle at 20% 20%, rgba(99,102,241,0.14), transparent 30%), radial-gradient(circle at 88% 18%, rgba(6,182,212,0.12), transparent 28%), linear-gradient(135deg, rgba(248,250,252,0.96), rgba(238,242,255,0.78))",
+          background:
+            "linear-gradient(90deg, rgba(99,102,241,0.09) 1px, transparent 1px), linear-gradient(0deg, rgba(99,102,241,0.08) 1px, transparent 1px)",
+          backgroundSize: "34px 34px",
+          opacity: darkMode ? 0.28 : 0.38,
         }}
       />
 
-      <div className="relative z-10 grid grid-cols-[1fr_0.9fr] gap-4">
-        <div>
-          <div
-            className="mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-medium"
-            style={{ color: accent, background: `${accent}14`, border: `1px solid ${accent}22` }}
-          >
-            <Brain size={13} />
-            AI Property Assistant
-          </div>
+      <div className="absolute left-6 top-5 z-20 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-medium"
+        style={{
+          color: darkMode ? "#a5b4fc" : "#4f46e5",
+          background: darkMode ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.10)",
+          borderColor: darkMode ? "rgba(129,140,248,0.24)" : "rgba(99,102,241,0.16)",
+        }}
+      >
+        <Brain size={13} />
+        AI tower live
+      </div>
 
-          <h2 className="text-lg font-semibold leading-tight" style={{ color: darkMode ? "#f8fafc" : "#0f172a" }}>
-            Smart Building Command View
+      <div className="relative z-10 grid h-full grid-cols-1 gap-5 pt-9 md:grid-cols-[0.72fr_1fr]">
+        <div className="flex flex-col justify-end">
+          <h2 className="text-xl font-semibold leading-tight" style={{ color: darkMode ? "#f8fafc" : "#0f172a" }}>
+            AI Concierge Actions is moving through your sales tower.
           </h2>
-
-          <p className="mt-2 text-xs leading-5" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
-            The AI elevator is tracking buyer leads, property demand, follow-ups, and deal movement across your real estate pipeline.
+          <p className="mt-3 text-xs leading-5" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+            Every floor represents a live client action: lead capture, site-visit readiness, negotiation and closing momentum.
           </p>
 
-          <div className="mt-5 grid grid-cols-3 gap-2">
-            {[
-              { label: "Growth", value: `${stats.healthScore}/100` },
-              { label: "Active", value: stats.activeLeads },
-              { label: "Hot", value: stats.hotLeads },
-            ].map((item) => (
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            {floors.map((floor) => (
               <div
-                key={item.label}
+                key={floor.name}
                 className="rounded-2xl border p-3"
                 style={{
-                  background: darkMode ? "rgba(15,23,42,0.48)" : "rgba(255,255,255,0.74)",
-                  borderColor: border,
+                  background: darkMode ? "rgba(15,23,42,0.58)" : "rgba(255,255,255,0.78)",
+                  borderColor: darkMode ? "rgba(129,140,248,0.16)" : "rgba(99,102,241,0.12)",
                 }}
               >
                 <p className="text-[10px] uppercase tracking-wide" style={{ color: darkMode ? "#64748b" : "#94a3b8" }}>
-                  {item.label}
+                  {floor.name}
                 </p>
-                <p className="mt-1 text-sm font-semibold" style={{ color: accent }}>
-                  {item.value}
+                <p className="mt-1 text-base font-bold" style={{ color: floor.color }}>
+                  {floor.value}
                 </p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="relative h-[210px]">
-          <div
-            className="absolute bottom-0 left-2 h-[190px] w-[132px] rounded-t-[2rem] border"
+        <div className="relative h-[310px]">
+          <div className="absolute bottom-0 left-1/2 h-[290px] w-[220px] -translate-x-1/2 rounded-t-[2.4rem] border"
             style={{
               background: darkMode
-                ? "linear-gradient(180deg, rgba(30,41,59,0.92), rgba(15,23,42,0.86))"
-                : "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(224,231,255,0.88))",
-              borderColor: border,
-              boxShadow: darkMode ? "0 24px 70px rgba(0,0,0,0.45)" : "0 24px 70px rgba(99,102,241,0.20)",
+                ? "linear-gradient(180deg, rgba(30,41,59,0.94), rgba(15,23,42,0.86))"
+                : "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(219,234,254,0.78))",
+              borderColor: darkMode ? "rgba(129,140,248,0.25)" : "rgba(99,102,241,0.18)",
+              boxShadow: darkMode ? "0 34px 90px rgba(0,0,0,0.55)" : "0 34px 90px rgba(99,102,241,0.22)",
             }}
           >
-            <div
-              className="absolute left-1/2 top-4 h-[154px] w-[34px] -translate-x-1/2 rounded-full"
-              style={{ background: darkMode ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.10)" }}
+            <div className="absolute inset-x-7 top-6 grid grid-cols-3 gap-3">
+              {Array.from({ length: 21 }).map((_, index) => (
+                <motion.span
+                  key={index}
+                  className="h-5 rounded-lg"
+                  animate={{ opacity: [0.22, 0.75, 0.22] }}
+                  transition={{ duration: 2.8, repeat: Infinity, delay: index * 0.08 }}
+                  style={{
+                    background: index % 4 === 0 ? "rgba(6,182,212,0.55)" : darkMode ? "rgba(129,140,248,0.22)" : "rgba(99,102,241,0.20)",
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="absolute left-1/2 top-5 h-[244px] w-[50px] -translate-x-1/2 rounded-full border"
+              style={{
+                background: darkMode ? "rgba(2,6,23,0.72)" : "rgba(255,255,255,0.66)",
+                borderColor: darkMode ? "rgba(129,140,248,0.20)" : "rgba(99,102,241,0.14)",
+              }}
             />
 
             <motion.div
-              className="absolute left-1/2 top-5 flex h-8 w-9 -translate-x-1/2 items-center justify-center rounded-xl text-[10px] font-semibold"
-              animate={{ y: [0, 118, 58, 0] }}
-              transition={{ duration: 5.2, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute left-1/2 top-7 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-2xl text-xs font-bold"
+              animate={{ y: [0, 178, 92, 0] }}
+              transition={{ duration: 5.8, repeat: Infinity, ease: "easeInOut" }}
               style={{
                 background: "linear-gradient(135deg, #6366f1, #06b6d4)",
-                color: "#fff",
-                boxShadow: "0 0 24px rgba(99,102,241,0.55)",
+                color: "#ffffff",
+                boxShadow: "0 0 36px rgba(99,102,241,0.64)",
               }}
             >
               AI
             </motion.div>
-
-            <div className="absolute right-3 top-4 space-y-4">
-              {floorLabels.map((floor, index) => (
-                <div key={floor} className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: index < 2 ? "#10b981" : "#f59e0b" }} />
-                  <span className="text-[9px]" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
-                    {floor}
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
 
           <motion.div
-            className="absolute right-0 top-2 h-20 w-20 rounded-3xl border p-3"
-            animate={{ y: [0, -8, 0], rotate: [0, 1.5, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute right-1 top-4 h-24 w-24 rounded-[2rem] border p-3"
+            animate={{ y: [0, -10, 0], rotate: [0, 2, 0] }}
+            transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
             style={{
-              background: darkMode ? "rgba(15,23,42,0.78)" : "rgba(255,255,255,0.86)",
-              borderColor: border,
-              boxShadow: darkMode ? "0 18px 45px rgba(0,0,0,0.38)" : "0 18px 45px rgba(99,102,241,0.22)",
+              background: darkMode ? "rgba(15,23,42,0.82)" : "rgba(255,255,255,0.88)",
+              borderColor: darkMode ? "rgba(129,140,248,0.24)" : "rgba(99,102,241,0.16)",
+              boxShadow: darkMode ? "0 24px 70px rgba(0,0,0,0.42)" : "0 24px 70px rgba(99,102,241,0.24)",
             }}
           >
             <div className="flex h-full flex-col items-center justify-center">
               <div className="mb-1 flex gap-1">
-                <span className="h-2 w-2 rounded-full" style={{ background: "#06b6d4" }} />
-                <span className="h-2 w-2 rounded-full" style={{ background: "#8b5cf6" }} />
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#06b6d4" }} />
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#8b5cf6" }} />
               </div>
-              <p className="text-[10px] font-semibold" style={{ color: accent }}>
-                BOT
-              </p>
-              <p className="text-[8px]" style={{ color: darkMode ? "#64748b" : "#94a3b8" }}>
-                assistant
-              </p>
+              <p className="text-[11px] font-bold" style={{ color: darkMode ? "#f8fafc" : "#0f172a" }}>BOT</p>
+              <p className="text-[8px]" style={{ color: darkMode ? "#64748b" : "#94a3b8" }}>concierge</p>
             </div>
           </motion.div>
 
-          <div
-            className="absolute bottom-2 right-1 h-10 w-24 rounded-2xl border"
-            style={{ background: darkMode ? "rgba(16,185,129,0.10)" : "rgba(16,185,129,0.12)", borderColor: "rgba(16,185,129,0.20)" }}
+          <div className="absolute bottom-4 right-2 rounded-2xl border px-3 py-2 text-[10px] font-medium"
+            style={{
+              color: "#10b981",
+              background: darkMode ? "rgba(16,185,129,0.10)" : "rgba(16,185,129,0.12)",
+              borderColor: "rgba(16,185,129,0.22)",
+            }}
           >
-            <div className="flex h-full items-center justify-center gap-1 text-[10px] font-medium" style={{ color: "#10b981" }}>
-              <Zap size={11} />
-              Live pipeline
-            </div>
+            Live pipeline elevator
           </div>
         </div>
       </div>
     </div>
   );
 }
+
 
 
 const platformIcons: Record<string, React.ElementType> = {
@@ -473,35 +516,44 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
   const tooltipBg = darkMode ? "#0d0d28" : "#ffffff";
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="h-full overflow-y-auto" style={{ perspective: "1400px" }}>
+      <div className="relative p-6 max-w-7xl mx-auto space-y-6">
         <motion.div
-          initial={{ opacity: 0, y: -14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45 }}
-          className="relative overflow-hidden rounded-[2rem] border p-5"
+          initial={{ opacity: 0, y: -20, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.55, ease: "easeOut" }}
+          className="relative overflow-hidden rounded-[2.4rem] border p-6"
           style={{
             background: darkMode
-              ? "linear-gradient(135deg, rgba(2,6,23,0.96), rgba(15,23,42,0.92) 48%, rgba(30,41,59,0.88))"
-              : "linear-gradient(135deg, #ffffff, #f8fafc 48%, #eef2ff)",
-            borderColor: darkMode ? "rgba(129,140,248,0.20)" : "rgba(99,102,241,0.14)",
-            boxShadow: darkMode ? "0 26px 80px rgba(0,0,0,0.45)" : "0 26px 80px rgba(99,102,241,0.16)",
+              ? "linear-gradient(135deg, rgba(2,6,23,0.98), rgba(15,23,42,0.94) 44%, rgba(30,41,59,0.88))"
+              : "linear-gradient(135deg, #ffffff, #f8fafc 44%, #e0e7ff)",
+            borderColor: darkMode ? "rgba(129,140,248,0.24)" : "rgba(99,102,241,0.16)",
+            boxShadow: darkMode ? "0 34px 110px rgba(0,0,0,0.55)" : "0 34px 110px rgba(99,102,241,0.18)",
           }}
         >
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                "linear-gradient(90deg, rgba(99,102,241,0.08) 1px, transparent 1px), linear-gradient(0deg, rgba(99,102,241,0.08) 1px, transparent 1px)",
-              backgroundSize: "36px 36px",
-              opacity: darkMode ? 0.28 : 0.38,
+                "linear-gradient(90deg, rgba(99,102,241,0.10) 1px, transparent 1px), linear-gradient(0deg, rgba(99,102,241,0.08) 1px, transparent 1px)",
+              backgroundSize: "38px 38px",
+              opacity: darkMode ? 0.26 : 0.38,
             }}
           />
 
-          <div className="relative z-10 grid gap-6 xl:grid-cols-[1.05fr_0.95fr] xl:items-center">
+          <div
+            className="absolute -left-20 top-10 h-52 w-52 rounded-full blur-3xl"
+            style={{ background: "rgba(99,102,241,0.22)" }}
+          />
+          <div
+            className="absolute -right-20 bottom-0 h-64 w-64 rounded-full blur-3xl"
+            style={{ background: "rgba(6,182,212,0.18)" }}
+          />
+
+          <div className="relative z-10 grid gap-7 xl:grid-cols-[0.86fr_1.14fr] xl:items-center">
             <div>
               <div
-                className="mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1"
+                className="mb-5 inline-flex items-center gap-2 rounded-full px-3 py-1"
                 style={{
                   background: darkMode ? "rgba(99,102,241,0.16)" : "rgba(99,102,241,0.10)",
                   border: darkMode ? "1px solid rgba(129,140,248,0.24)" : "1px solid rgba(99,102,241,0.14)",
@@ -509,34 +561,34 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                 }}
               >
                 <Sparkles size={14} />
-                <span className="text-xs font-medium">RS Real Estate Command Center</span>
+                <span className="text-xs font-medium">RS Real Estate Smart Tower</span>
               </div>
 
               <h1
-                className="tracking-tight"
+                className="max-w-2xl tracking-tight"
                 style={{
                   color: darkMode ? "#f8fafc" : "#0f172a",
-                  fontSize: "2rem",
-                  fontWeight: 750,
-                  lineHeight: 1.05,
-                  letterSpacing: "-0.045em",
+                  fontSize: "2.45rem",
+                  fontWeight: 820,
+                  lineHeight: 0.98,
+                  letterSpacing: "-0.06em",
                 }}
               >
-                Smart property growth dashboard
+                Run every buyer lead like an elevator to closing.
               </h1>
 
-              <p className="mt-3 max-w-2xl text-sm leading-6" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
-                Track buyer leads, active pipeline, site-visit readiness, and campaign momentum from one AI-powered real estate workspace.
+              <p className="mt-4 max-w-2xl text-sm leading-6" style={{ color: darkMode ? "#94a3b8" : "#64748b" }}>
+                A real-estate command lobby for lead quality, property demand, active pipeline and campaign actions — powered by your AI assistant.
               </p>
 
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-6 flex flex-wrap gap-2">
                 <button
                   onClick={() => onNavigate("ai-studio")}
-                  className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm transition-all hover:opacity-90"
+                  className="flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm transition-all hover:opacity-90"
                   style={{
                     background: "linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)",
                     color: "#ffffff",
-                    boxShadow: "0 12px 30px rgba(99,102,241,0.35)",
+                    boxShadow: "0 16px 40px rgba(99,102,241,0.38)",
                   }}
                 >
                   <Sparkles size={14} />
@@ -545,11 +597,11 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
 
                 <button
                   onClick={() => onNavigate("crm")}
-                  className="flex items-center gap-2 rounded-xl border px-4 py-2 text-sm transition-all hover:bg-primary/5"
+                  className="flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm transition-all hover:bg-primary/5"
                   style={{
-                    borderColor: darkMode ? "rgba(129,140,248,0.24)" : "rgba(99,102,241,0.16)",
+                    borderColor: darkMode ? "rgba(129,140,248,0.26)" : "rgba(99,102,241,0.18)",
                     color: darkMode ? "#a5b4fc" : "#4f46e5",
-                    background: darkMode ? "rgba(99,102,241,0.06)" : "rgba(255,255,255,0.68)",
+                    background: darkMode ? "rgba(99,102,241,0.07)" : "rgba(255,255,255,0.76)",
                   }}
                 >
                   <Users size={14} />
@@ -558,11 +610,11 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
 
                 <button
                   onClick={() => window.location.reload()}
-                  className="rounded-xl border p-2 transition-all hover:bg-primary/5"
+                  className="rounded-2xl border p-2.5 transition-all hover:bg-primary/5"
                   style={{
-                    borderColor: darkMode ? "rgba(129,140,248,0.20)" : "rgba(99,102,241,0.14)",
+                    borderColor: darkMode ? "rgba(129,140,248,0.22)" : "rgba(99,102,241,0.16)",
                     color: darkMode ? "#94a3b8" : "#64748b",
-                    background: darkMode ? "rgba(15,23,42,0.45)" : "rgba(255,255,255,0.68)",
+                    background: darkMode ? "rgba(15,23,42,0.48)" : "rgba(255,255,255,0.76)",
                   }}
                   aria-label="Refresh dashboard"
                 >
@@ -575,7 +627,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <MetricCard
             label="Buyer Leads"
             value={loadingLeads ? "..." : formatNumber(stats.totalLeads)}
@@ -633,7 +685,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                  Property Demand Trend
+                  Observation Deck: Property Demand
                 </h3>
                 <p className="text-xs mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
                   Buyer enquiry, reach and campaign movement
@@ -714,7 +766,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             }}
           >
             <h3 className="text-sm font-semibold mb-1" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-              Buyer Enquiry Sources
+              Source Floor: Buyer Enquiries
             </h3>
             <p className="text-xs mb-4" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
               Backend source distribution
@@ -765,7 +817,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                 <Brain size={12} className="text-white" />
               </div>
               <h3 className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                AI Property Assistant
+                AI Concierge Actions
               </h3>
               <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(99,102,241,0.1)", color: "#818cf8" }}>
                 live
@@ -821,7 +873,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                   <Clock size={12} style={{ color: "#06b6d4" }} />
                 </div>
                 <h3 className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                  Hot Buyer Follow-ups
+                  Buyer Follow-up Lounge
                 </h3>
               </div>
 
