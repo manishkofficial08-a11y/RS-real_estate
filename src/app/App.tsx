@@ -11,6 +11,8 @@ import { Settings } from "./components/Settings";
 import { Support } from "./components/Support";
 import { MediaLibrary } from "./components/MediaLibrary";
 import { Reports } from "./components/Reports";
+import { TeamManagement } from "./components/TeamManagement";
+import { Billing } from "./components/Billing";
 import { AIManager } from "./components/AIManager";
 import { Background3D } from "./components/Background3D";
 import { CommandPalette } from "./components/CommandPalette";
@@ -43,6 +45,8 @@ const screenComponents: Record<
   properties: ({ darkMode }) => <Properties darkMode={darkMode} />,
   scheduler: ({ darkMode }) => <Scheduler darkMode={darkMode} />,
   reports: ({ darkMode }) => <Reports darkMode={darkMode} />,
+  team: ({ darkMode }) => <TeamManagement darkMode={darkMode} />,
+  billing: ({ darkMode }) => <Billing darkMode={darkMode} />,
   support: ({ darkMode }) => <Support darkMode={darkMode} />,
   "ai-manager": ({ darkMode }) => <AIManager darkMode={darkMode} />,
   settings: ({ darkMode }) => <Settings darkMode={darkMode} />,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, LayoutDashboard, Sparkles, BarChart3, Users2, Calendar, FileBarChart, Bot, Settings, ArrowRight } from "lucide-react";
+import { Search, LayoutDashboard, Sparkles, BarChart3, Users2, Calendar, FileBarChart, Bot, Settings, ArrowRight, CreditCard } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 const commands = [
@@ -9,6 +9,8 @@ const commands = [
   { id: "crm", icon: Users2, label: "Open CRM", category: "Navigate", shortcut: "G C" },
   { id: "scheduler", icon: Calendar, label: "View Scheduler", category: "Navigate", shortcut: "G S" },
   { id: "reports", icon: FileBarChart, label: "Open Reports", category: "Navigate", shortcut: "G R" },
+  { id: "team", icon: Users2, label: "Manage Team", category: "Navigate", shortcut: "G T" },
+  { id: "billing", icon: CreditCard, label: "Open Billing", category: "Navigate", shortcut: "G B" },
   { id: "ai-manager", icon: Bot, label: "Chat with AI Manager", category: "Navigate", shortcut: "G M" },
   { id: "settings", icon: Settings, label: "Settings", category: "Navigate", shortcut: "G ," },
 ];

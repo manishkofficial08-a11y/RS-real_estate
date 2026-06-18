@@ -9,9 +9,22 @@ from app.database.base import Base
 
 class UserRole(str, enum.Enum):
     superadmin = "superadmin"
+    owner = "owner"
     admin = "admin"
+    marketer = "marketer"
+    sales = "sales"
+    viewer = "viewer"
+    # Legacy values kept for compatibility with databases that have not migrated yet.
     client = "client"
     staff = "staff"
+
+
+class ClientTeamRole(str, enum.Enum):
+    owner = "owner"
+    admin = "admin"
+    marketer = "marketer"
+    sales = "sales"
+    viewer = "viewer"
 
 
 class User(Base):
@@ -21,7 +34,7 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
     full_name = Column(String, nullable=False)
-    role = Column(String, default=UserRole.client.value)
+    role = Column(String, default=UserRole.owner.value)
     tenant_id = Column(String, ForeignKey("tenants.id"), nullable=True)
     is_active = Column(Boolean, default=True)
 
