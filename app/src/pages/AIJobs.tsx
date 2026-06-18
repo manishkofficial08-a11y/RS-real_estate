@@ -23,9 +23,12 @@ import {
 } from "lucide-react";
 import {
   getAIJobs,
+  getAdminPublisherOperations,
+  processAdminDuePublisherPosts,
   updateAIJob,
   type AdminAIJob,
   type AdminAIJobStatus,
+  type AdminPublisherOperations,
 } from "@/lib/adminApi";
 
 const filters: Array<{ label: string; value: AdminAIJobStatus | "all" }> = [
@@ -295,6 +298,10 @@ export default function AIJobs() {
   const [openActionsJobId, setOpenActionsJobId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const [publisherOps, setPublisherOps] = useState<AdminPublisherOperations | null>(null);
+  const [publisherOpsLoading, setPublisherOpsLoading] = useState(true);
+  const [publisherActionLoading, setPublisherActionLoading] = useState(false);
+  const [publisherMessage, setPublisherMessage] = useState<string | null>(null);
 
   async function loadJobs(selectedFilter = filter, silent = false) {
     try {
@@ -320,9 +327,30 @@ export default function AIJobs() {
     }
   }
 
+  async function loadPublisherOperations(silent = false) {
+    try {
+      if (!silent) {
+        setPublisherOpsLoading(true);
+      }
+
+      const data = await getAdminPublisherOperations();
+      setPublisherOps(data);
+    } catch (err) {
+      setPublisherMessage(
+        err instanceof Error ? err.message : "Failed to load publisher operations",
+      );
+    } finally {
+      setPublisherOpsLoading(false);
+    }
+  }
+
   useEffect(() => {
     loadJobs(filter);
   }, [filter]);
+
+  useEffect(() => {
+    loadPublisherOperations();
+  }, []);
 
   const filteredJobs = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -503,6 +531,68 @@ export default function AIJobs() {
     }
   };
 
+  const handleProcessDuePublisherPosts = async () => {
+    try {
+      setPublisherActionLoading(true);
+      setPublisherMessage(null);
+
+      const result = await processAdminDuePublisherPosts({
+        limit: 25,
+        allow_mock_fallback: true,
+      });
+
+      setPublisherMessage(
+        `Processed ${result.processed_count} of ${result.due_count} due post(s) across ${result.tenant_count} tenant(s).`,
+      );
+
+      await loadPublisherOperations(true);
+      await loadJobs(filter, true);
+    } catch (err) {
+      setPublisherMessage(
+        err instanceof Error ? err.message : "Failed to process due publisher posts",
+      );
+    } finally {
+      setPublisherActionLoading(false);
+    }
+  };
+
+  const publisherSummary = publisherOps?.summary;
+
+  const publisherOperationCards = [
+    {
+      label: "Scheduled",
+      value: publisherSummary?.scheduled ?? 0,
+      detail: "Waiting in queue",
+      icon: Clock,
+      color: "#6B8AFF",
+    },
+    {
+      label: "Due Now",
+      value: publisherSummary?.due_now ?? 0,
+      detail: "Ready for worker",
+      icon: Timer,
+      color: "#FF8A5C",
+    },
+    {
+      label: "Published",
+      value: publisherSummary?.published ?? 0,
+      detail: `${publisherSummary?.success_rate ?? 0}% success rate`,
+      icon: CheckCircle2,
+      color: "#4ADE80",
+    },
+    {
+      label: "Failed",
+      value: publisherSummary?.failed ?? 0,
+      detail: `${publisherSummary?.retry_ready ?? 0} retry ready`,
+      icon: AlertTriangle,
+      color: "#FF5A5A",
+    },
+  ];
+
+  const publisherPlatformStats = publisherOps?.platforms ?? [];
+  const publisherRecentEvents = publisherOps?.recent_events ?? [];
+  const publisherFailedEvents = publisherOps?.failed_events ?? [];
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -534,7 +624,10 @@ export default function AIJobs() {
 
         <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={() => loadJobs(filter, true)}
+            onClick={() => {
+              loadJobs(filter, true);
+              loadPublisherOperations(true);
+            }}
             disabled={refreshing}
             className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm transition-colors disabled:opacity-60"
             style={{
@@ -640,32 +733,53 @@ export default function AIJobs() {
               >
                 <Send size={14} style={{ color: "#6B8AFF" }} />
                 <span className="text-xs font-mono" style={{ color: "#6B8AFF" }}>
-                  Publisher Readiness Preview
+                  Live Publisher Operations
                 </span>
               </div>
               <h2 className="text-xl font-medium" style={{ color: "#F0EDE6" }}>
                 Publisher Operations
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6" style={{ color: "#8A8A93" }}>
-                Frontend-only monitoring view for campaign publishing readiness.
-                Values below are operational preview cards, not live publishing metrics.
+                Monitor scheduled publishing health, platform outcomes, failed jobs,
+                and run the scheduled publisher worker manually when posts are due.
               </p>
             </div>
 
-            <div
-              className="rounded-xl px-4 py-3 text-xs leading-5"
-              style={{
-                background: "rgba(255, 138, 92, 0.08)",
-                border: "1px solid rgba(255, 138, 92, 0.18)",
-                color: "#FFB28A",
-              }}
-            >
-              Real publishing depends on platform credentials and deployment config.
+            <div className="flex flex-col gap-2 sm:items-end">
+              <button
+                onClick={handleProcessDuePublisherPosts}
+                disabled={publisherActionLoading}
+                className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm transition-colors disabled:opacity-60"
+                style={{ background: "#6B8AFF", color: "#FFFFFF" }}
+              >
+                {publisherActionLoading ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <Play size={15} />
+                )}
+                Process Due Posts
+              </button>
+              <p className="text-xs" style={{ color: "#55555C" }}>
+                Uses backend scheduled publisher worker.
+              </p>
             </div>
           </div>
 
+          {publisherMessage && (
+            <div
+              className="mx-5 mt-5 rounded-xl p-3 text-sm"
+              style={{
+                background: "rgba(107, 138, 255, 0.08)",
+                border: "1px solid rgba(107, 138, 255, 0.16)",
+                color: "#C7D2FE",
+              }}
+            >
+              {publisherMessage}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">
-            {publisherPipelineStats.map((item) => {
+            {publisherOperationCards.map((item) => {
               const Icon = item.icon;
 
               return (
@@ -683,7 +797,7 @@ export default function AIJobs() {
                         {item.label}
                       </p>
                       <p className="mt-2 text-lg font-medium" style={{ color: "#F0EDE6" }}>
-                        {item.value}
+                        {publisherOpsLoading ? "—" : item.value}
                       </p>
                       <p className="mt-1 text-xs" style={{ color: "#55555C" }}>
                         {item.detail}
@@ -711,10 +825,10 @@ export default function AIJobs() {
             <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="text-base font-medium" style={{ color: "#F0EDE6" }}>
-                  Platform Readiness
+                  Platform Health
                 </h3>
                 <p className="mt-1 text-xs" style={{ color: "#8A8A93" }}>
-                  Campaign adapters and credential requirements
+                  Live outcomes grouped by publishing platform
                 </p>
               </div>
               <span
@@ -725,85 +839,132 @@ export default function AIJobs() {
                   border: "1px solid rgba(255, 255, 255, 0.08)",
                 }}
               >
-                Readiness preview
+                {publisherOps?.checked_at ? `Synced ${formatDateTime(publisherOps.checked_at)}` : "Waiting"}
               </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {publisherPlatforms.map((platform) => {
-                const Icon = platform.icon;
-
-                return (
+            {publisherPlatformStats.length ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {publisherPlatformStats.map((platform) => (
                   <div
-                    key={platform.name}
+                    key={platform.platform}
                     className="rounded-2xl p-4"
                     style={{
                       background: "rgba(255, 255, 255, 0.03)",
                       border: "1px solid rgba(255, 255, 255, 0.06)",
                     }}
                   >
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="rounded-xl p-2.5"
-                          style={{
-                            background: `${platform.color}14`,
-                            color: platform.color,
-                            border: `1px solid ${platform.color}26`,
-                          }}
-                        >
-                          <Icon size={16} />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium" style={{ color: "#F0EDE6" }}>
-                            {platform.name}
-                          </h4>
-                          <p className="mt-1 text-xs leading-5" style={{ color: "#8A8A93" }}>
-                            {platform.purpose}
-                          </p>
-                        </div>
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div>
+                        <h4 className="text-sm font-medium capitalize" style={{ color: "#F0EDE6" }}>
+                          {platform.platform}
+                        </h4>
+                        <p className="mt-1 text-xs" style={{ color: "#8A8A93" }}>
+                          {platform.total} total · {platform.success_rate}% success
+                        </p>
                       </div>
+                      <Gauge size={18} style={{ color: platform.failed ? "#FF8A5C" : "#4ADE80" }} />
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className="rounded-full px-2.5 py-1 text-xs"
-                        style={{
-                          background: `${platform.color}12`,
-                          color: platform.color,
-                          border: `1px solid ${platform.color}24`,
-                        }}
-                      >
-                        {platform.readiness}
-                      </span>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <span style={{ color: "#8A8A93" }}>Scheduled: {platform.scheduled}</span>
+                      <span style={{ color: "#8A8A93" }}>Publishing: {platform.publishing}</span>
+                      <span style={{ color: "#4ADE80" }}>Published: {platform.published}</span>
+                      <span style={{ color: "#FF8A5C" }}>Failed: {platform.failed}</span>
                     </div>
-
-                    <p className="mt-3 text-xs leading-5" style={{ color: "#55555C" }}>
-                      Real publishing depends on platform credentials and deployment config.
-                    </p>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div
+                className="rounded-2xl p-6 text-sm"
+                style={{
+                  background: "rgba(255, 255, 255, 0.03)",
+                  border: "1px solid rgba(255, 255, 255, 0.06)",
+                  color: "#8A8A93",
+                }}
+              >
+                No publisher activity yet. Scheduled posts will appear here after clients create schedules.
+              </div>
+            )}
           </div>
 
           <div className="surface-card p-5">
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-base font-medium" style={{ color: "#F0EDE6" }}>
-                  Recent Publisher Events
+                  Failed Publishes
                 </h3>
                 <p className="mt-1 text-xs" style={{ color: "#8A8A93" }}>
-                  Operational preview/demo list
+                  Latest failures and retry candidates
                 </p>
               </div>
-              <Activity size={18} style={{ color: "#4ADE80" }} />
+              <AlertTriangle size={18} style={{ color: "#FF8A5C" }} />
             </div>
 
             <div className="space-y-3">
-              {publisherEvents.map((event, index) => (
+              {publisherFailedEvents.length ? (
+                publisherFailedEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="rounded-xl p-3"
+                    style={{
+                      background: "rgba(255, 138, 92, 0.06)",
+                      border: "1px solid rgba(255, 138, 92, 0.14)",
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm" style={{ color: "#F0EDE6" }}>
+                          {event.generated_post_title || "Untitled post"}
+                        </p>
+                        <p className="mt-1 text-xs" style={{ color: "#FFB28A" }}>
+                          {event.business_name || "Unknown company"} · {event.platform}
+                        </p>
+                        <p className="mt-1 text-xs" style={{ color: "#8A8A93" }}>
+                          {event.failure_reason || "No failure reason stored yet."}
+                        </p>
+                      </div>
+                      <span className="text-xs font-mono" style={{ color: "#FF8A5C" }}>
+                        {event.retry_count}/{event.max_retries}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
                 <div
-                  key={event}
+                  className="rounded-xl p-4 text-sm"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.03)",
+                    border: "1px solid rgba(255, 255, 255, 0.06)",
+                    color: "#8A8A93",
+                  }}
+                >
+                  No failed publisher jobs right now.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="surface-card p-5">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-medium" style={{ color: "#F0EDE6" }}>
+                Recent Publisher Events
+              </h3>
+              <p className="mt-1 text-xs" style={{ color: "#8A8A93" }}>
+                Live scheduled publishing events across tenants
+              </p>
+            </div>
+            <Activity size={18} style={{ color: "#4ADE80" }} />
+          </div>
+
+          <div className="space-y-3">
+            {publisherRecentEvents.length ? (
+              publisherRecentEvents.map((event, index) => (
+                <div
+                  key={event.id}
                   className="rounded-xl p-3"
                   style={{
                     background: "rgba(255, 255, 255, 0.03)",
@@ -820,18 +981,48 @@ export default function AIJobs() {
                     >
                       {index + 1}
                     </span>
-                    <div>
-                      <p className="text-sm" style={{ color: "#F0EDE6" }}>
-                        {event}
-                      </p>
-                      <p className="mt-1 text-xs" style={{ color: "#55555C" }}>
-                        Preview event - not live publisher telemetry.
-                      </p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-sm" style={{ color: "#F0EDE6" }}>
+                            {event.generated_post_title || "Untitled post"}
+                          </p>
+                          <p className="mt-1 text-xs" style={{ color: "#8A8A93" }}>
+                            {event.business_name || "Unknown company"} · {event.platform} · {event.status}
+                          </p>
+                        </div>
+                        <span className="text-xs font-mono" style={{ color: "#55555C" }}>
+                          {formatDateTime(event.scheduled_at)}
+                        </span>
+                      </div>
+
+                      {event.external_post_url && (
+                        <a
+                          href={event.external_post_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex text-xs"
+                          style={{ color: "#6B8AFF" }}
+                        >
+                          View external post
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              ))
+            ) : (
+              <div
+                className="rounded-xl p-4 text-sm"
+                style={{
+                  background: "rgba(255, 255, 255, 0.03)",
+                  border: "1px solid rgba(255, 255, 255, 0.06)",
+                  color: "#8A8A93",
+                }}
+              >
+                No recent publisher events yet.
+              </div>
+            )}
           </div>
         </div>
       </section>

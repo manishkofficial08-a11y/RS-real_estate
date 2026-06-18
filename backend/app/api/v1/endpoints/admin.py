@@ -1,14 +1,18 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 from app.database.session import get_db
 from app.models.user import User
 from app.models.tenant import Tenant
 from app.models.property import Property
 from app.models.lead import Lead
+from app.models.generated_post import GeneratedPost
+from app.models.scheduled_post import ScheduledPost, ScheduledPostStatus
 from app.core.dependencies import get_current_admin
+from app.services.scheduled_publisher import process_due_scheduled_posts
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -54,6 +58,66 @@ class DashboardStats(BaseModel):
     total_users: int
     total_properties: int
     total_leads: int
+
+
+class AdminPublisherOperationsSummary(BaseModel):
+    total: int
+    scheduled: int
+    publishing: int
+    published: int
+    failed: int
+    cancelled: int
+    due_now: int
+    retry_ready: int
+    success_rate: int
+
+
+class AdminPublisherPlatformMetric(BaseModel):
+    platform: str
+    total: int
+    scheduled: int
+    publishing: int
+    published: int
+    failed: int
+    success_rate: int
+
+
+class AdminPublisherEvent(BaseModel):
+    id: str
+    tenant_id: str
+    business_name: Optional[str]
+    generated_post_title: Optional[str]
+    platform: str
+    status: str
+    scheduled_at: Optional[str]
+    published_at: Optional[str]
+    failed_at: Optional[str]
+    failure_reason: Optional[str]
+    external_post_url: Optional[str]
+    retry_count: int
+    max_retries: int
+
+
+class AdminPublisherOperationsResponse(BaseModel):
+    checked_at: str
+    summary: AdminPublisherOperationsSummary
+    platforms: List[AdminPublisherPlatformMetric]
+    recent_events: List[AdminPublisherEvent]
+    failed_events: List[AdminPublisherEvent]
+
+
+class AdminPublisherProcessDueRequest(BaseModel):
+    tenant_id: Optional[str] = None
+    limit: int = 25
+    allow_mock_fallback: bool = True
+
+
+class AdminPublisherProcessDueResponse(BaseModel):
+    checked_at: str
+    tenant_count: int
+    due_count: int
+    processed_count: int
+    results: List[Dict[str, Any]]
 
 
 @router.get("/dashboard", response_model=DashboardStats)
@@ -161,3 +225,206 @@ async def get_all_leads(
         )
 
     return leads
+
+
+def _admin_dt_to_iso(value):
+    if not value:
+        return None
+
+    return value.isoformat()
+
+
+def _admin_as_utc(value):
+    if not value:
+        return None
+
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+
+    return value.astimezone(timezone.utc)
+
+
+def _admin_publisher_event(schedule, business_name, generated_post_title):
+    return AdminPublisherEvent(
+        id=schedule.id,
+        tenant_id=schedule.tenant_id,
+        business_name=business_name,
+        generated_post_title=generated_post_title,
+        platform=schedule.platform or "unknown",
+        status=schedule.status or "unknown",
+        scheduled_at=_admin_dt_to_iso(schedule.scheduled_at),
+        published_at=_admin_dt_to_iso(schedule.published_at),
+        failed_at=_admin_dt_to_iso(schedule.failed_at),
+        failure_reason=schedule.failure_reason,
+        external_post_url=schedule.external_post_url,
+        retry_count=schedule.retry_count or 0,
+        max_retries=schedule.max_retries or 0,
+    )
+
+
+@router.get("/publisher-operations", response_model=AdminPublisherOperationsResponse)
+async def get_publisher_operations(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    now = datetime.now(timezone.utc)
+
+    result = await db.execute(
+        select(ScheduledPost, Tenant.name, GeneratedPost.title)
+        .join(Tenant, ScheduledPost.tenant_id == Tenant.id)
+        .outerjoin(GeneratedPost, ScheduledPost.generated_post_id == GeneratedPost.id)
+        .where(ScheduledPost.is_active == True)
+        .order_by(ScheduledPost.scheduled_at.desc())
+        .limit(500)
+    )
+
+    rows = result.all()
+
+    status_counts = {
+        "scheduled": 0,
+        "publishing": 0,
+        "published": 0,
+        "failed": 0,
+        "cancelled": 0,
+    }
+    due_now = 0
+    retry_ready = 0
+    platform_buckets: Dict[str, Dict[str, int]] = {}
+    recent_events: List[AdminPublisherEvent] = []
+    failed_events: List[AdminPublisherEvent] = []
+
+    for schedule, business_name, generated_post_title in rows:
+        status_value = schedule.status or "unknown"
+        platform_value = schedule.platform or "unknown"
+
+        if status_value in status_counts:
+            status_counts[status_value] += 1
+
+        scheduled_at = _admin_as_utc(schedule.scheduled_at)
+
+        if (
+            status_value == ScheduledPostStatus.scheduled.value
+            and scheduled_at
+            and scheduled_at <= now
+        ):
+            due_now += 1
+
+        if (
+            status_value == ScheduledPostStatus.failed.value
+            and (schedule.retry_count or 0) < (schedule.max_retries or 0)
+        ):
+            retry_ready += 1
+
+        if platform_value not in platform_buckets:
+            platform_buckets[platform_value] = {
+                "total": 0,
+                "scheduled": 0,
+                "publishing": 0,
+                "published": 0,
+                "failed": 0,
+            }
+
+        platform_buckets[platform_value]["total"] += 1
+
+        if status_value in platform_buckets[platform_value]:
+            platform_buckets[platform_value][status_value] += 1
+
+        event = _admin_publisher_event(schedule, business_name, generated_post_title)
+
+        if len(recent_events) < 12:
+            recent_events.append(event)
+
+        if status_value == ScheduledPostStatus.failed.value and len(failed_events) < 8:
+            failed_events.append(event)
+
+    total = len(rows)
+    completed = status_counts["published"]
+    failed = status_counts["failed"]
+    success_rate = round((completed / max(1, completed + failed)) * 100)
+
+    platform_metrics = []
+
+    for platform, values in sorted(platform_buckets.items()):
+        platform_completed = values.get("published", 0)
+        platform_failed = values.get("failed", 0)
+        platform_success_rate = round(
+            (platform_completed / max(1, platform_completed + platform_failed)) * 100
+        )
+
+        platform_metrics.append(
+            AdminPublisherPlatformMetric(
+                platform=platform,
+                total=values["total"],
+                scheduled=values.get("scheduled", 0),
+                publishing=values.get("publishing", 0),
+                published=values.get("published", 0),
+                failed=values.get("failed", 0),
+                success_rate=platform_success_rate,
+            )
+        )
+
+    return AdminPublisherOperationsResponse(
+        checked_at=now.isoformat(),
+        summary=AdminPublisherOperationsSummary(
+            total=total,
+            scheduled=status_counts["scheduled"],
+            publishing=status_counts["publishing"],
+            published=status_counts["published"],
+            failed=status_counts["failed"],
+            cancelled=status_counts["cancelled"],
+            due_now=due_now,
+            retry_ready=retry_ready,
+            success_rate=success_rate,
+        ),
+        platforms=platform_metrics,
+        recent_events=recent_events,
+        failed_events=failed_events,
+    )
+
+
+@router.post("/publisher-operations/process-due", response_model=AdminPublisherProcessDueResponse)
+async def process_due_publisher_posts_admin(
+    data: AdminPublisherProcessDueRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    now = datetime.now(timezone.utc)
+
+    if data.tenant_id:
+        tenant_ids = [data.tenant_id]
+    else:
+        result = await db.execute(
+            select(ScheduledPost.tenant_id)
+            .where(
+                ScheduledPost.is_active == True,
+                ScheduledPost.status == ScheduledPostStatus.scheduled.value,
+                ScheduledPost.scheduled_at <= now,
+            )
+            .distinct()
+        )
+        tenant_ids = [tenant_id for tenant_id in result.scalars().all() if tenant_id]
+
+    due_count = 0
+    processed_count = 0
+    all_results: List[Dict[str, Any]] = []
+
+    for tenant_id in tenant_ids:
+        result = await process_due_scheduled_posts(
+            db,
+            tenant_id=tenant_id,
+            limit=data.limit,
+            allow_mock_fallback=data.allow_mock_fallback,
+        )
+
+        due_count += int(result.get("due_count") or 0)
+        processed_count += int(result.get("processed_count") or 0)
+        all_results.extend(result.get("results") or [])
+
+    return AdminPublisherProcessDueResponse(
+        checked_at=now.isoformat(),
+        tenant_count=len(tenant_ids),
+        due_count=due_count,
+        processed_count=processed_count,
+        results=all_results,
+    )
+
