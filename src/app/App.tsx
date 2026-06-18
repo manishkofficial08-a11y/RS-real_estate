@@ -19,7 +19,7 @@ import { AutomationCenter } from "./components/AutomationCenter";
 import { Background3D } from "./components/Background3D";
 import { CommandPalette } from "./components/CommandPalette";
 import { GenericScreen } from "./components/GenericScreen";
-import { Bell, Search, Sparkles } from "lucide-react";
+import { Bell, CheckCircle2, Inbox, RefreshCw, Search, Sparkles } from "lucide-react";
 import { ClientLogin } from "./components/ClientLogin";
 import { ResetPassword } from "./components/ResetPassword";
 import {
@@ -151,6 +151,30 @@ export default function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+  async function loadClientNotifications() {
+    if (!clientLoggedIn) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
+    try {
+      setNotificationsLoading(true);
+
+      const [items, count] = await Promise.all([
+        getClientNotifications(),
+        getClientNotificationUnreadCount(),
+      ]);
+
+      setNotifications(items);
+      setUnreadCount(count.unread_count);
+    } catch (error) {
+      console.error("Failed to load client notifications", error);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (!clientLoggedIn) {
       setNotifications([]);
@@ -158,36 +182,11 @@ export default function App() {
       return;
     }
 
-    let alive = true;
+    loadClientNotifications();
 
-    async function loadNotifications() {
-      try {
-        setNotificationsLoading(true);
-
-        const [items, count] = await Promise.all([
-          getClientNotifications(),
-          getClientNotificationUnreadCount(),
-        ]);
-
-        if (!alive) return;
-
-        setNotifications(items);
-        setUnreadCount(count.unread_count);
-      } catch (error) {
-        console.error("Failed to load client notifications", error);
-      } finally {
-        if (alive) {
-          setNotificationsLoading(false);
-        }
-      }
-    }
-
-    loadNotifications();
-
-    const intervalId = window.setInterval(loadNotifications, 30000);
+    const intervalId = window.setInterval(loadClientNotifications, 30000);
 
     return () => {
-      alive = false;
       window.clearInterval(intervalId);
     };
   }, [clientLoggedIn]);
@@ -225,6 +224,8 @@ export default function App() {
 
         setUnreadCount((prev) => Math.max(0, prev - 1));
       }
+
+      await loadClientNotifications();
 
       if (notification.link === "/support") {
         setActiveScreen("support");
@@ -408,21 +409,41 @@ export default function App() {
             {/* Notifications */}
             <div className="relative">
               <button
+                type="button"
                 onClick={() => setNotifOpen((o) => !o)}
-                className="relative p-2 rounded-xl transition-all hover:bg-primary/5"
-                style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                className="relative h-9 w-9 rounded-xl border transition-all flex items-center justify-center"
+                style={{
+                  color: unreadCount > 0 ? "#ffffff" : darkMode ? "#cbd5e1" : "#475569",
+                  background: unreadCount > 0
+                    ? "linear-gradient(135deg, #ef4444 0%, #f97316 100%)"
+                    : darkMode
+                      ? "rgba(99,102,241,0.08)"
+                      : "rgba(15,23,42,0.04)",
+                  borderColor: unreadCount > 0
+                    ? "rgba(248,113,113,0.45)"
+                    : darkMode
+                      ? "rgba(99,102,241,0.14)"
+                      : "rgba(15,23,42,0.08)",
+                  boxShadow: unreadCount > 0
+                    ? "0 0 18px rgba(239,68,68,0.45)"
+                    : "none",
+                }}
+                aria-label={`Open notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+                aria-expanded={notifOpen}
               >
                 <Bell size={16} />
                 {unreadCount > 0 && (
                   <span
-                    className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full text-[10px] font-semibold flex items-center justify-center"
+                    className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full text-[10px] font-bold flex items-center justify-center"
                     style={{
                       background: "#ef4444",
                       color: "#ffffff",
-                      boxShadow: "0 0 8px rgba(239,68,68,0.65)",
+                      border: darkMode
+                        ? "2px solid #05051a"
+                        : "2px solid #ffffff",
                     }}
                   >
-                    {unreadCount > 9 ? "9+" : unreadCount}
+                    {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
               </button>
@@ -431,119 +452,248 @@ export default function App() {
                 {notifOpen && (
                   <>
                     <div
-                      className="fixed inset-0 z-20"
+                      className="fixed inset-0 z-[80]"
                       onClick={() => setNotifOpen(false)}
                     />
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                      initial={{ opacity: 0, scale: 0.96, y: -8 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-2 w-80 rounded-2xl border z-30 overflow-hidden"
+                      exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                      transition={{ duration: 0.16 }}
+                      className="fixed right-4 top-[70px] w-[min(420px,calc(100vw-32px))] rounded-3xl border z-[90] overflow-hidden"
                       style={{
                         background: darkMode
-                          ? "rgba(10,10,30,0.97)"
-                          : "#ffffff",
+                          ? "linear-gradient(180deg, rgba(10,10,30,0.98) 0%, rgba(5,5,18,0.98) 100%)"
+                          : "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
                         borderColor: darkMode
-                          ? "rgba(99,102,241,0.2)"
+                          ? "rgba(99,102,241,0.26)"
                           : "rgba(15,23,42,0.08)",
                         boxShadow: darkMode
-                          ? "0 16px 48px rgba(0,0,0,0.5)"
-                          : "0 16px 48px rgba(0,0,0,0.12)",
-                        backdropFilter: "blur(24px)",
+                          ? "0 28px 90px rgba(0,0,0,0.68), 0 0 0 1px rgba(255,255,255,0.03)"
+                          : "0 28px 90px rgba(15,23,42,0.16)",
+                        backdropFilter: "blur(28px)",
                       }}
                     >
                       <div
-                        className="px-4 py-3 border-b"
+                        className="px-5 py-4 border-b"
                         style={{
                           borderColor: darkMode
-                            ? "rgba(99,102,241,0.1)"
+                            ? "rgba(99,102,241,0.12)"
                             : "rgba(15,23,42,0.06)",
                         }}
                       >
-                        <p
-                          className="text-sm font-semibold"
-                          style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
-                        >
-                          Notifications
-                        </p>
-                        <p
-                          className="text-xs"
-                          style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
-                        >
-                          {notificationsLoading
-                            ? "Loading..."
-                            : `${unreadCount} unread`}
-                        </p>
-                      </div>
-                      <div
-                        className="divide-y"
-                        style={{
-                          borderColor: darkMode
-                            ? "rgba(99,102,241,0.06)"
-                            : "rgba(15,23,42,0.04)",
-                        }}
-                      >
-                        {notifications.length === 0 ? (
-                          <div className="px-4 py-6 text-center">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
                             <p
-                              className="text-xs"
+                              className="text-sm font-bold"
+                              style={{ color: darkMode ? "#f8fafc" : "#0f172a" }}
+                            >
+                              Notifications
+                            </p>
+                            <p
+                              className="text-xs mt-0.5"
+                              style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+                            >
+                              {notificationsLoading
+                                ? "Refreshing latest updates..."
+                                : unreadCount > 0
+                                  ? `${unreadCount} unread update${unreadCount === 1 ? "" : "s"}`
+                                  : "All caught up"}
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={loadClientNotifications}
+                            disabled={notificationsLoading}
+                            className="h-8 w-8 rounded-xl border flex items-center justify-center transition-all disabled:opacity-60"
+                            style={{
+                              color: darkMode ? "#cbd5e1" : "#475569",
+                              background: darkMode
+                                ? "rgba(99,102,241,0.08)"
+                                : "rgba(15,23,42,0.04)",
+                              borderColor: darkMode
+                                ? "rgba(99,102,241,0.14)"
+                                : "rgba(15,23,42,0.08)",
+                            }}
+                            title="Refresh notifications"
+                            aria-label="Refresh notifications"
+                          >
+                            <RefreshCw
+                              size={14}
+                              className={notificationsLoading ? "animate-spin" : ""}
+                            />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="max-h-[420px] overflow-y-auto p-3">
+                        {notificationsLoading && notifications.length === 0 ? (
+                          <div className="px-4 py-10 text-center">
+                            <RefreshCw
+                              size={22}
+                              className="mx-auto mb-3 animate-spin"
+                              style={{ color: darkMode ? "#818cf8" : "#6366f1" }}
+                            />
+                            <p
+                              className="text-sm font-medium"
+                              style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                            >
+                              Loading notifications
+                            </p>
+                            <p
+                              className="text-xs mt-1"
+                              style={{ color: darkMode ? "#64748b" : "#94a3b8" }}
+                            >
+                              Checking latest support and account updates...
+                            </p>
+                          </div>
+                        ) : notifications.length === 0 ? (
+                          <div className="px-4 py-10 text-center">
+                            <div
+                              className="mx-auto mb-3 h-12 w-12 rounded-2xl flex items-center justify-center"
                               style={{
-                                color: darkMode ? "#64748b" : "#94a3b8",
+                                background: darkMode
+                                  ? "rgba(99,102,241,0.10)"
+                                  : "rgba(99,102,241,0.08)",
+                                color: darkMode ? "#a5b4fc" : "#6366f1",
                               }}
+                            >
+                              <Inbox size={22} />
+                            </div>
+                            <p
+                              className="text-sm font-semibold"
+                              style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
                             >
                               No notifications yet
                             </p>
+                            <p
+                              className="text-xs mt-1 max-w-[260px] mx-auto"
+                              style={{ color: darkMode ? "#64748b" : "#94a3b8" }}
+                            >
+                              Support replies, billing alerts, and important workspace updates will appear here.
+                            </p>
                           </div>
                         ) : (
-                          notifications.map((notification) => (
-                            <button
-                              key={notification.id}
-                              type="button"
-                              onClick={() =>
-                                handleNotificationClick(notification)
-                              }
-                              className="w-full flex gap-3 px-4 py-3 text-left transition-all hover:bg-primary/5 cursor-pointer"
-                            >
-                              <div
-                                className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                          <div className="space-y-2">
+                            {notifications.map((notification) => (
+                              <button
+                                key={notification.id}
+                                type="button"
+                                onClick={() =>
+                                  handleNotificationClick(notification)
+                                }
+                                className="w-full text-left rounded-2xl border p-3 transition-all hover:-translate-y-0.5"
                                 style={{
                                   background: notification.is_read
-                                    ? "#64748b"
-                                    : "#ef4444",
+                                    ? darkMode
+                                      ? "rgba(15,23,42,0.46)"
+                                      : "rgba(248,250,252,0.9)"
+                                    : darkMode
+                                      ? "linear-gradient(135deg, rgba(99,102,241,0.16), rgba(14,165,233,0.08))"
+                                      : "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(14,165,233,0.05))",
+                                  borderColor: notification.is_read
+                                    ? darkMode
+                                      ? "rgba(148,163,184,0.10)"
+                                      : "rgba(15,23,42,0.06)"
+                                    : darkMode
+                                      ? "rgba(129,140,248,0.28)"
+                                      : "rgba(99,102,241,0.16)",
                                   boxShadow: notification.is_read
                                     ? "none"
-                                    : "0 0 6px rgba(239,68,68,0.8)",
+                                    : "0 12px 34px rgba(99,102,241,0.12)",
                                 }}
-                              />
-                              <div className="min-w-0">
-                                <p
-                                  className="text-xs font-medium"
-                                  style={{
-                                    color: darkMode ? "#e2e8f0" : "#0f172a",
-                                  }}
-                                >
-                                  {notification.title}
-                                </p>
-                                <p
-                                  className="text-xs mt-1 line-clamp-2"
-                                  style={{
-                                    color: darkMode ? "#94a3b8" : "#475569",
-                                  }}
-                                >
-                                  {notification.message}
-                                </p>
-                                <p
-                                  className="text-[11px] mt-1"
-                                  style={{
-                                    color: darkMode ? "#4a5568" : "#94a3b8",
-                                  }}
-                                >
-                                  {notification.is_read ? "Read" : "Unread"}
-                                </p>
-                              </div>
-                            </button>
-                          ))
+                              >
+                                <div className="flex gap-3">
+                                  <div
+                                    className="mt-0.5 h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                                    style={{
+                                      background: notification.is_read
+                                        ? darkMode
+                                          ? "rgba(148,163,184,0.10)"
+                                          : "rgba(15,23,42,0.05)"
+                                        : "rgba(99,102,241,0.16)",
+                                      color: notification.is_read
+                                        ? darkMode
+                                          ? "#94a3b8"
+                                          : "#64748b"
+                                        : "#818cf8",
+                                    }}
+                                  >
+                                    {notification.is_read ? (
+                                      <CheckCircle2 size={16} />
+                                    ) : (
+                                      <Bell size={16} />
+                                    )}
+                                  </div>
+
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <p
+                                        className="text-sm font-semibold leading-snug break-words"
+                                        style={{
+                                          color: darkMode ? "#f8fafc" : "#0f172a",
+                                        }}
+                                      >
+                                        {notification.title || "Workspace update"}
+                                      </p>
+
+                                      {!notification.is_read && (
+                                        <span
+                                          className="mt-1 h-2 w-2 rounded-full flex-shrink-0"
+                                          style={{
+                                            background: "#ef4444",
+                                            boxShadow:
+                                              "0 0 8px rgba(239,68,68,0.75)",
+                                          }}
+                                        />
+                                      )}
+                                    </div>
+
+                                    <p
+                                      className="text-xs mt-1.5 leading-relaxed break-words"
+                                      style={{
+                                        color: darkMode ? "#cbd5e1" : "#475569",
+                                      }}
+                                    >
+                                      {notification.message || "Open this update for more details."}
+                                    </p>
+
+                                    <div className="flex items-center justify-between gap-2 mt-3">
+                                      <span
+                                        className="text-[11px] font-medium px-2 py-1 rounded-full"
+                                        style={{
+                                          color: notification.is_read
+                                            ? darkMode
+                                              ? "#94a3b8"
+                                              : "#64748b"
+                                            : "#ffffff",
+                                          background: notification.is_read
+                                            ? darkMode
+                                              ? "rgba(148,163,184,0.10)"
+                                              : "rgba(15,23,42,0.06)"
+                                            : "rgba(99,102,241,0.95)",
+                                        }}
+                                      >
+                                        {notification.is_read ? "Read" : "Unread"}
+                                      </span>
+
+                                      {notification.link && (
+                                        <span
+                                          className="text-[11px] font-semibold"
+                                          style={{
+                                            color: darkMode ? "#a5b4fc" : "#6366f1",
+                                          }}
+                                        >
+                                          Open
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
                         )}
                       </div>
                     </motion.div>
