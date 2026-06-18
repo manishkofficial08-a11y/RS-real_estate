@@ -39,6 +39,55 @@ function getInitials(name?: string | null) {
   );
 }
 
+
+const socialIntegrationCards = [
+  {
+    name: "Instagram Business",
+    description:
+      "Connect a professional Instagram account for reels, posts, and listing creatives.",
+    status: "Setup required",
+    requiredInfo: ["Instagram Business Account ID", "Facebook Page ID"],
+    buttonLabel: "Connect after backend setup",
+    color: "#e879f9",
+  },
+  {
+    name: "Facebook Page",
+    description:
+      "Prepare a business Page connection for automated property and campaign publishing.",
+    status: "Token needed",
+    requiredInfo: ["Facebook Page ID", "Page access token"],
+    buttonLabel: "Coming soon",
+    color: "#3b82f6",
+  },
+  {
+    name: "LinkedIn",
+    description:
+      "Enable company or profile publishing for professional real estate updates.",
+    status: "Ready after deployment",
+    requiredInfo: ["LinkedIn Author URN"],
+    buttonLabel: "Connect after backend setup",
+    color: "#06b6d4",
+  },
+  {
+    name: "YouTube",
+    description:
+      "Prepare video publishing for walkthroughs, shorts, and property showcase content.",
+    status: "Ready after deployment",
+    requiredInfo: ["YouTube Channel access"],
+    buttonLabel: "Coming soon",
+    color: "#ef4444",
+  },
+  {
+    name: "Twitter/X",
+    description:
+      "Prepare short-form publishing for listing announcements and campaign updates.",
+    status: "Token needed",
+    requiredInfo: ["Twitter/X API credentials"],
+    buttonLabel: "Connect after backend setup",
+    color: "#94a3b8",
+  },
+];
+
 export function Settings({ darkMode }: SettingsProps) {
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [loading, setLoading] = useState(false);
@@ -213,7 +262,7 @@ export function Settings({ darkMode }: SettingsProps) {
                 className="text-sm mt-1"
                 style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
               >
-                {formatLabel(profile?.business_type || "real_estate")} Ã‚Â·{" "}
+                {formatLabel(profile?.business_type || "real_estate")} ·{" "}
                 {formatLabel(profile?.plan || "free")} Plan
               </p>
             </div>
@@ -275,6 +324,167 @@ export function Settings({ darkMode }: SettingsProps) {
               </div>
             </motion.div>
           ))}
+        </div>
+
+
+        <div
+          className="rounded-2xl border p-5"
+          style={{
+            background: cardBase.background,
+            borderColor: cardBase.borderColor,
+          }}
+        >
+          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h3
+                className="text-sm font-semibold"
+                style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+              >
+                Social Integrations
+              </h3>
+              <p
+                className="mt-1 max-w-2xl text-sm"
+                style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+              >
+                Prepare platform connections for automated publishing. Live OAuth
+                connection will be enabled after publisher backend setup.
+              </p>
+            </div>
+
+            <span
+              className="w-fit rounded-full border px-3 py-1 text-xs font-medium"
+              style={{
+                background: darkMode
+                  ? "rgba(99,102,241,0.10)"
+                  : "rgba(99,102,241,0.08)",
+                borderColor: "rgba(99,102,241,0.22)",
+                color: darkMode ? "#a5b4fc" : "#6366f1",
+              }}
+            >
+              Readiness preview
+            </span>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {socialIntegrationCards.map((platform, index) => (
+              <motion.div
+                key={platform.name}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.08 + index * 0.04 }}
+                className="rounded-2xl border p-4"
+                style={{
+                  background: darkMode
+                    ? "rgba(99,102,241,0.04)"
+                    : "#f8fafc",
+                  borderColor: darkMode
+                    ? "rgba(99,102,241,0.10)"
+                    : "rgba(15,23,42,0.06)",
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h4
+                      className="text-sm font-semibold"
+                      style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                    >
+                      {platform.name}
+                    </h4>
+                    <p
+                      className="mt-2 text-xs leading-5"
+                      style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+                    >
+                      {platform.description}
+                    </p>
+                  </div>
+
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold"
+                    style={{
+                      background: `${platform.color}18`,
+                      color: platform.color,
+                    }}
+                  >
+                    {platform.name.charAt(0)}
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <span
+                    className="rounded-full border px-2 py-1 text-xs font-medium"
+                    style={{
+                      background: `${platform.color}12`,
+                      borderColor: `${platform.color}35`,
+                      color: platform.color,
+                    }}
+                  >
+                    {platform.status}
+                  </span>
+                  <span
+                    className="rounded-full border px-2 py-1 text-xs"
+                    style={{
+                      background: darkMode
+                        ? "rgba(255,255,255,0.04)"
+                        : "#ffffff",
+                      borderColor: cardBase.borderColor,
+                      color: darkMode ? "#64748b" : "#94a3b8",
+                    }}
+                  >
+                    No OAuth yet
+                  </span>
+                </div>
+
+                <div className="mt-4 rounded-xl border p-3" style={{
+                  background: darkMode ? "rgba(13,13,40,0.45)" : "#ffffff",
+                  borderColor: cardBase.borderColor,
+                }}>
+                  <p
+                    className="text-xs font-medium"
+                    style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+                  >
+                    Information needed
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    {platform.requiredInfo.map((item) => (
+                      <div
+                        key={item}
+                        className="flex items-center gap-2 text-xs"
+                        style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+                      >
+                        <span
+                          className="h-1.5 w-1.5 rounded-full"
+                          style={{ background: platform.color }}
+                        />
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled
+                  className="mt-4 w-full rounded-xl px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-70"
+                  style={{
+                    background: darkMode
+                      ? "rgba(255,255,255,0.06)"
+                      : "rgba(15,23,42,0.05)",
+                    color: darkMode ? "#94a3b8" : "#64748b",
+                  }}
+                >
+                  {platform.buttonLabel}
+                </button>
+              </motion.div>
+            ))}
+          </div>
+
+          <p
+            className="mt-4 text-xs"
+            style={{ color: darkMode ? "#64748b" : "#94a3b8" }}
+          >
+            This section is UI-only. It does not collect secrets, store tokens, or
+            start a real OAuth flow.
+          </p>
         </div>
 
         <div
