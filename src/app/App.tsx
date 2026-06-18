@@ -12,6 +12,7 @@ import { Support } from "./components/Support";
 import { MediaLibrary } from "./components/MediaLibrary";
 import { Reports } from "./components/Reports";
 import { AIManager } from "./components/AIManager";
+import { AutomationCenter } from "./components/AutomationCenter";
 import { Background3D } from "./components/Background3D";
 import { CommandPalette } from "./components/CommandPalette";
 import { GenericScreen } from "./components/GenericScreen";
@@ -45,6 +46,12 @@ const screenComponents: Record<
   reports: ({ darkMode }) => <Reports darkMode={darkMode} />,
   support: ({ darkMode }) => <Support darkMode={darkMode} />,
   "ai-manager": ({ darkMode }) => <AIManager darkMode={darkMode} />,
+  automation: ({ darkMode, onNavigate }) => (
+    <AutomationCenter darkMode={darkMode} onNavigate={onNavigate} />
+  ),
+  integrations: ({ darkMode, onNavigate }) => (
+    <AutomationCenter darkMode={darkMode} onNavigate={onNavigate} />
+  ),
   settings: ({ darkMode }) => <Settings darkMode={darkMode} />,
 };
 
@@ -59,7 +66,6 @@ const screenTitles: Record<string, string> = {
   reports: "Reports",
   team: "Team",
   automation: "Automation",
-  integrations: "Integrations",
   billing: "Billing",
   support: "Support",
   settings: "Settings",
@@ -177,7 +183,7 @@ export default function App() {
     );
   }
 
-  const ScreenComponent = (screenComponents[activeScreen] || screenComponents.media || screenComponents.dashboard);
+  const ScreenComponent = screenComponents[activeScreen];
   const handleNotificationClick = async (notification: ClientNotification) => {
     try {
       if (!notification.is_read) {
