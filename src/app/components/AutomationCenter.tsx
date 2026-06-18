@@ -5,7 +5,6 @@ import {
   CalendarClock,
   CheckCircle2,
   ClipboardCheck,
-  ExternalLink,
   FileBarChart,
   Image,
   Link2,
@@ -44,7 +43,7 @@ const automationAgents = [
     description: "Generate real estate captions from assets and property context.",
     icon: Wand2,
     color: "#8b5cf6",
-    action: "Open AI Studio",
+    action: "Open Campaign Studio",
     screen: "ai-studio",
   },
   {
@@ -53,7 +52,7 @@ const automationAgents = [
     description: "Suggest clean platform-specific hashtag sets.",
     icon: Sparkles,
     color: "#06b6d4",
-    action: "Open AI Studio",
+    action: "Open Campaign Studio",
     screen: "ai-studio",
   },
   {
@@ -67,12 +66,12 @@ const automationAgents = [
   },
   {
     name: "Publisher Agent",
-    status: "Token setup required",
-    description: "Publishes campaigns after social platform credentials are configured.",
+    status: "Demo mode",
+    description: "Publishes campaigns in safe demo mode until social accounts are connected.",
     icon: Megaphone,
     color: "#f59e0b",
-    action: "Open Scheduler",
-    screen: "scheduler",
+    action: "Review readiness",
+    screen: "automation",
   },
   {
     name: "Report Email Agent",
@@ -85,82 +84,107 @@ const automationAgents = [
   },
 ];
 
-const integrations = [
+const socialAccounts = [
+  {
+    name: "YouTube Shorts",
+    platform: "Google",
+    connectionStatus: "Not connected",
+    publishMode: "Demo mode",
+    liveRequirement: "Google OAuth + YouTube upload scope",
+    usedFor: "Short-form property video publishing.",
+    icon: Play,
+    color: "#ef4444",
+    checklist: [
+      "Connect Google account",
+      "Choose YouTube channel",
+      "Enable video upload scope",
+      "Switch campaign publishing from demo to live",
+    ],
+  },
   {
     name: "Instagram Reels",
     platform: "Meta",
-    status: "Needs token",
-    description: "Publish property reels and campaign videos.",
+    connectionStatus: "Not connected",
+    publishMode: "Demo mode",
+    liveRequirement: "Meta OAuth + Instagram business permissions",
+    usedFor: "Property reels, walkthrough videos, and short campaign hooks.",
     icon: Video,
     color: "#ec4899",
-    checklist: ["Connect Meta account", "Select Instagram page", "Enable reel publishing"],
+    checklist: [
+      "Connect Meta account",
+      "Select Instagram business profile",
+      "Enable reel publishing permission",
+      "Switch campaign publishing from demo to live",
+    ],
   },
   {
     name: "Facebook Video",
     platform: "Meta",
-    status: "Needs token",
-    description: "Publish local awareness videos to Facebook pages.",
+    connectionStatus: "Not connected",
+    publishMode: "Demo mode",
+    liveRequirement: "Meta OAuth + Facebook page permissions",
+    usedFor: "Local awareness videos and property campaign posts.",
     icon: Share2,
     color: "#3b82f6",
-    checklist: ["Connect Facebook page", "Verify page permissions", "Enable video publishing"],
-  },
-  {
-    name: "YouTube Shorts",
-    platform: "Google",
-    status: "OAuth required",
-    description: "Publish short-form property videos to YouTube.",
-    icon: Play,
-    color: "#ef4444",
-    checklist: ["Connect Google account", "Choose YouTube channel", "Enable upload scope"],
+    checklist: [
+      "Connect Facebook account",
+      "Select Facebook page",
+      "Verify page video publishing permission",
+      "Switch campaign publishing from demo to live",
+    ],
   },
   {
     name: "LinkedIn",
     platform: "LinkedIn",
-    status: "Campaign-ready soon",
-    description: "Publish professional updates and property campaign posts.",
+    connectionStatus: "Not connected",
+    publishMode: "Demo mode",
+    liveRequirement: "LinkedIn OAuth + profile/page posting permission",
+    usedFor: "Professional real estate updates, investor posts, and property launches.",
     icon: Link2,
     color: "#0ea5e9",
-    checklist: ["Connect LinkedIn", "Choose profile/page", "Enable campaign posting"],
-  },
-  {
-    name: "Website / Other",
-    platform: "Custom",
-    status: "Planned",
-    description: "Push generated content to websites or custom channels.",
-    icon: ExternalLink,
-    color: "#10b981",
-    checklist: ["Add webhook URL", "Map payload fields", "Enable custom publishing"],
+    checklist: [
+      "Connect LinkedIn account",
+      "Choose profile or company page",
+      "Enable posting permission",
+      "Switch campaign publishing from demo to live",
+    ],
   },
 ];
 
 const setupChecklist = [
   {
-    title: "Upload media",
-    description: "Add images/videos in Media Library.",
+    title: "Client login",
+    description: "Client enters the portal and gets access to the publishing workflow.",
+    screen: "dashboard",
+    icon: Bot,
+  },
+  {
+    title: "Upload or select video",
+    description: "Client uploads a property video or selects an existing Media Library asset.",
     screen: "media",
     icon: Image,
   },
   {
-    title: "Generate draft post",
-    description: "Use AI Studio to create platform-ready content.",
+    title: "Create campaign drafts",
+    description: "Campaign Studio creates platform-specific drafts from the same video.",
     screen: "ai-studio",
-    icon: Bot,
+    icon: Sparkles,
   },
   {
-    title: "Schedule content",
-    description: "Pick date, time, and platform from Scheduler.",
+    title: "Connect social accounts",
+    description: "Live publishing requires YouTube, Meta, and LinkedIn account connections.",
+    screen: "automation",
+    icon: Settings,
+  },
+  {
+    title: "Publish or schedule",
+    description: "Client selects platforms and publishes now or schedules posts.",
     screen: "scheduler",
     icon: CalendarClock,
   },
   {
-    title: "Configure tokens",
-    description: "Connect social accounts before real publishing.",
-    screen: "settings",
-    icon: Settings,
-  },
-  {
     title: "Review reports",
-    description: "Track results and email summaries from Reports.",
+    description: "Client checks reports and AI Manager recommendations after publishing.",
     screen: "reports",
     icon: FileBarChart,
   },
@@ -169,7 +193,7 @@ const setupChecklist = [
 function getStatusStyle(status: string) {
   const lower = status.toLowerCase();
 
-  if (lower.includes("ready") || lower.includes("live")) {
+  if (lower.includes("ready") || lower.includes("live") || lower.includes("connected")) {
     return {
       background: "rgba(16, 185, 129, 0.12)",
       border: "1px solid rgba(16, 185, 129, 0.22)",
@@ -177,7 +201,14 @@ function getStatusStyle(status: string) {
     };
   }
 
-  if (lower.includes("required") || lower.includes("token") || lower.includes("oauth")) {
+  if (
+    lower.includes("required") ||
+    lower.includes("token") ||
+    lower.includes("oauth") ||
+    lower.includes("pending") ||
+    lower.includes("not connected") ||
+    lower.includes("demo")
+  ) {
     return {
       background: "rgba(245, 158, 11, 0.12)",
       border: "1px solid rgba(245, 158, 11, 0.22)",
@@ -201,6 +232,10 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
   const mutedColor = darkMode ? "#94a3b8" : "#64748b";
   const faintColor = darkMode ? "#4a5568" : "#94a3b8";
   const textColor = darkMode ? "#e2e8f0" : "#0f172a";
+
+  const connectedCount = 0;
+  const totalSocialAccounts = socialAccounts.length;
+  const demoModeCount = socialAccounts.filter((account) => account.publishMode === "Demo mode").length;
 
   const navigate = (screen: string) => {
     if (onNavigate) {
@@ -232,20 +267,20 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
                 color: textColor,
               }}
             >
-              Automation & Integrations
+              Connected Social Accounts
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6" style={{ color: mutedColor }}>
-              One place for AI agents, publishing readiness, social integrations,
-              and the workflow from media upload to scheduled campaign publishing.
+              Manage the client journey from login to campaign creation, social account readiness,
+              safe demo publishing, and final live posting.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: "AI Agents", value: "6", color: "#6366f1" },
-              { label: "Ready", value: "4", color: "#10b981" },
-              { label: "Need Token", value: "3", color: "#f59e0b" },
-              { label: "Live Flow", value: "Media → AI → Schedule", color: "#06b6d4" },
+              { label: "Accounts", value: `${connectedCount}/${totalSocialAccounts}`, color: "#6366f1" },
+              { label: "Mode", value: "Demo-safe", color: "#f59e0b" },
+              { label: "Live Pending", value: `${demoModeCount}`, color: "#f59e0b" },
+              { label: "Flow", value: "Login → Publish", color: "#06b6d4" },
             ].map((item) => (
               <div
                 key={item.label}
@@ -267,9 +302,9 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
           className="rounded-2xl border p-5"
           style={{
             background: darkMode
-              ? "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(6,182,212,0.06))"
-              : "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(6,182,212,0.04))",
-            borderColor: "rgba(99,102,241,0.18)",
+              ? "linear-gradient(135deg, rgba(245,158,11,0.13), rgba(99,102,241,0.06))"
+              : "linear-gradient(135deg, rgba(245,158,11,0.10), rgba(99,102,241,0.04))",
+            borderColor: "rgba(245,158,11,0.24)",
           }}
         >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -277,19 +312,19 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
               <div
                 className="rounded-2xl p-3"
                 style={{
-                  background: "rgba(99,102,241,0.16)",
-                  color: "#818cf8",
+                  background: "rgba(245,158,11,0.16)",
+                  color: "#f59e0b",
                 }}
               >
                 <ClipboardCheck size={22} />
               </div>
               <div>
                 <h2 className="text-base font-semibold" style={{ color: textColor }}>
-                  Client automation flow
+                  Live publishing requires connected social accounts
                 </h2>
                 <p className="mt-1 text-sm leading-6" style={{ color: mutedColor }}>
-                  Upload property media, generate captions/hashtags, schedule the post,
-                  then publish once platform credentials are connected.
+                  Until YouTube, Meta, and LinkedIn accounts are connected, the client can still
+                  create drafts, schedule campaigns, and use safe demo/mock publishing results.
                 </p>
               </div>
             </div>
@@ -312,7 +347,7 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
                 }}
               >
                 <Sparkles size={13} />
-                Generate post
+                Open Campaign Studio
               </button>
             </div>
           </div>
@@ -322,10 +357,107 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold" style={{ color: textColor }}>
+                Social account readiness
+              </h2>
+              <p className="mt-1 text-xs" style={{ color: mutedColor }}>
+                These accounts must be connected before the client can publish live to social media.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
+            {socialAccounts.map((account) => {
+              const Icon = account.icon;
+
+              return (
+                <motion.div
+                  key={account.name}
+                  className="rounded-2xl border p-5"
+                  style={surfaceStyle}
+                  whileHover={{ y: -2 }}
+                  transition={{ duration: 0.16 }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div
+                      className="rounded-2xl p-3"
+                      style={{
+                        background: `${account.color}16`,
+                        color: account.color,
+                        border: `1px solid ${account.color}24`,
+                      }}
+                    >
+                      <Icon size={20} />
+                    </div>
+
+                    <span
+                      className="rounded-full px-2.5 py-1 text-[11px]"
+                      style={getStatusStyle(account.connectionStatus)}
+                    >
+                      {account.connectionStatus}
+                    </span>
+                  </div>
+
+                  <h3 className="mt-4 text-sm font-semibold" style={{ color: textColor }}>
+                    {account.name}
+                  </h3>
+                  <p className="text-xs" style={{ color: faintColor }}>
+                    {account.platform}
+                  </p>
+
+                  <p className="mt-3 min-h-12 text-xs leading-5" style={{ color: mutedColor }}>
+                    {account.usedFor}
+                  </p>
+
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span style={{ color: faintColor }}>Publishing mode</span>
+                      <span className="rounded-full px-2 py-1" style={getStatusStyle(account.publishMode)}>
+                        {account.publishMode}
+                      </span>
+                    </div>
+                    <div className="text-xs leading-5" style={{ color: mutedColor }}>
+                      <span style={{ color: faintColor }}>Live requirement: </span>
+                      {account.liveRequirement}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-2">
+                    {account.checklist.map((item) => (
+                      <div key={item} className="flex items-center gap-2 text-xs" style={{ color: mutedColor }}>
+                        <AlertCircle size={12} style={{ color: account.color }} />
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium opacity-70 cursor-not-allowed"
+                    style={{
+                      borderColor: `${account.color}33`,
+                      color: account.color,
+                      background: `${account.color}0F`,
+                    }}
+                    title="OAuth connection will be added in the backend integration phase."
+                  >
+                    Connect account
+                    <RefreshCcw size={12} />
+                  </button>
+                </motion.div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold" style={{ color: textColor }}>
                 Automation agents
               </h2>
               <p className="mt-1 text-xs" style={{ color: mutedColor }}>
-                Client-facing AI automation modules currently available in the product.
+                Client-facing automation modules currently available in the product.
               </p>
             </div>
           </div>
@@ -380,97 +512,19 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
           </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.45fr_0.85fr]">
+        <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_0.75fr]">
           <div>
             <div className="mb-4">
               <h2 className="text-base font-semibold" style={{ color: textColor }}>
-                Social integrations
+                Client handover flow
               </h2>
               <p className="mt-1 text-xs" style={{ color: mutedColor }}>
-                Real publishing is available after account tokens/OAuth are configured.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {integrations.map((integration) => {
-                const Icon = integration.icon;
-
-                return (
-                  <div
-                    key={integration.name}
-                    className="rounded-2xl border p-5"
-                    style={surfaceStyle}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="rounded-2xl p-3"
-                          style={{
-                            background: `${integration.color}16`,
-                            color: integration.color,
-                            border: `1px solid ${integration.color}24`,
-                          }}
-                        >
-                          <Icon size={19} />
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-semibold" style={{ color: textColor }}>
-                            {integration.name}
-                          </h3>
-                          <p className="text-xs" style={{ color: faintColor }}>
-                            {integration.platform}
-                          </p>
-                        </div>
-                      </div>
-
-                      <span className="rounded-full px-2.5 py-1 text-[11px]" style={getStatusStyle(integration.status)}>
-                        {integration.status}
-                      </span>
-                    </div>
-
-                    <p className="mt-4 text-xs leading-5" style={{ color: mutedColor }}>
-                      {integration.description}
-                    </p>
-
-                    <div className="mt-4 space-y-2">
-                      {integration.checklist.map((item) => (
-                        <div key={item} className="flex items-center gap-2 text-xs" style={{ color: mutedColor }}>
-                          <AlertCircle size={12} style={{ color: integration.color }} />
-                          {item}
-                        </div>
-                      ))}
-                    </div>
-
-                    <button
-                      type="button"
-                      className="mt-4 inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium"
-                      style={{
-                        borderColor: `${integration.color}33`,
-                        color: integration.color,
-                        background: `${integration.color}0F`,
-                      }}
-                    >
-                      Test connection
-                      <RefreshCcw size={12} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <div className="mb-4">
-              <h2 className="text-base font-semibold" style={{ color: textColor }}>
-                Setup checklist
-              </h2>
-              <p className="mt-1 text-xs" style={{ color: mutedColor }}>
-                Follow this flow before handing over publishing access.
+                This is the exact workflow clients will follow once account connection is live.
               </p>
             </div>
 
             <div className="rounded-2xl border p-5" style={surfaceStyle}>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {setupChecklist.map((step, index) => {
                   const Icon = step.icon;
 
@@ -513,6 +567,42 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
                 })}
               </div>
             </div>
+          </div>
+
+          <div>
+            <div className="mb-4">
+              <h2 className="text-base font-semibold" style={{ color: textColor }}>
+                Publish readiness
+              </h2>
+              <p className="mt-1 text-xs" style={{ color: mutedColor }}>
+                Current handover status for client publishing.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border p-5" style={surfaceStyle}>
+              <div className="space-y-4">
+                {[
+                  { label: "Client can login", ready: true },
+                  { label: "Client can upload/select video", ready: true },
+                  { label: "Client can create campaign drafts", ready: true },
+                  { label: "Client can schedule drafts", ready: true },
+                  { label: "Social OAuth connected", ready: false },
+                  { label: "Live platform tokens stored", ready: false },
+                  { label: "True live publishing enabled", ready: false },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-3">
+                    {item.ready ? (
+                      <CheckCircle2 size={15} style={{ color: "#10b981" }} />
+                    ) : (
+                      <AlertCircle size={15} style={{ color: "#f59e0b" }} />
+                    )}
+                    <span className="text-xs" style={{ color: mutedColor }}>
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             <div
               className="mt-4 rounded-2xl border p-4"
@@ -524,8 +614,8 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
               <div className="flex items-start gap-3">
                 <AlertCircle size={17} style={{ color: "#f59e0b" }} />
                 <p className="text-xs leading-5" style={{ color: darkMode ? "#fbbf24" : "#92400e" }}>
-                  Social publishing needs real platform credentials. Until tokens are configured,
-                  the system can generate drafts, schedules, reports, and mock-safe publish results.
+                  The full client publishing journey is ready in demo-safe mode. True live publishing
+                  will be enabled after OAuth connection and secure token storage are added.
                 </p>
               </div>
             </div>
