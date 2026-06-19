@@ -48,6 +48,41 @@ def _required_env(name: str) -> str:
     return value
 
 
+def _credential_value(
+    credentials: Optional[Dict[str, Any]],
+    key: str,
+    env_name: str = "",
+    default: str = "",
+) -> str:
+    if credentials:
+        value = credentials.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+        metadata = credentials.get("metadata_json")
+        if isinstance(metadata, dict):
+            metadata_value = metadata.get(key)
+            if isinstance(metadata_value, str) and metadata_value.strip():
+                return metadata_value.strip()
+
+    if env_name:
+        return _env(env_name, default)
+
+    return default
+
+
+def _required_credential_or_env(
+    credentials: Optional[Dict[str, Any]],
+    key: str,
+    env_name: str,
+    label: str,
+) -> str:
+    value = _credential_value(credentials, key, env_name)
+    if not value:
+        raise PublisherConfigError(f"{label} is not configured")
+    return value
+
+
 def _publisher_mode() -> str:
     mode = _env("PUBLISHER_MODE", "mock").lower()
     if mode not in {"mock", "real", "hybrid"}:
@@ -223,9 +258,21 @@ async def _get_json(url: str, params: Dict[str, Any]) -> Dict[str, Any]:
 async def _publish_facebook(
     post: GeneratedPost,
     media_asset: Optional["ContentAsset"] = None,
+    credentials: Optional[Dict[str, Any]] = None,
 ) -> PublisherResult:
-    page_id = _required_env("FACEBOOK_PAGE_ID")
-    token = _required_env("FACEBOOK_PAGE_ACCESS_TOKEN")
+    page_id = (
+        _credential_value(credentials, "external_account_id")
+        or _credential_value(credentials, "page_id", "FACEBOOK_PAGE_ID")
+    )
+    if not page_id:
+        raise PublisherConfigError("Facebook page id is not configured")
+
+    token = _required_credential_or_env(
+        credentials,
+        "access_token",
+        "FACEBOOK_PAGE_ACCESS_TOKEN",
+        "Facebook page access token",
+    )
     graph_version = _env("META_GRAPH_VERSION", "v20.0")
 
     caption = _build_caption(post)
@@ -285,9 +332,25 @@ async def _publish_facebook(
 async def _publish_instagram(
     post: GeneratedPost,
     media_asset: Optional["ContentAsset"] = None,
+    credentials: Optional[Dict[str, Any]] = None,
 ) -> PublisherResult:
-    ig_account_id = _required_env("INSTAGRAM_BUSINESS_ACCOUNT_ID")
-    token = _required_env("INSTAGRAM_ACCESS_TOKEN")
+    ig_account_id = (
+        _credential_value(credentials, "external_account_id")
+        or _credential_value(
+            credentials,
+            "instagram_business_account_id",
+            "INSTAGRAM_BUSINESS_ACCOUNT_ID",
+        )
+    )
+    if not ig_account_id:
+        raise PublisherConfigError("Instagram business account id is not configured")
+
+    token = _required_credential_or_env(
+        credentials,
+        "access_token",
+        "INSTAGRAM_ACCESS_TOKEN",
+        "Instagram access token",
+    )
     graph_version = _env("META_GRAPH_VERSION", "v20.0")
 
     if not _extract_media_reference(post, media_asset):
@@ -370,9 +433,20 @@ async def _publish_instagram(
 async def _publish_linkedin(
     post: GeneratedPost,
     media_asset: Optional["ContentAsset"] = None,
+    credentials: Optional[Dict[str, Any]] = None,
 ) -> PublisherResult:
-    token = _required_env("LINKEDIN_ACCESS_TOKEN")
-    author_urn = _required_env("LINKEDIN_AUTHOR_URN")
+    token = _required_credential_or_env(
+        credentials,
+        "access_token",
+        "LINKEDIN_ACCESS_TOKEN",
+        "LinkedIn access token",
+    )
+    author_urn = (
+        _credential_value(credentials, "external_account_id")
+        or _credential_value(credentials, "author_urn", "LINKEDIN_AUTHOR_URN")
+    )
+    if not author_urn:
+        raise PublisherConfigError("LinkedIn author URN is not configured")
 
     payload = {
         "author": author_urn,
@@ -483,28 +557,46 @@ async def _read_video_source(
     )
 
 
-async def _youtube_access_token() -> str:
-    payload = {
-        "client_id": _required_env("YOUTUBE_CLIENT_ID"),
-        "client_secret": _required_env("YOUTUBE_CLIENT_SECRET"),
-        "refresh_token": _required_env("YOUTUBE_REFRESH_TOKEN"),
-        "grant_type": "refresh_token",
-    }
-    token_data = await _post_form("https://oauth2.googleapis.com/token", payload)
-    access_token = token_data.get("access_token")
+async def _youtube_access_token(
+    credentials: Optional[Dict[str, Any]] = None,
+) -> str:
+    refresh_token = _credential_value(
+        credentials,
+        "refresh_token",
+        "YOUTUBE_REFRESH_TOKEN",
+    )
 
-    if not isinstance(access_token, str) or not access_token:
-        raise PublisherError("YouTube OAuth refresh did not return an access token")
+    if refresh_token:
+        payload = {
+            "client_id": _required_env("YOUTUBE_CLIENT_ID"),
+            "client_secret": _required_env("YOUTUBE_CLIENT_SECRET"),
+            "refresh_token": refresh_token,
+            "grant_type": "refresh_token",
+        }
+        token_data = await _post_form("https://oauth2.googleapis.com/token", payload)
+        access_token = token_data.get("access_token")
 
-    return access_token
+        if not isinstance(access_token, str) or not access_token:
+            raise PublisherError("YouTube OAuth refresh did not return an access token")
+
+        return access_token
+
+    access_token = _credential_value(credentials, "access_token")
+    if access_token:
+        return access_token
+
+    raise PublisherConfigError(
+        "YouTube access token or refresh token is not configured"
+    )
 
 
 async def _publish_youtube(
     post: GeneratedPost,
     media_asset: Optional["ContentAsset"] = None,
+    credentials: Optional[Dict[str, Any]] = None,
 ) -> PublisherResult:
     video_bytes, mime_type = await _read_video_source(post, media_asset)
-    access_token = await _youtube_access_token()
+    access_token = await _youtube_access_token(credentials)
     privacy_status = _env("YOUTUBE_PRIVACY_STATUS", "private").lower()
 
     if privacy_status not in {"private", "public", "unlisted"}:
@@ -579,20 +671,21 @@ async def _real_publish(
     post: GeneratedPost,
     platform: Optional[str] = None,
     media_asset: Optional["ContentAsset"] = None,
+    credentials: Optional[Dict[str, Any]] = None,
 ) -> PublisherResult:
     platform = _normalize_platform(platform or post.platform)
 
     if platform == "youtube":
-        return await _publish_youtube(post, media_asset)
+        return await _publish_youtube(post, media_asset, credentials)
 
     if platform == "facebook":
-        return await _publish_facebook(post, media_asset)
+        return await _publish_facebook(post, media_asset, credentials)
 
     if platform == "instagram":
-        return await _publish_instagram(post, media_asset)
+        return await _publish_instagram(post, media_asset, credentials)
 
     if platform == "linkedin":
-        return await _publish_linkedin(post, media_asset)
+        return await _publish_linkedin(post, media_asset, credentials)
 
     raise PublisherConfigError(
         f"Real publisher for platform '{platform}' is not configured yet"
@@ -604,6 +697,7 @@ async def publish_generated_post_to_platform(
     platform: Optional[str] = None,
     media_asset: Optional["ContentAsset"] = None,
     allow_mock_fallback: bool = True,
+    credentials: Optional[Dict[str, Any]] = None,
 ) -> PublisherResult:
     mode = _publisher_mode()
     normalized_platform = _normalize_platform(platform or post.platform)
@@ -612,7 +706,12 @@ async def publish_generated_post_to_platform(
         return _mock_publish(post, normalized_platform)
 
     try:
-        return await _real_publish(post, normalized_platform, media_asset)
+        return await _real_publish(
+            post,
+            normalized_platform,
+            media_asset,
+            credentials,
+        )
     except Exception as exc:
         if mode == "hybrid" and allow_mock_fallback:
             return _mock_publish(post, normalized_platform, warning=str(exc))

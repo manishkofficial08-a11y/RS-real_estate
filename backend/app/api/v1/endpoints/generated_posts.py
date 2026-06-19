@@ -18,6 +18,9 @@ from app.models.generated_post import (
 )
 from app.models.property import Property
 from app.models.user import User
+from app.services.social_account_credentials import (
+    get_connected_social_account_credentials,
+)
 from app.services.social_publisher import (
     PublisherError,
     get_publisher_mode,
@@ -447,12 +450,20 @@ async def publish_generated_post(
         post.platform = data.platform.value
 
     media_asset = await _get_linked_media_asset(db, tenant_id, post)
+    selected_platform = data.platform.value if data.platform else post.platform
+    social_credentials = await get_connected_social_account_credentials(
+        db,
+        tenant_id,
+        selected_platform,
+    )
 
     try:
         publish_result = await publish_generated_post_to_platform(
             post,
+            platform=selected_platform,
             media_asset=media_asset,
             allow_mock_fallback=data.allow_mock_fallback,
+            credentials=social_credentials,
         )
     except PublisherError as exc:
         metadata = dict(post.metadata_json or {})
@@ -537,11 +548,18 @@ async def campaign_publish_generated_post(
 
     for platform in platforms:
         try:
+            social_credentials = await get_connected_social_account_credentials(
+                db,
+                tenant_id,
+                platform,
+            )
+
             publish_result = await publish_generated_post_to_platform(
                 post,
                 platform=platform,
                 media_asset=media_asset,
                 allow_mock_fallback=data.allow_mock_fallback,
+                credentials=social_credentials,
             )
             results.append(
                 CampaignPublishResult(
