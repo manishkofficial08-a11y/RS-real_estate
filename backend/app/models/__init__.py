@@ -18,3 +18,5 @@ from app.models.billing import (
     SubscriptionPlan,
     SubscriptionStatus,
 )
+
+from app.models.social_account import SocialAccount, SocialAccountStatus, SocialPlatform
