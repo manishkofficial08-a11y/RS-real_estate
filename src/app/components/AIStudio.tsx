@@ -31,6 +31,7 @@ import {
   deleteGeneratedPost,
   getMyClientAIJobs,
   getMyGeneratedPosts,
+  getClientSocialAccounts,
   publishGeneratedPost,
   updateGeneratedPost,
   type ClientAIJob,
@@ -40,6 +41,7 @@ import {
   type ClientGeneratedPost,
   type ClientGeneratedPostPlatform,
   type ClientScheduledPostPlatform,
+  type ClientSocialAccount,
 } from "../lib/clientApi";
 
 const tools: Array<{
@@ -243,6 +245,21 @@ const generatedPostPlatformOptions: Array<{
   { label: "Website", value: "website" },
   { label: "Other", value: "other" },
 ];
+
+const campaignPlatformLabels: Record<ClientCampaignPublishPlatform, string> = {
+  youtube: "YouTube Shorts",
+  instagram: "Instagram Reels",
+  facebook: "Facebook Page",
+  linkedin: "LinkedIn",
+};
+
+const isConnectedSocialAccount = (
+  account: ClientSocialAccount,
+  platform: ClientCampaignPublishPlatform,
+) =>
+  String(account.platform).toLowerCase() === platform &&
+  account.status === "connected" &&
+  account.is_active;
 
 const getGeneratedPostStatusConfig = (status: GeneratedPostStatus) => {
   if (status === "published") {
@@ -459,6 +476,8 @@ export function AIStudio({ darkMode }: AIStudioProps) {
   const [campaignResult, setCampaignResult] =
     useState<ClientCampaignPublishResponse | null>(null);
   const [campaignError, setCampaignError] = useState<string | null>(null);
+  const [socialAccounts, setSocialAccounts] = useState<ClientSocialAccount[]>([]);
+  const [loadingSocialAccounts, setLoadingSocialAccounts] = useState(true);
   const [loadingGeneratedPosts, setLoadingGeneratedPosts] = useState(true);
   const [generatedPostsError, setGeneratedPostsError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -497,6 +516,37 @@ export function AIStudio({ darkMode }: AIStudioProps) {
     return generatedPosts.filter((post) => post.status === generatedPostFilter);
   }, [generatedPostFilter, generatedPosts]);
 
+  const connectedCampaignPlatforms = useMemo(
+    () =>
+      campaignPlatformOptions
+        .map((platform) => platform.value)
+        .filter((platform) =>
+          socialAccounts.some((account) => isConnectedSocialAccount(account, platform)),
+        ),
+    [socialAccounts],
+  );
+
+  const connectedCampaignPlatformSet = useMemo(
+    () => new Set<ClientCampaignPublishPlatform>(connectedCampaignPlatforms),
+    [connectedCampaignPlatforms],
+  );
+
+  const connectedCampaignAccountMap = useMemo(() => {
+    const map = new Map<ClientCampaignPublishPlatform, ClientSocialAccount>();
+
+    campaignPlatformOptions.forEach((platform) => {
+      const account = socialAccounts.find((item) =>
+        isConnectedSocialAccount(item, platform.value),
+      );
+
+      if (account) {
+        map.set(platform.value, account);
+      }
+    });
+
+    return map;
+  }, [socialAccounts]);
+
   const loadGeneratedPosts = async () => {
     try {
       setLoadingGeneratedPosts(true);
@@ -524,9 +574,25 @@ export function AIStudio({ darkMode }: AIStudioProps) {
     }, 2800);
   };
 
+  const loadSocialAccounts = async () => {
+    try {
+      setLoadingSocialAccounts(true);
+      const data = await getClientSocialAccounts();
+      setSocialAccounts(data);
+    } catch (err) {
+      showGeneratedPostActionMessage(
+        err instanceof Error ? err.message : "Failed to load connected social accounts.",
+        "error",
+      );
+    } finally {
+      setLoadingSocialAccounts(false);
+    }
+  };
+
   const handleRefreshGeneratedPosts = () => {
     setGeneratedPostFilter("all");
     void loadGeneratedPosts();
+    void loadSocialAccounts();
   };
 
   const openEditGeneratedPost = (post: GeneratedPost) => {
@@ -696,9 +762,14 @@ export function AIStudio({ darkMode }: AIStudioProps) {
 
   const openCampaignPublisher = (post: GeneratedPost) => {
     setCampaignTargetPost(post);
-    setCampaignPlatforms(campaignPlatformOptions.map((platform) => platform.value));
+    setCampaignPlatforms(connectedCampaignPlatforms);
     setCampaignResult(null);
-    setCampaignError(null);
+    setCampaignError(
+      connectedCampaignPlatforms.length
+        ? null
+        : "Connect at least one social account from Automation before publishing.",
+    );
+    void loadSocialAccounts();
   };
 
   const closeCampaignPublisher = () => {
@@ -715,6 +786,11 @@ export function AIStudio({ darkMode }: AIStudioProps) {
   };
 
   const toggleCampaignPlatform = (platform: ClientCampaignPublishPlatform) => {
+    if (!connectedCampaignPlatformSet.has(platform)) {
+      setCampaignError(`${campaignPlatformLabels[platform]} is not connected yet.`);
+      return;
+    }
+
     setCampaignPlatforms((current) =>
       current.includes(platform)
         ? current.filter((value) => value !== platform)
@@ -727,7 +803,20 @@ export function AIStudio({ darkMode }: AIStudioProps) {
     if (!campaignTargetPost) return;
 
     if (!campaignPlatforms.length) {
-      setCampaignError("Select at least one platform.");
+      setCampaignError("Select at least one connected platform.");
+      return;
+    }
+
+    const unconnectedPlatforms = campaignPlatforms.filter(
+      (platform) => !connectedCampaignPlatformSet.has(platform),
+    );
+
+    if (unconnectedPlatforms.length) {
+      setCampaignError(
+        `Connect these platforms before publishing: ${unconnectedPlatforms
+          .map((platform) => campaignPlatformLabels[platform])
+          .join(", ")}`,
+      );
       return;
     }
 
@@ -740,10 +829,15 @@ export function AIStudio({ darkMode }: AIStudioProps) {
 
       const result = await campaignPublishGeneratedPost(campaignTargetPost.id, {
         platforms: campaignPlatforms,
-        allow_mock_fallback: true,
+        allow_mock_fallback: false,
         campaign_metadata: {
           source: "ai_studio",
-          action: "publish_everywhere",
+          action: "publish_connected_accounts",
+          connected_accounts: campaignPlatforms.map((platform) => ({
+            platform,
+            account_id: connectedCampaignAccountMap.get(platform)?.id,
+            account_name: connectedCampaignAccountMap.get(platform)?.account_name,
+          })),
         },
       });
 
@@ -788,6 +882,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
   useEffect(() => {
     loadJobs();
     void loadGeneratedPosts();
+    void loadSocialAccounts();
   }, []);
 
   const handleGenerate = async () => {
@@ -1822,7 +1917,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                                           return;
                                         }
 
-                                        void handlePublishGeneratedPost(post);
+                                        openCampaignPublisher(post);
                                       }}
                                       disabled={Boolean(generatedPostActionKey)}
                                       className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all hover:scale-[1.02] disabled:hover:scale-100"
@@ -2201,10 +2296,10 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                         className="text-base font-semibold"
                         style={{ color: textPrimary }}
                       >
-                        Publish Campaign
+                        Publish to Connected Accounts
                       </h2>
                       <p className="text-xs" style={{ color: textSoft }}>
-                        One action, platform-by-platform results.
+                        Publishes only to connected social accounts. Mock fallback is disabled.
                       </p>
                     </div>
                   </div>
@@ -2260,17 +2355,37 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                 )}
 
               <div className="mt-5">
-                <p className="mb-2 text-xs font-semibold" style={{ color: textPrimary }}>
-                  Select platforms
-                </p>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold" style={{ color: textPrimary }}>
+                    Select connected platforms
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void loadSocialAccounts()}
+                    className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium"
+                    style={{
+                      borderColor: cardStyle.borderColor,
+                      color: textSoft,
+                    }}
+                  >
+                    {loadingSocialAccounts ? (
+                      <Loader2 size={11} className="animate-spin" />
+                    ) : (
+                      <RefreshCw size={11} />
+                    )}
+                    Refresh
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {campaignPlatformOptions.map((platform) => {
                     const checked = campaignPlatforms.includes(platform.value);
+                    const connected = connectedCampaignPlatformSet.has(platform.value);
+                    const account = connectedCampaignAccountMap.get(platform.value);
 
                     return (
                       <label
                         key={platform.value}
-                        className="flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition-all"
+                        className="flex items-start gap-3 rounded-2xl border p-3 transition-all"
                         style={{
                           background: checked
                             ? darkMode
@@ -2282,6 +2397,8 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                           borderColor: checked
                             ? "rgba(99,102,241,0.34)"
                             : cardStyle.borderColor,
+                          cursor: connected ? "pointer" : "not-allowed",
+                          opacity: connected ? 1 : 0.58,
                         }}
                       >
                         <input
@@ -2289,6 +2406,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                           checked={checked}
                           onChange={() => toggleCampaignPlatform(platform.value)}
                           disabled={
+                            !connected ||
                             generatedPostActionKey ===
                             `${campaignTargetPost.id}:campaign`
                           }
@@ -2296,16 +2414,29 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                         />
                         <span>
                           <span
-                            className="block text-xs font-semibold"
+                            className="flex items-center gap-2 text-xs font-semibold"
                             style={{ color: textPrimary }}
                           >
                             {platform.label}
+                            <span
+                              className="rounded-full px-2 py-0.5 text-[10px]"
+                              style={{
+                                background: connected
+                                  ? "rgba(16,185,129,0.12)"
+                                  : "rgba(245,158,11,0.12)",
+                                color: connected ? "#10b981" : "#f59e0b",
+                              }}
+                            >
+                              {connected ? "Connected" : "Not connected"}
+                            </span>
                           </span>
                           <span
                             className="mt-1 block text-xs leading-4"
                             style={{ color: textSoft }}
                           >
-                            {platform.description}
+                            {connected && account
+                              ? `Using ${account.account_name}`
+                              : "Connect this account in Automation before publishing."}
                           </span>
                         </span>
                       </label>
@@ -2456,7 +2587,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                   ) : (
                     <Share2 size={13} />
                   )}
-                  {campaignResult ? "Publish Again" : "Publish Campaign"}
+                  {campaignResult ? "Publish Again" : "Publish to Connected Accounts"}
                 </button>
               </div>
             </motion.section>
