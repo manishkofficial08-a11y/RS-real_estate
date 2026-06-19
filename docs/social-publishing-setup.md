@@ -31,7 +31,7 @@ YouTube app credentials:
 - YOUTUBE_PRIVACY_STATUS=public
 
 Recommended:
-- SOCIAL_PUBLISHER_MODE=real
+- PUBLISHER_MODE=real
 
 ## Frontend environment
 
