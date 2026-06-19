@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ArrowRight,
@@ -8,24 +9,48 @@ import {
   FileBarChart,
   Image,
   Link2,
+  Loader2,
   Mail,
   Megaphone,
   Play,
+  PlugZap,
   RefreshCcw,
   Settings,
   Share2,
   Sparkles,
+  Trash2,
   Upload,
   Video,
   Wand2,
+  X,
   Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
+import {
+  connectClientSocialAccountManual,
+  deleteClientSocialAccount,
+  disconnectClientSocialAccount,
+  getClientSocialAccounts,
+  getClientSocialReadiness,
+  type ClientSocialAccount,
+  type ClientSocialPlatform,
+  type ClientSocialReadinessResponse,
+} from "../lib/clientApi";
 
 interface AutomationCenterProps {
   darkMode: boolean;
   onNavigate?: (screen: string) => void;
 }
+
+type ConnectFormState = {
+  platform: ClientSocialPlatform;
+  accountName: string;
+  externalAccountId: string;
+  accessToken: string;
+  refreshToken: string;
+  scopes: string;
+  tokenExpiresAt: string;
+};
 
 const automationAgents = [
   {
@@ -66,8 +91,8 @@ const automationAgents = [
   },
   {
     name: "Publisher Agent",
-    status: "Demo mode",
-    description: "Publishes campaigns in safe demo mode until social accounts are connected.",
+    status: "Live when connected",
+    description: "Publishes campaigns using the client's connected social account tokens.",
     icon: Megaphone,
     color: "#f59e0b",
     action: "Review readiness",
@@ -84,70 +109,77 @@ const automationAgents = [
   },
 ];
 
-const socialAccounts = [
+const socialPlatforms: Array<{
+  key: ClientSocialPlatform;
+  name: string;
+  platform: string;
+  liveRequirement: string;
+  usedFor: string;
+  icon: typeof Play;
+  color: string;
+  externalIdLabel: string;
+  accessTokenLabel: string;
+  refreshTokenLabel?: string;
+  placeholderAccount: string;
+  placeholderExternalId: string;
+  defaultScopes: string;
+}> = [
   {
+    key: "youtube",
     name: "YouTube Shorts",
     platform: "Google",
-    connectionStatus: "Not connected",
-    publishMode: "Demo mode",
-    liveRequirement: "Google OAuth + YouTube upload scope",
+    liveRequirement: "Google OAuth + YouTube upload permission",
     usedFor: "Short-form property video publishing.",
     icon: Play,
     color: "#ef4444",
-    checklist: [
-      "Connect Google account",
-      "Choose YouTube channel",
-      "Enable video upload scope",
-      "Switch campaign publishing from demo to live",
-    ],
+    externalIdLabel: "YouTube Channel ID",
+    accessTokenLabel: "Access token",
+    refreshTokenLabel: "Refresh token recommended",
+    placeholderAccount: "RS Realty YouTube",
+    placeholderExternalId: "UCxxxxxxxxxxxxxxxx",
+    defaultScopes: "youtube.upload",
   },
   {
+    key: "instagram",
     name: "Instagram Reels",
     platform: "Meta",
-    connectionStatus: "Not connected",
-    publishMode: "Demo mode",
-    liveRequirement: "Meta OAuth + Instagram business permissions",
+    liveRequirement: "Instagram Business account + Meta Graph permissions",
     usedFor: "Property reels, walkthrough videos, and short campaign hooks.",
     icon: Video,
     color: "#ec4899",
-    checklist: [
-      "Connect Meta account",
-      "Select Instagram business profile",
-      "Enable reel publishing permission",
-      "Switch campaign publishing from demo to live",
-    ],
+    externalIdLabel: "Instagram Business Account ID",
+    accessTokenLabel: "Instagram/Meta access token",
+    placeholderAccount: "rs_realty_instagram",
+    placeholderExternalId: "17841400000000000",
+    defaultScopes: "instagram_basic,instagram_content_publish,pages_show_list",
   },
   {
-    name: "Facebook Video",
+    key: "facebook",
+    name: "Facebook Page",
     platform: "Meta",
-    connectionStatus: "Not connected",
-    publishMode: "Demo mode",
-    liveRequirement: "Meta OAuth + Facebook page permissions",
+    liveRequirement: "Facebook Page token with content publishing permission",
     usedFor: "Local awareness videos and property campaign posts.",
     icon: Share2,
     color: "#3b82f6",
-    checklist: [
-      "Connect Facebook account",
-      "Select Facebook page",
-      "Verify page video publishing permission",
-      "Switch campaign publishing from demo to live",
-    ],
+    externalIdLabel: "Facebook Page ID",
+    accessTokenLabel: "Facebook Page access token",
+    placeholderAccount: "RS Realty Page",
+    placeholderExternalId: "123456789012345",
+    defaultScopes: "pages_manage_posts,pages_read_engagement,pages_show_list",
   },
   {
+    key: "linkedin",
     name: "LinkedIn",
     platform: "LinkedIn",
-    connectionStatus: "Not connected",
-    publishMode: "Demo mode",
-    liveRequirement: "LinkedIn OAuth + profile/page posting permission",
+    liveRequirement: "LinkedIn member/page author URN + posting permission",
     usedFor: "Professional real estate updates, investor posts, and property launches.",
     icon: Link2,
     color: "#0ea5e9",
-    checklist: [
-      "Connect LinkedIn account",
-      "Choose profile or company page",
-      "Enable posting permission",
-      "Switch campaign publishing from demo to live",
-    ],
+    externalIdLabel: "LinkedIn Author URN",
+    accessTokenLabel: "LinkedIn access token",
+    placeholderAccount: "Manish / RS Realty",
+    placeholderExternalId: "urn:li:person:xxxxxxxx",
+    defaultScopes: "w_member_social",
   },
 ];
 
@@ -172,13 +204,13 @@ const setupChecklist = [
   },
   {
     title: "Connect social accounts",
-    description: "Live publishing requires YouTube, Meta, and LinkedIn account connections.",
+    description: "YouTube, Meta, and LinkedIn credentials are stored per client account.",
     screen: "automation",
     icon: Settings,
   },
   {
     title: "Publish or schedule",
-    description: "Client selects platforms and publishes now or schedules posts.",
+    description: "Client selects connected platforms and publishes now or schedules posts.",
     screen: "scheduler",
     icon: CalendarClock,
   },
@@ -207,7 +239,8 @@ function getStatusStyle(status: string) {
     lower.includes("oauth") ||
     lower.includes("pending") ||
     lower.includes("not connected") ||
-    lower.includes("demo")
+    lower.includes("expired") ||
+    lower.includes("error")
   ) {
     return {
       background: "rgba(245, 158, 11, 0.12)",
@@ -223,7 +256,44 @@ function getStatusStyle(status: string) {
   };
 }
 
+function formatDate(value?: string | null) {
+  if (!value) return "Not recorded";
+
+  try {
+    return new Intl.DateTimeFormat("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function emptyForm(platform: ClientSocialPlatform): ConnectFormState {
+  const config = socialPlatforms.find((item) => item.key === platform) ?? socialPlatforms[0];
+
+  return {
+    platform,
+    accountName: "",
+    externalAccountId: "",
+    accessToken: "",
+    refreshToken: "",
+    scopes: config.defaultScopes,
+    tokenExpiresAt: "",
+  };
+}
+
 export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps) {
+  const [accounts, setAccounts] = useState<ClientSocialAccount[]>([]);
+  const [readiness, setReadiness] = useState<ClientSocialReadinessResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [activeConnectPlatform, setActiveConnectPlatform] =
+    useState<ClientSocialPlatform | null>(null);
+  const [form, setForm] = useState<ConnectFormState>(emptyForm("youtube"));
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
   const surfaceStyle = {
     background: darkMode ? "rgba(13,13,40,0.82)" : "#ffffff",
     borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
@@ -233,9 +303,21 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
   const faintColor = darkMode ? "#4a5568" : "#94a3b8";
   const textColor = darkMode ? "#e2e8f0" : "#0f172a";
 
-  const connectedCount = 0;
-  const totalSocialAccounts = socialAccounts.length;
-  const demoModeCount = socialAccounts.filter((account) => account.publishMode === "Demo mode").length;
+  const accountMap = useMemo(() => {
+    const map = new Map<string, ClientSocialAccount>();
+
+    accounts.forEach((account) => {
+      if (account.status === "connected" && account.is_active) {
+        map.set(String(account.platform), account);
+      }
+    });
+
+    return map;
+  }, [accounts]);
+
+  const connectedCount = readiness?.connected_count ?? accountMap.size;
+  const totalSocialAccounts = socialPlatforms.length;
+  const missingCount = Math.max(totalSocialAccounts - connectedCount, 0);
 
   const navigate = (screen: string) => {
     if (onNavigate) {
@@ -243,9 +325,136 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
     }
   };
 
+  async function loadSocialAccounts() {
+    try {
+      setLoading(true);
+      setError("");
+      const [accountItems, readinessData] = await Promise.all([
+        getClientSocialAccounts(),
+        getClientSocialReadiness(),
+      ]);
+      setAccounts(accountItems);
+      setReadiness(readinessData);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load social accounts");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadSocialAccounts();
+  }, []);
+
+  function openConnect(platform: ClientSocialPlatform) {
+    setActiveConnectPlatform(platform);
+    setForm(emptyForm(platform));
+    setMessage("");
+    setError("");
+  }
+
+  async function handleConnectSubmit() {
+    if (!activeConnectPlatform) return;
+
+    const accountName = form.accountName.trim();
+    const accessToken = form.accessToken.trim();
+    const refreshToken = form.refreshToken.trim();
+    const externalAccountId = form.externalAccountId.trim();
+
+    if (!accountName) {
+      setError("Account name is required.");
+      return;
+    }
+
+    if (!accessToken && !refreshToken) {
+      setError("Add at least an access token or refresh token.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+      setMessage("");
+
+      const scopes = form.scopes
+        .split(",")
+        .map((scope) => scope.trim())
+        .filter(Boolean);
+
+      const metadata: Record<string, unknown> = {};
+
+      if (activeConnectPlatform === "facebook" && externalAccountId) {
+        metadata.page_id = externalAccountId;
+      }
+
+      if (activeConnectPlatform === "instagram" && externalAccountId) {
+        metadata.instagram_business_account_id = externalAccountId;
+      }
+
+      if (activeConnectPlatform === "linkedin" && externalAccountId) {
+        metadata.author_urn = externalAccountId;
+      }
+
+      await connectClientSocialAccountManual({
+        platform: activeConnectPlatform,
+        account_name: accountName,
+        external_account_id: externalAccountId || null,
+        access_token: accessToken || null,
+        refresh_token: refreshToken || null,
+        token_expires_at: form.tokenExpiresAt ? new Date(form.tokenExpiresAt).toISOString() : null,
+        scopes,
+        metadata_json: metadata,
+      });
+
+      setMessage("Social account connected successfully.");
+      setActiveConnectPlatform(null);
+      await loadSocialAccounts();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Failed to connect account");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDisconnect(account: ClientSocialAccount) {
+    try {
+      setSaving(true);
+      setError("");
+      await disconnectClientSocialAccount(account.id);
+      setMessage(`${account.account_name} disconnected.`);
+      await loadSocialAccounts();
+    } catch (disconnectError) {
+      setError(
+        disconnectError instanceof Error
+          ? disconnectError.message
+          : "Failed to disconnect account",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(account: ClientSocialAccount) {
+    try {
+      setSaving(true);
+      setError("");
+      await deleteClientSocialAccount(account.id);
+      setMessage(`${account.account_name} removed.`);
+      await loadSocialAccounts();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Failed to remove account");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const activeConfig = activeConnectPlatform
+    ? socialPlatforms.find((platform) => platform.key === activeConnectPlatform)
+    : null;
+
   return (
-    <div className="h-full overflow-y-auto p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="h-full overflow-y-auto p-4 sm:p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <div
@@ -261,7 +470,7 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
             </div>
             <h1
               style={{
-                fontSize: "1.75rem",
+                fontSize: "clamp(1.45rem, 4vw, 1.9rem)",
                 fontWeight: 700,
                 letterSpacing: "-0.035em",
                 color: textColor,
@@ -270,23 +479,19 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
               Connected Social Accounts
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6" style={{ color: mutedColor }}>
-              Manage the client journey from login to campaign creation, social account readiness,
-              safe demo publishing, and final live posting.
+              Connect the client's real YouTube, Instagram, Facebook, and LinkedIn accounts.
+              Campaign Studio publishing will use these connected credentials.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { label: "Accounts", value: `${connectedCount}/${totalSocialAccounts}`, color: "#6366f1" },
-              { label: "Mode", value: "Demo-safe", color: "#f59e0b" },
-              { label: "Live Pending", value: `${demoModeCount}`, color: "#f59e0b" },
-              { label: "Flow", value: "Login → Publish", color: "#06b6d4" },
+              { label: "Mode", value: readiness?.live_ready ? "Live-ready" : "Setup needed", color: readiness?.live_ready ? "#10b981" : "#f59e0b" },
+              { label: "Missing", value: `${missingCount}`, color: missingCount ? "#f59e0b" : "#10b981" },
+              { label: "Flow", value: "Media → Publish", color: "#06b6d4" },
             ].map((item) => (
-              <div
-                key={item.label}
-                className="rounded-2xl border px-4 py-3"
-                style={surfaceStyle}
-              >
+              <div key={item.label} className="rounded-2xl border px-4 py-3" style={surfaceStyle}>
                 <p className="text-[11px] font-mono" style={{ color: faintColor }}>
                   {item.label}
                 </p>
@@ -298,13 +503,28 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
           </div>
         </div>
 
+        {(message || error) && (
+          <div
+            className="rounded-2xl border p-4 text-sm"
+            style={{
+              background: error ? "rgba(239,68,68,0.10)" : "rgba(16,185,129,0.10)",
+              borderColor: error ? "rgba(239,68,68,0.24)" : "rgba(16,185,129,0.24)",
+              color: error ? "#ef4444" : "#10b981",
+            }}
+          >
+            {error || message}
+          </div>
+        )}
+
         <div
           className="rounded-2xl border p-5"
           style={{
             background: darkMode
-              ? "linear-gradient(135deg, rgba(245,158,11,0.13), rgba(99,102,241,0.06))"
-              : "linear-gradient(135deg, rgba(245,158,11,0.10), rgba(99,102,241,0.04))",
-            borderColor: "rgba(245,158,11,0.24)",
+              ? "linear-gradient(135deg, rgba(16,185,129,0.13), rgba(99,102,241,0.06))"
+              : "linear-gradient(135deg, rgba(16,185,129,0.10), rgba(99,102,241,0.04))",
+            borderColor: readiness?.live_ready
+              ? "rgba(16,185,129,0.24)"
+              : "rgba(245,158,11,0.24)",
           }}
         >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -312,39 +532,43 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
               <div
                 className="rounded-2xl p-3"
                 style={{
-                  background: "rgba(245,158,11,0.16)",
-                  color: "#f59e0b",
+                  background: readiness?.live_ready
+                    ? "rgba(16,185,129,0.16)"
+                    : "rgba(245,158,11,0.16)",
+                  color: readiness?.live_ready ? "#10b981" : "#f59e0b",
                 }}
               >
                 <ClipboardCheck size={22} />
               </div>
               <div>
                 <h2 className="text-base font-semibold" style={{ color: textColor }}>
-                  Live publishing requires connected social accounts
+                  {readiness?.live_ready
+                    ? "Live publishing is ready"
+                    : "Connect social accounts before live publishing"}
                 </h2>
                 <p className="mt-1 text-sm leading-6" style={{ color: mutedColor }}>
-                  Until YouTube, Meta, and LinkedIn accounts are connected, the client can still
-                  create drafts, schedule campaigns, and use safe demo/mock publishing results.
+                  Once accounts are connected, publishing from Campaign Studio will use the stored
+                  client-specific tokens. Missing accounts will return a clear connection error.
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => navigate("media")}
-                className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium"
-                style={{ background: "#6366f1", color: "#ffffff" }}
-              >
-                <Upload size={13} />
-                Start with media
-              </button>
-              <button
-                onClick={() => navigate("ai-studio")}
+                onClick={loadSocialAccounts}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium"
                 style={{
                   borderColor: darkMode ? "rgba(99,102,241,0.24)" : "rgba(99,102,241,0.16)",
                   color: darkMode ? "#818cf8" : "#6366f1",
                 }}
+              >
+                {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />}
+                Refresh
+              </button>
+              <button
+                onClick={() => navigate("ai-studio")}
+                className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium"
+                style={{ background: "#6366f1", color: "#ffffff" }}
               >
                 <Sparkles size={13} />
                 Open Campaign Studio
@@ -354,24 +578,25 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
         </div>
 
         <section>
-          <div className="mb-4 flex items-end justify-between gap-3">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-base font-semibold" style={{ color: textColor }}>
-                Social account readiness
+                Social account connections
               </h2>
               <p className="mt-1 text-xs" style={{ color: mutedColor }}>
-                These accounts must be connected before the client can publish live to social media.
+                Store real platform credentials per client tenant. Tokens are saved encrypted in backend.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
-            {socialAccounts.map((account) => {
-              const Icon = account.icon;
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {socialPlatforms.map((platform) => {
+              const Icon = platform.icon;
+              const currentAccount = accountMap.get(platform.key);
 
               return (
                 <motion.div
-                  key={account.name}
+                  key={platform.key}
                   className="rounded-2xl border p-5"
                   style={surfaceStyle}
                   whileHover={{ y: -2 }}
@@ -381,9 +606,9 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
                     <div
                       className="rounded-2xl p-3"
                       style={{
-                        background: `${account.color}16`,
-                        color: account.color,
-                        border: `1px solid ${account.color}24`,
+                        background: `${platform.color}16`,
+                        color: platform.color,
+                        border: `1px solid ${platform.color}24`,
                       }}
                     >
                       <Icon size={20} />
@@ -391,59 +616,98 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
 
                     <span
                       className="rounded-full px-2.5 py-1 text-[11px]"
-                      style={getStatusStyle(account.connectionStatus)}
+                      style={getStatusStyle(currentAccount ? "connected" : "not connected")}
                     >
-                      {account.connectionStatus}
+                      {currentAccount ? "Connected" : "Not connected"}
                     </span>
                   </div>
 
                   <h3 className="mt-4 text-sm font-semibold" style={{ color: textColor }}>
-                    {account.name}
+                    {platform.name}
                   </h3>
                   <p className="text-xs" style={{ color: faintColor }}>
-                    {account.platform}
+                    {platform.platform}
                   </p>
 
                   <p className="mt-3 min-h-12 text-xs leading-5" style={{ color: mutedColor }}>
-                    {account.usedFor}
+                    {platform.usedFor}
                   </p>
 
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center justify-between gap-3 text-xs">
+                  <div className="mt-4 space-y-2 text-xs">
+                    <div className="flex items-center justify-between gap-3">
                       <span style={{ color: faintColor }}>Publishing mode</span>
-                      <span className="rounded-full px-2 py-1" style={getStatusStyle(account.publishMode)}>
-                        {account.publishMode}
+                      <span
+                        className="rounded-full px-2 py-1"
+                        style={getStatusStyle(currentAccount ? "live" : "connection required")}
+                      >
+                        {currentAccount ? "Live credentials" : "Setup required"}
                       </span>
                     </div>
-                    <div className="text-xs leading-5" style={{ color: mutedColor }}>
-                      <span style={{ color: faintColor }}>Live requirement: </span>
-                      {account.liveRequirement}
-                    </div>
-                  </div>
 
-                  <div className="mt-4 space-y-2">
-                    {account.checklist.map((item) => (
-                      <div key={item} className="flex items-center gap-2 text-xs" style={{ color: mutedColor }}>
-                        <AlertCircle size={12} style={{ color: account.color }} />
-                        {item}
+                    {currentAccount ? (
+                      <>
+                        <div className="leading-5" style={{ color: mutedColor }}>
+                          <span style={{ color: faintColor }}>Account: </span>
+                          {currentAccount.account_name}
+                        </div>
+                        <div className="leading-5" style={{ color: mutedColor }}>
+                          <span style={{ color: faintColor }}>Connected: </span>
+                          {formatDate(currentAccount.last_connected_at)}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="leading-5" style={{ color: mutedColor }}>
+                        <span style={{ color: faintColor }}>Requirement: </span>
+                        {platform.liveRequirement}
                       </div>
-                    ))}
+                    )}
                   </div>
 
-                  <button
-                    type="button"
-                    disabled
-                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium opacity-70 cursor-not-allowed"
-                    style={{
-                      borderColor: `${account.color}33`,
-                      color: account.color,
-                      background: `${account.color}0F`,
-                    }}
-                    title="OAuth connection will be added in the backend integration phase."
-                  >
-                    Connect account
-                    <RefreshCcw size={12} />
-                  </button>
+                  {currentAccount ? (
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDisconnect(currentAccount)}
+                        disabled={saving}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium"
+                        style={{
+                          borderColor: `${platform.color}33`,
+                          color: platform.color,
+                          background: `${platform.color}0F`,
+                        }}
+                      >
+                        Disconnect
+                        <X size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(currentAccount)}
+                        disabled={saving}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium"
+                        style={{
+                          borderColor: "rgba(239,68,68,0.24)",
+                          color: "#ef4444",
+                          background: "rgba(239,68,68,0.08)",
+                        }}
+                      >
+                        Remove
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => openConnect(platform.key)}
+                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-medium"
+                      style={{
+                        color: "#ffffff",
+                        background: platform.color,
+                      }}
+                    >
+                      Connect account
+                      <PlugZap size={12} />
+                    </button>
+                  )}
                 </motion.div>
               );
             })}
@@ -451,15 +715,13 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
         </section>
 
         <section>
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold" style={{ color: textColor }}>
-                Automation agents
-              </h2>
-              <p className="mt-1 text-xs" style={{ color: mutedColor }}>
-                Client-facing automation modules currently available in the product.
-              </p>
-            </div>
+          <div className="mb-4">
+            <h2 className="text-base font-semibold" style={{ color: textColor }}>
+              Automation agents
+            </h2>
+            <p className="mt-1 text-xs" style={{ color: mutedColor }}>
+              Client-facing automation modules currently available in the product.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -519,7 +781,7 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
                 Client handover flow
               </h2>
               <p className="mt-1 text-xs" style={{ color: mutedColor }}>
-                This is the exact workflow clients will follow once account connection is live.
+                This is the exact workflow clients will follow after account connection.
               </p>
             </div>
 
@@ -586,9 +848,9 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
                   { label: "Client can upload/select video", ready: true },
                   { label: "Client can create campaign drafts", ready: true },
                   { label: "Client can schedule drafts", ready: true },
-                  { label: "Social OAuth connected", ready: false },
-                  { label: "Live platform tokens stored", ready: false },
-                  { label: "True live publishing enabled", ready: false },
+                  { label: "Social accounts connected", ready: connectedCount > 0 },
+                  { label: "All supported platforms ready", ready: readiness?.live_ready ?? false },
+                  { label: "Publisher uses client credentials", ready: true },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-3">
                     {item.ready ? (
@@ -607,21 +869,168 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
             <div
               className="mt-4 rounded-2xl border p-4"
               style={{
-                background: "rgba(245,158,11,0.08)",
-                borderColor: "rgba(245,158,11,0.18)",
+                background: darkMode ? "rgba(6,182,212,0.08)" : "rgba(6,182,212,0.05)",
+                borderColor: "rgba(6,182,212,0.18)",
               }}
             >
-              <div className="flex items-start gap-3">
-                <AlertCircle size={17} style={{ color: "#f59e0b" }} />
-                <p className="text-xs leading-5" style={{ color: darkMode ? "#fbbf24" : "#92400e" }}>
-                  The full client publishing journey is ready in demo-safe mode. True live publishing
-                  will be enabled after OAuth connection and secure token storage are added.
-                </p>
-              </div>
+              <p className="text-xs leading-5" style={{ color: mutedColor }}>
+                Connected credentials are required for live publishing. If a platform rejects a token
+                or permission, the publish result will return a platform-specific error instead of a
+                fake success.
+              </p>
             </div>
           </div>
         </section>
       </div>
+
+      {activeConnectPlatform && activeConfig && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div
+            className="w-full max-w-2xl rounded-3xl border p-5 shadow-2xl"
+            style={{
+              background: darkMode ? "#0d0d28" : "#ffffff",
+              borderColor: darkMode ? "rgba(99,102,241,0.22)" : "rgba(15,23,42,0.10)",
+            }}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold" style={{ color: textColor }}>
+                  Connect {activeConfig.name}
+                </h3>
+                <p className="mt-1 text-xs leading-5" style={{ color: mutedColor }}>
+                  Add the client's platform credentials. Tokens are stored encrypted in the backend.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveConnectPlatform(null)}
+                className="rounded-xl p-2"
+                style={{ color: mutedColor }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="text-xs font-medium" style={{ color: textColor }}>
+                Account name
+                <input
+                  value={form.accountName}
+                  onChange={(event) => setForm((prev) => ({ ...prev, accountName: event.target.value }))}
+                  placeholder={activeConfig.placeholderAccount}
+                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm outline-none"
+                  style={{
+                    background: darkMode ? "rgba(255,255,255,0.04)" : "#ffffff",
+                    borderColor: darkMode ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.12)",
+                    color: textColor,
+                  }}
+                />
+              </label>
+
+              <label className="text-xs font-medium" style={{ color: textColor }}>
+                {activeConfig.externalIdLabel}
+                <input
+                  value={form.externalAccountId}
+                  onChange={(event) => setForm((prev) => ({ ...prev, externalAccountId: event.target.value }))}
+                  placeholder={activeConfig.placeholderExternalId}
+                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm outline-none"
+                  style={{
+                    background: darkMode ? "rgba(255,255,255,0.04)" : "#ffffff",
+                    borderColor: darkMode ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.12)",
+                    color: textColor,
+                  }}
+                />
+              </label>
+
+              <label className="text-xs font-medium sm:col-span-2" style={{ color: textColor }}>
+                {activeConfig.accessTokenLabel}
+                <input
+                  type="password"
+                  value={form.accessToken}
+                  onChange={(event) => setForm((prev) => ({ ...prev, accessToken: event.target.value }))}
+                  placeholder="Paste access token"
+                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm outline-none"
+                  style={{
+                    background: darkMode ? "rgba(255,255,255,0.04)" : "#ffffff",
+                    borderColor: darkMode ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.12)",
+                    color: textColor,
+                  }}
+                />
+              </label>
+
+              <label className="text-xs font-medium sm:col-span-2" style={{ color: textColor }}>
+                {activeConfig.refreshTokenLabel || "Refresh token optional"}
+                <input
+                  type="password"
+                  value={form.refreshToken}
+                  onChange={(event) => setForm((prev) => ({ ...prev, refreshToken: event.target.value }))}
+                  placeholder="Paste refresh token if available"
+                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm outline-none"
+                  style={{
+                    background: darkMode ? "rgba(255,255,255,0.04)" : "#ffffff",
+                    borderColor: darkMode ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.12)",
+                    color: textColor,
+                  }}
+                />
+              </label>
+
+              <label className="text-xs font-medium" style={{ color: textColor }}>
+                Scopes
+                <input
+                  value={form.scopes}
+                  onChange={(event) => setForm((prev) => ({ ...prev, scopes: event.target.value }))}
+                  placeholder={activeConfig.defaultScopes}
+                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm outline-none"
+                  style={{
+                    background: darkMode ? "rgba(255,255,255,0.04)" : "#ffffff",
+                    borderColor: darkMode ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.12)",
+                    color: textColor,
+                  }}
+                />
+              </label>
+
+              <label className="text-xs font-medium" style={{ color: textColor }}>
+                Token expiry optional
+                <input
+                  type="datetime-local"
+                  value={form.tokenExpiresAt}
+                  onChange={(event) => setForm((prev) => ({ ...prev, tokenExpiresAt: event.target.value }))}
+                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm outline-none"
+                  style={{
+                    background: darkMode ? "rgba(255,255,255,0.04)" : "#ffffff",
+                    borderColor: darkMode ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.12)",
+                    color: textColor,
+                  }}
+                />
+              </label>
+            </div>
+
+            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setActiveConnectPlatform(null)}
+                className="rounded-xl border px-4 py-2 text-sm font-medium"
+                style={{
+                  borderColor: darkMode ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.12)",
+                  color: mutedColor,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConnectSubmit}
+                disabled={saving}
+                className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
+                style={{ background: activeConfig.color, color: "#ffffff" }}
+              >
+                {saving ? <Loader2 size={15} className="animate-spin" /> : <PlugZap size={15} />}
+                Save connection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

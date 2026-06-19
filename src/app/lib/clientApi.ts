@@ -1087,3 +1087,94 @@ export async function emailReport(
     body: JSON.stringify(payload),
   });
 }
+
+
+export type ClientSocialPlatform =
+  | "youtube"
+  | "instagram"
+  | "facebook"
+  | "linkedin";
+
+export type ClientSocialAccountStatus =
+  | "connected"
+  | "disconnected"
+  | "expired"
+  | "error"
+  | string;
+
+export type ClientSocialAccount = {
+  id: string;
+  tenant_id: string;
+  platform: ClientSocialPlatform | string;
+  account_name: string;
+  external_account_id?: string | null;
+  status: ClientSocialAccountStatus;
+  scopes: string[];
+  token_expires_at?: string | null;
+  last_connected_at?: string | null;
+  last_error?: string | null;
+  metadata_json?: Record<string, unknown> | null;
+  is_active: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type ConnectClientSocialAccountPayload = {
+  platform: ClientSocialPlatform;
+  account_name: string;
+  external_account_id?: string | null;
+  access_token?: string | null;
+  refresh_token?: string | null;
+  token_expires_at?: string | null;
+  scopes?: string[];
+  metadata_json?: Record<string, unknown>;
+};
+
+export type ClientSocialReadinessItem = {
+  platform: ClientSocialPlatform | string;
+  connected: boolean;
+  account_name?: string | null;
+  status: string;
+  action_required?: string | null;
+};
+
+export type ClientSocialReadinessResponse = {
+  connected_count: number;
+  total_platforms: number;
+  live_ready: boolean;
+  items: ClientSocialReadinessItem[];
+};
+
+export async function getClientSocialAccounts(): Promise<ClientSocialAccount[]> {
+  return clientFetch<ClientSocialAccount[]>("/social-accounts/");
+}
+
+export async function getClientSocialReadiness(): Promise<ClientSocialReadinessResponse> {
+  return clientFetch<ClientSocialReadinessResponse>("/social-accounts/readiness");
+}
+
+export async function connectClientSocialAccountManual(
+  payload: ConnectClientSocialAccountPayload,
+): Promise<ClientSocialAccount> {
+  return clientFetch<ClientSocialAccount>("/social-accounts/connect-manual", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function disconnectClientSocialAccount(
+  accountId: string,
+): Promise<ClientSocialAccount> {
+  return clientFetch<ClientSocialAccount>(
+    `/social-accounts/${accountId}/disconnect`,
+    {
+      method: "PATCH",
+    },
+  );
+}
+
+export async function deleteClientSocialAccount(accountId: string): Promise<void> {
+  await clientFetch<void>(`/social-accounts/${accountId}`, {
+    method: "DELETE",
+  });
+}
