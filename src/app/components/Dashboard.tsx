@@ -45,8 +45,8 @@ const baseAreaData = [
 ];
 
 const demoPlatformData = [
-  { name: "Website", value: 38, color: "#6366f1" },
-  { name: "Referral", value: 29, color: "#8b5cf6" },
+  { name: "Website", value: 38, color: "#1D4ED8" },
+  { name: "Referral", value: 29, color: "#2563EB" },
   { name: "Social", value: 19, color: "#06b6d4" },
   { name: "Other", value: 14, color: "#f59e0b" },
 ];
@@ -113,7 +113,7 @@ function MetricCard({
       className="relative rounded-2xl p-5 border overflow-hidden group cursor-default"
       style={{
         background: darkMode ? "rgba(13, 13, 40, 0.8)" : "#ffffff",
-        borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+        borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
         backdropFilter: "blur(16px)",
         boxShadow: darkMode
           ? "0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)"
@@ -132,7 +132,7 @@ function MetricCard({
 
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-xs mb-3" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+          <p className="text-xs mb-3" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
             {label}
           </p>
 
@@ -187,7 +187,7 @@ const platformIcons: Record<string, React.ElementType> = {
 const statusColors: Record<string, string> = {
   scheduled: "#10b981",
   draft: "#f59e0b",
-  processing: "#6366f1",
+  processing: "#1D4ED8",
 };
 
 export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
@@ -263,7 +263,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
       return acc;
     }, {});
 
-    const colors = ["#6366f1", "#8b5cf6", "#06b6d4", "#f59e0b", "#10b981"];
+    const colors = ["#1D4ED8", "#2563EB", "#06b6d4", "#f59e0b", "#10b981"];
     const total = leads.length;
 
     return Object.entries(sourceCount).map(([name, count], index) => ({
@@ -297,14 +297,14 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             : "Lead score data is empty. Start capturing source, budget and requirement details.",
         action: "Open CRM",
         screen: "crm",
-        color: "#8b5cf6",
+        color: "#2563EB",
       },
       {
         icon: TrendingUp,
         text: `${stats.activeLeads} active leads are currently in pipeline. Keep follow-ups tight.`,
         action: "Follow up",
         screen: "crm",
-        color: "#6366f1",
+        color: "#1D4ED8",
       },
       {
         icon: Brain,
@@ -316,10 +316,10 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
     ];
   }, [stats]);
 
-  const chartColor = darkMode ? "#818cf8" : "#6366f1";
-  const gridColor = darkMode ? "rgba(99,102,241,0.06)" : "rgba(15,23,42,0.04)";
+  const chartColor = darkMode ? "#60A5FA" : "#1D4ED8";
+  const gridColor = darkMode ? "rgba(29,78,216,0.06)" : "rgba(15,23,42,0.04)";
   const tickColor = darkMode ? "#2d3748" : "#cbd5e1";
-  const tooltipBg = darkMode ? "#0d0d28" : "#ffffff";
+  const tooltipBg = darkMode ? "#0F172A" : "#ffffff";
 
   return (
     <div className="h-full overflow-y-auto">
@@ -337,7 +337,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
               WELCOME BACK, 👨
             </h1>
 
-            <p className="text-sm mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+            <p className="text-sm mt-1" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
               {loadingLeads
                 ? "Loading your real dashboard data..."
                 : leadError
@@ -351,9 +351,9 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
               onClick={() => onNavigate("ai-studio")}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all hover:opacity-90"
               style={{
-                background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                background: "linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)",
                 color: "#ffffff",
-                boxShadow: "0 4px 14px rgba(99,102,241,0.35)",
+                boxShadow: "0 4px 14px rgba(29,78,216,0.35)",
               }}
             >
               <Sparkles size={14} />
@@ -364,8 +364,8 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
               onClick={() => window.location.reload()}
               className="p-2 rounded-xl border transition-all hover:bg-primary/5"
               style={{
-                borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
-                color: darkMode ? "#4a5568" : "#94a3b8",
+                borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
+                color: darkMode ? "#94A3B8" : "#94a3b8",
               }}
             >
               <RefreshCw size={14} />
@@ -380,15 +380,15 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
           className="relative rounded-2xl p-5 overflow-hidden border"
           style={{
             background: darkMode
-              ? "linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.08) 50%, rgba(6,182,212,0.06) 100%)"
-              : "linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(139,92,246,0.04) 100%)",
-            borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)",
+              ? "linear-gradient(135deg, rgba(29,78,216,0.12) 0%, rgba(37,99,235,0.08) 50%, rgba(6,182,212,0.06) 100%)"
+              : "linear-gradient(135deg, rgba(29,78,216,0.06) 0%, rgba(37,99,235,0.04) 100%)",
+            borderColor: darkMode ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.1)",
           }}
         >
           <div
             className="absolute top-0 right-0 w-64 h-32 pointer-events-none"
             style={{
-              background: "radial-gradient(ellipse at 80% 20%, rgba(99,102,241,0.15) 0%, transparent 60%)",
+              background: "radial-gradient(ellipse at 80% 20%, rgba(29,78,216,0.15) 0%, transparent 60%)",
             }}
           />
 
@@ -400,7 +400,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                   cy="40"
                   r="34"
                   fill="none"
-                  stroke={darkMode ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.08)"}
+                  stroke={darkMode ? "rgba(29,78,216,0.15)" : "rgba(29,78,216,0.08)"}
                   strokeWidth="6"
                 />
                 <circle
@@ -415,7 +415,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                 />
                 <defs>
                   <linearGradient id="healthGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#6366f1" />
+                    <stop offset="0%" stopColor="#1D4ED8" />
                     <stop offset="100%" stopColor="#06b6d4" />
                   </linearGradient>
                 </defs>
@@ -432,7 +432,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                 >
                   {stats.healthScore}
                 </span>
-                <span className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                <span className="text-xs" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
                   / 100
                 </span>
               </div>
@@ -441,12 +441,12 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             <div className="flex-1 grid grid-cols-3 gap-4">
               {[
                 { label: "Lead Quality", value: `${stats.avgScore || 0}%`, color: "#10b981" },
-                { label: "Active Pipeline", value: `${stats.activeLeads}`, color: "#6366f1" },
+                { label: "Active Pipeline", value: `${stats.activeLeads}`, color: "#1D4ED8" },
                 { label: "Conversion", value: `${stats.conversionRate}%`, color: "#f59e0b" },
               ].map((item) => (
                 <div key={item.label}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                    <span className="text-xs" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
                       {item.label}
                     </span>
                     <span className="text-xs font-semibold" style={{ color: item.color }}>
@@ -456,7 +456,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
 
                   <div
                     className="h-1.5 rounded-full overflow-hidden"
-                    style={{ background: darkMode ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.06)" }}
+                    style={{ background: darkMode ? "rgba(29,78,216,0.1)" : "rgba(29,78,216,0.06)" }}
                   >
                     <motion.div
                       initial={{ width: 0 }}
@@ -480,8 +480,8 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                 onClick={() => onNavigate("analytics")}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs border transition-all hover:bg-primary/5"
                 style={{
-                  borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)",
-                  color: darkMode ? "#818cf8" : "#6366f1",
+                  borderColor: darkMode ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.1)",
+                  color: darkMode ? "#60A5FA" : "#1D4ED8",
                 }}
               >
                 Full Report <ArrowRight size={12} />
@@ -498,7 +498,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             positive={stats.totalLeads > 0}
             darkMode={darkMode}
             icon={Users}
-            color="#6366f1"
+            color="#1D4ED8"
             delay={0.1}
           />
           <MetricCard
@@ -508,7 +508,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             positive={stats.hotLeads > 0}
             darkMode={darkMode}
             icon={Target}
-            color="#8b5cf6"
+            color="#2563EB"
             delay={0.15}
           />
           <MetricCard
@@ -541,7 +541,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             className="lg:col-span-2 rounded-2xl p-5 border"
             style={{
               background: darkMode ? "rgba(13, 13, 40, 0.8)" : "#ffffff",
-              borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+              borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
               backdropFilter: "blur(16px)",
             }}
           >
@@ -550,7 +550,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                 <h3 className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
                   Performance Overview
                 </h3>
-                <p className="text-xs mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                <p className="text-xs mt-0.5" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
                   Lead trend + marketing performance
                 </p>
               </div>
@@ -565,16 +565,16 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                       background:
                         activeTab === tab
                           ? darkMode
-                            ? "rgba(99,102,241,0.2)"
-                            : "rgba(99,102,241,0.1)"
+                            ? "rgba(29,78,216,0.2)"
+                            : "rgba(29,78,216,0.1)"
                           : "transparent",
                       color:
                         activeTab === tab
                           ? darkMode
-                            ? "#818cf8"
-                            : "#6366f1"
+                            ? "#60A5FA"
+                            : "#1D4ED8"
                           : darkMode
-                            ? "#4a5568"
+                            ? "#94A3B8"
                             : "#94a3b8",
                     }}
                   >
@@ -597,7 +597,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                 <Tooltip
                   contentStyle={{
                     background: tooltipBg,
-                    border: `1px solid ${darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)"}`,
+                    border: `1px solid ${darkMode ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.1)"}`,
                     borderRadius: "12px",
                     fontSize: "12px",
                     color: darkMode ? "#e2e8f0" : "#0f172a",
@@ -624,14 +624,14 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             className="rounded-2xl p-5 border"
             style={{
               background: darkMode ? "rgba(13, 13, 40, 0.8)" : "#ffffff",
-              borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+              borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
               backdropFilter: "blur(16px)",
             }}
           >
             <h3 className="text-sm font-semibold mb-1" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
               Lead Source Share
             </h3>
-            <p className="text-xs mb-4" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+            <p className="text-xs mb-4" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
               Backend source distribution
             </p>
 
@@ -671,18 +671,18 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             className="rounded-2xl p-5 border"
             style={{
               background: darkMode ? "rgba(13, 13, 40, 0.8)" : "#ffffff",
-              borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+              borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
               backdropFilter: "blur(16px)",
             }}
           >
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}>
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)" }}>
                 <Brain size={12} className="text-white" />
               </div>
               <h3 className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
                 AI Recommendations
               </h3>
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(99,102,241,0.1)", color: "#818cf8" }}>
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(29,78,216,0.1)", color: "#60A5FA" }}>
                 live
               </span>
             </div>
@@ -693,8 +693,8 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                   key={`${rec.action}-${index}`}
                   className="flex items-start gap-3 p-3 rounded-xl border transition-all hover:border-primary/20 group cursor-pointer"
                   style={{
-                    borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)",
-                    background: darkMode ? "rgba(99,102,241,0.03)" : "rgba(99,102,241,0.02)",
+                    borderColor: darkMode ? "rgba(29,78,216,0.08)" : "rgba(15,23,42,0.04)",
+                    background: darkMode ? "rgba(29,78,216,0.03)" : "rgba(29,78,216,0.02)",
                   }}
                 >
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${rec.color}15` }}>
@@ -726,7 +726,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
             className="rounded-2xl p-5 border"
             style={{
               background: darkMode ? "rgba(13, 13, 40, 0.8)" : "#ffffff",
-              borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+              borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
               backdropFilter: "blur(16px)",
             }}
           >
@@ -743,7 +743,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
               <button
                 onClick={() => onNavigate("crm")}
                 className="text-xs flex items-center gap-1 transition-all hover:opacity-80"
-                style={{ color: darkMode ? "#818cf8" : "#6366f1" }}
+                style={{ color: darkMode ? "#60A5FA" : "#1D4ED8" }}
               >
                 View CRM <ArrowRight size={11} />
               </button>
@@ -756,14 +756,14 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                     key={lead.id}
                     className="flex items-start gap-3 p-3 rounded-xl border group cursor-pointer transition-all hover:border-primary/20"
                     style={{
-                      borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)",
-                      background: darkMode ? "rgba(99,102,241,0.03)" : "rgba(99,102,241,0.02)",
+                      borderColor: darkMode ? "rgba(29,78,216,0.08)" : "rgba(15,23,42,0.04)",
+                      background: darkMode ? "rgba(29,78,216,0.03)" : "rgba(29,78,216,0.02)",
                     }}
                     onClick={() => onNavigate("crm")}
                   >
                     <div
                       className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                      style={{ background: darkMode ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.06)", color: darkMode ? "#818cf8" : "#6366f1" }}
+                      style={{ background: darkMode ? "rgba(29,78,216,0.1)" : "rgba(29,78,216,0.06)", color: darkMode ? "#60A5FA" : "#1D4ED8" }}
                     >
                       {getInitials(lead.name)}
                     </div>
@@ -793,15 +793,15 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                       key={`${post.platform}-${index}`}
                       className="flex items-start gap-3 p-3 rounded-xl border group cursor-pointer transition-all hover:border-primary/20"
                       style={{
-                        borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)",
-                        background: darkMode ? "rgba(99,102,241,0.03)" : "rgba(99,102,241,0.02)",
+                        borderColor: darkMode ? "rgba(29,78,216,0.08)" : "rgba(15,23,42,0.04)",
+                        background: darkMode ? "rgba(29,78,216,0.03)" : "rgba(29,78,216,0.02)",
                       }}
                     >
                       <div
                         className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: darkMode ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.06)" }}
+                        style={{ background: darkMode ? "rgba(29,78,216,0.1)" : "rgba(29,78,216,0.06)" }}
                       >
-                        <PlatformIcon size={13} style={{ color: darkMode ? "#818cf8" : "#6366f1" }} />
+                        <PlatformIcon size={13} style={{ color: darkMode ? "#60A5FA" : "#1D4ED8" }} />
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -829,8 +829,8 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
               onClick={() => onNavigate("crm")}
               className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs transition-all hover:bg-primary/5"
               style={{
-                borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)",
-                color: darkMode ? "#818cf8" : "#6366f1",
+                borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(29,78,216,0.08)",
+                color: darkMode ? "#60A5FA" : "#1D4ED8",
                 borderStyle: "dashed",
               }}
             >
@@ -847,8 +847,8 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
           className="grid grid-cols-2 sm:grid-cols-4 gap-3"
         >
           {[
-            { icon: Sparkles, label: "Generate Caption", color: "#6366f1", screen: "ai-studio" },
-            { icon: BarChart3, label: "View Analytics", color: "#8b5cf6", screen: "analytics" },
+            { icon: Sparkles, label: "Generate Caption", color: "#1D4ED8", screen: "ai-studio" },
+            { icon: BarChart3, label: "View Analytics", color: "#2563EB", screen: "analytics" },
             { icon: Users, label: "Check CRM", color: "#06b6d4", screen: "crm" },
             { icon: FileText, label: "Properties", color: "#f59e0b", screen: "properties" },
           ].map((action) => (

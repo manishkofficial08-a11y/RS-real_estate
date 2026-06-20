@@ -58,7 +58,7 @@ const tools: Array<{
     icon: Sparkles,
     label: "Caption Generator",
     desc: "Create captions for listings, launches, and posts",
-    color: "#6366f1",
+    color: "#1D4ED8",
   },
   {
     id: "hashtag",
@@ -66,7 +66,7 @@ const tools: Array<{
     icon: Hash,
     label: "Hashtag Generator",
     desc: "Generate niche and platform-specific hashtags",
-    color: "#8b5cf6",
+    color: "#2563EB",
   },
   {
     id: "report",
@@ -274,7 +274,7 @@ const getGeneratedPostStatusConfig = (status: GeneratedPostStatus) => {
   if (status === "scheduled") {
     return {
       label: "Scheduled",
-      color: "#6366f1",
+      color: "#1D4ED8",
       bg: "rgba(99, 102, 241, 0.10)",
       border: "rgba(99, 102, 241, 0.18)",
     };
@@ -405,7 +405,7 @@ const getStatusConfig = (status: string) => {
     return {
       label: "Running",
       icon: Loader2,
-      color: "#6366f1",
+      color: "#1D4ED8",
       bg: "rgba(99, 102, 241, 0.10)",
       border: "rgba(99, 102, 241, 0.18)",
     };
@@ -491,13 +491,13 @@ export function AIStudio({ darkMode }: AIStudioProps) {
 
   const cardStyle = {
     background: darkMode ? "rgba(13, 13, 40, 0.8)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
     backdropFilter: "blur(16px)",
   };
 
   const textPrimary = darkMode ? "#e2e8f0" : "#0f172a";
   const textMuted = darkMode ? "#64748b" : "#64748b";
-  const textSoft = darkMode ? "#4a5568" : "#94a3b8";
+  const textSoft = darkMode ? "#94A3B8" : "#94a3b8";
 
   const stats = useMemo(() => {
     const total = jobs.length;
@@ -933,8 +933,8 @@ export function AIStudio({ darkMode }: AIStudioProps) {
             <div
               className="flex h-8 w-8 items-center justify-center rounded-xl"
               style={{
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                boxShadow: "0 0 20px rgba(99,102,241,0.3)",
+                background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
+                boxShadow: "0 0 20px rgba(29,78,216,0.3)",
               }}
             >
               <Sparkles size={15} className="text-white" />
@@ -945,7 +945,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
             <span
               className="rounded-full px-2 py-1 text-xs"
               style={{
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                 color: "#ffffff",
               }}
             >
@@ -975,11 +975,11 @@ export function AIStudio({ darkMode }: AIStudioProps) {
           className="rounded-2xl border p-5"
           style={{
             background: darkMode
-              ? "linear-gradient(135deg, rgba(99,102,241,0.14), rgba(6,182,212,0.08))"
-              : "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(6,182,212,0.05))",
+              ? "linear-gradient(135deg, rgba(29,78,216,0.14), rgba(6,182,212,0.08))"
+              : "linear-gradient(135deg, rgba(29,78,216,0.08), rgba(6,182,212,0.05))",
             borderColor: darkMode
-              ? "rgba(99,102,241,0.20)"
-              : "rgba(99,102,241,0.14)",
+              ? "rgba(29,78,216,0.20)"
+              : "rgba(29,78,216,0.14)",
           }}
         >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -987,9 +987,9 @@ export function AIStudio({ darkMode }: AIStudioProps) {
               <div
                 className="flex h-11 w-11 items-center justify-center rounded-2xl"
                 style={{
-                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                   color: "#ffffff",
-                  boxShadow: "0 8px 22px rgba(99,102,241,0.28)",
+                  boxShadow: "0 8px 22px rgba(29,78,216,0.28)",
                 }}
               >
                 <Video size={20} />
@@ -1034,8 +1034,8 @@ export function AIStudio({ darkMode }: AIStudioProps) {
 
         <div className="hidden">
           {[
-            { label: "Total AI Jobs", value: stats.total, color: "#6366f1" },
-            { label: "Running", value: stats.running, color: "#8b5cf6" },
+            { label: "Total AI Jobs", value: stats.total, color: "#1D4ED8" },
+            { label: "Running", value: stats.running, color: "#2563EB" },
             { label: "Completed", value: stats.completed, color: "#10b981" },
             { label: "Failed", value: stats.failed, color: "#ef4444" },
           ].map((stat) => (
@@ -1080,7 +1080,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                   activeTool === tool.id
                     ? `${tool.color}40`
                     : darkMode
-                      ? "rgba(99,102,241,0.1)"
+                      ? "rgba(29,78,216,0.1)"
                       : "rgba(15,23,42,0.06)",
                 boxShadow: activeTool === tool.id ? `0 0 20px ${tool.color}20` : "none",
               }}
@@ -1114,8 +1114,8 @@ export function AIStudio({ darkMode }: AIStudioProps) {
               className="hidden"
               style={{
                 background: darkMode
-                  ? "rgba(99,102,241,0.06)"
-                  : "rgba(99,102,241,0.04)",
+                  ? "rgba(29,78,216,0.06)"
+                  : "rgba(29,78,216,0.04)",
               }}
             >
               {(["generate", "history", "templates"] as const).map((tab) => (
@@ -1127,14 +1127,14 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                     background:
                       activeTab === tab
                         ? darkMode
-                          ? "rgba(99,102,241,0.2)"
+                          ? "rgba(29,78,216,0.2)"
                           : "#ffffff"
                         : "transparent",
                     color:
                       activeTab === tab
                         ? darkMode
-                          ? "#818cf8"
-                          : "#6366f1"
+                          ? "#60A5FA"
+                          : "#1D4ED8"
                         : textSoft,
                     boxShadow:
                       activeTab === tab && !darkMode
@@ -1194,9 +1194,9 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                             onChange={(event) => setSelectedPlatform(event.target.value)}
                             className="w-full appearance-none rounded-xl border px-3 py-2.5 pr-8 text-sm"
                             style={{
-                              background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                              background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                               borderColor: darkMode
-                                ? "rgba(99,102,241,0.12)"
+                                ? "rgba(29,78,216,0.12)"
                                 : "rgba(15,23,42,0.08)",
                               color: textPrimary,
                             }}
@@ -1223,9 +1223,9 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                             onChange={(event) => setSelectedTone(event.target.value)}
                             className="w-full appearance-none rounded-xl border px-3 py-2.5 pr-8 text-sm"
                             style={{
-                              background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                              background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                               borderColor: darkMode
-                                ? "rgba(99,102,241,0.12)"
+                                ? "rgba(29,78,216,0.12)"
                                 : "rgba(15,23,42,0.08)",
                               color: textPrimary,
                             }}
@@ -1254,9 +1254,9 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                         rows={5}
                         className="w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none transition-all focus:ring-2"
                         style={{
-                          background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                          background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                           borderColor: darkMode
-                            ? "rgba(99,102,241,0.12)"
+                            ? "rgba(29,78,216,0.12)"
                             : "rgba(15,23,42,0.08)",
                           color: textPrimary,
                           fontFamily: "inherit",
@@ -1269,9 +1269,9 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                       disabled={generating}
                       className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
                       style={{
-                        background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                        background: "linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)",
                         color: "#ffffff",
-                        boxShadow: "0 4px 14px rgba(99,102,241,0.35)",
+                        boxShadow: "0 4px 14px rgba(29,78,216,0.35)",
                       }}
                     >
                       {generating ? (
@@ -1328,9 +1328,9 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                         <div className="mb-2 flex items-center gap-2">
                           <div
                             className="flex h-9 w-9 items-center justify-center rounded-xl"
-                            style={{ background: darkMode ? "rgba(99,102,241,0.16)" : "rgba(99,102,241,0.10)" }}
+                            style={{ background: darkMode ? "rgba(29,78,216,0.16)" : "rgba(29,78,216,0.10)" }}
                           >
-                            <FileText size={16} style={{ color: "#6366f1" }} />
+                            <FileText size={16} style={{ color: "#1D4ED8" }} />
                           </div>
                           <div>
                             <h2
@@ -1388,13 +1388,13 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                               style={{
                                 background: active
                                   ? darkMode
-                                    ? "rgba(99,102,241,0.22)"
-                                    : "rgba(99,102,241,0.10)"
+                                    ? "rgba(29,78,216,0.22)"
+                                    : "rgba(29,78,216,0.10)"
                                   : "transparent",
                                 borderColor: active
-                                  ? "rgba(99,102,241,0.36)"
+                                  ? "rgba(29,78,216,0.36)"
                                   : cardStyle.borderColor,
-                                color: active ? "#6366f1" : textMuted,
+                                color: active ? "#1D4ED8" : textMuted,
                               }}
                             >
                               {filter.label}
@@ -1408,9 +1408,9 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                       <div
                         className="mt-4 rounded-2xl border p-4"
                         style={{
-                          background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                          background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                           borderColor: darkMode
-                            ? "rgba(99,102,241,0.18)"
+                            ? "rgba(29,78,216,0.18)"
                             : "rgba(15,23,42,0.08)",
                         }}
                       >
@@ -1489,7 +1489,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                             disabled={generatedPostActionKey === `${editTargetPost.id}:edit`}
                             className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-all hover:opacity-90 disabled:opacity-60"
                             style={{
-                              background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                              background: "linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)",
                               color: "#ffffff",
                             }}
                           >
@@ -1506,9 +1506,9 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                       <div
                         className="mt-4 rounded-2xl border p-4"
                         style={{
-                          background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                          background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                           borderColor: darkMode
-                            ? "rgba(99,102,241,0.18)"
+                            ? "rgba(29,78,216,0.18)"
                             : "rgba(15,23,42,0.08)",
                         }}
                       >
@@ -1623,7 +1623,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                             }
                             className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-all hover:opacity-90 disabled:opacity-60"
                             style={{
-                              background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                              background: "linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)",
                               color: "#ffffff",
                             }}
                           >
@@ -1640,9 +1640,9 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                       <div
                         className="mt-4 rounded-2xl border p-4"
                         style={{
-                          background: darkMode ? "rgba(99,102,241,0.06)" : "#ffffff",
+                          background: darkMode ? "rgba(29,78,216,0.06)" : "#ffffff",
                           borderColor: darkMode
-                            ? "rgba(99,102,241,0.18)"
+                            ? "rgba(29,78,216,0.18)"
                             : "rgba(15,23,42,0.08)",
                         }}
                       >
@@ -1652,11 +1652,11 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                               <span
                                 className="rounded-full border px-2.5 py-1 text-xs font-medium"
                                 style={{
-                                  color: "#6366f1",
+                                  color: "#1D4ED8",
                                   background: darkMode
-                                    ? "rgba(99,102,241,0.12)"
-                                    : "rgba(99,102,241,0.08)",
-                                  borderColor: "rgba(99,102,241,0.18)",
+                                    ? "rgba(29,78,216,0.12)"
+                                    : "rgba(29,78,216,0.08)",
+                                  borderColor: "rgba(29,78,216,0.18)",
                                 }}
                               >
                                 {previewTargetPost.platform}
@@ -1728,8 +1728,8 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                             onClick={() => openScheduleGeneratedPost(previewTargetPost)}
                             className="rounded-xl px-4 py-2 text-xs font-medium"
                             style={{
-                              background: "rgba(99,102,241,0.12)",
-                              color: "#6366f1",
+                              background: "rgba(29,78,216,0.12)",
+                              color: "#1D4ED8",
                             }}
                           >
                             Schedule this draft
@@ -1739,7 +1739,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                             onClick={() => openCampaignPublisher(previewTargetPost)}
                             className="rounded-xl px-4 py-2 text-xs font-medium"
                             style={{
-                              background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                              background: "linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)",
                               color: "#ffffff",
                             }}
                           >
@@ -1770,13 +1770,13 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                         <div
                           className="rounded-2xl border border-dashed p-6 text-center"
                           style={{
-                            background: darkMode ? "rgba(99,102,241,0.04)" : "#f8fafc",
+                            background: darkMode ? "rgba(29,78,216,0.04)" : "#f8fafc",
                             borderColor: darkMode
-                              ? "rgba(99,102,241,0.18)"
+                              ? "rgba(29,78,216,0.18)"
                               : "rgba(15,23,42,0.10)",
                           }}
                         >
-                          <Loader2 className="mx-auto animate-spin" size={20} style={{ color: "#6366f1" }} />
+                          <Loader2 className="mx-auto animate-spin" size={20} style={{ color: "#1D4ED8" }} />
                           <p className="mt-3 text-sm font-semibold" style={{ color: textPrimary }}>
                             Loading generated posts...
                           </p>
@@ -1801,9 +1801,9 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                             onClick={() => void loadGeneratedPosts()}
                             className="mt-4 rounded-xl px-4 py-2 text-xs font-medium transition-all hover:opacity-90"
                             style={{
-                              background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                              background: "linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)",
                               color: "#ffffff",
-                              boxShadow: "0 4px 14px rgba(99,102,241,0.25)",
+                              boxShadow: "0 4px 14px rgba(29,78,216,0.25)",
                             }}
                           >
                             Retry
@@ -1813,19 +1813,19 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                         <div
                           className="rounded-2xl border border-dashed p-6 text-center"
                           style={{
-                            background: darkMode ? "rgba(99,102,241,0.04)" : "#f8fafc",
+                            background: darkMode ? "rgba(29,78,216,0.04)" : "#f8fafc",
                             borderColor: darkMode
-                              ? "rgba(99,102,241,0.18)"
+                              ? "rgba(29,78,216,0.18)"
                               : "rgba(15,23,42,0.10)",
                           }}
                         >
                           <div
                             className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
                             style={{
-                              background: "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.12))",
+                              background: "linear-gradient(135deg, rgba(29,78,216,0.18), rgba(37,99,235,0.12))",
                             }}
                           >
-                            <Sparkles size={18} style={{ color: "#6366f1" }} />
+                            <Sparkles size={18} style={{ color: "#1D4ED8" }} />
                           </div>
                           <p className="text-sm font-semibold" style={{ color: textPrimary }}>
                             No generated posts yet
@@ -1838,9 +1838,9 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                             onClick={handleRefreshGeneratedPosts}
                             className="mt-4 rounded-xl px-4 py-2 text-xs font-medium transition-all hover:opacity-90"
                             style={{
-                              background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                              background: "linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)",
                               color: "#ffffff",
-                              boxShadow: "0 4px 14px rgba(99,102,241,0.25)",
+                              boxShadow: "0 4px 14px rgba(29,78,216,0.25)",
                             }}
                           >
                             Refresh posts
@@ -1857,7 +1857,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                                 onClick={() => setPreviewTargetPost(post)}
                                 className="cursor-pointer rounded-2xl border p-4"
                                 style={{
-                                  background: darkMode ? "rgba(99,102,241,0.04)" : "#f8fafc",
+                                  background: darkMode ? "rgba(29,78,216,0.04)" : "#f8fafc",
                                   borderColor: cardStyle.borderColor,
                                 }}
                               >
@@ -1865,11 +1865,11 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                                   <span
                                     className="rounded-full border px-2.5 py-1 text-xs font-medium"
                                     style={{
-                                      color: "#6366f1",
+                                      color: "#1D4ED8",
                                       background: darkMode
-                                        ? "rgba(99,102,241,0.12)"
-                                        : "rgba(99,102,241,0.08)",
-                                      borderColor: "rgba(99,102,241,0.18)",
+                                        ? "rgba(29,78,216,0.12)"
+                                        : "rgba(29,78,216,0.08)",
+                                      borderColor: "rgba(29,78,216,0.18)",
                                     }}
                                   >
                                     {post.platform}
@@ -1954,13 +1954,13 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                                     className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all hover:scale-[1.02] disabled:hover:scale-100"
                                     style={{
                                       background:
-                                        "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                                        "linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)",
                                       color: "#ffffff",
                                       cursor: generatedPostActionKey
                                         ? "not-allowed"
                                         : "pointer",
                                       opacity: generatedPostActionKey ? 0.6 : 1,
-                                      boxShadow: "0 4px 12px rgba(99,102,241,0.2)",
+                                      boxShadow: "0 4px 12px rgba(29,78,216,0.2)",
                                     }}
                                     aria-label={`Publish ${post.platform} post as a multi-platform campaign`}
                                   >
@@ -2122,9 +2122,9 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                         onClick={() => setSelectedJob(job)}
                         className="w-full rounded-xl border p-3 text-left"
                         style={{
-                          background: darkMode ? "rgba(99,102,241,0.04)" : "#f8fafc",
+                          background: darkMode ? "rgba(29,78,216,0.04)" : "#f8fafc",
                           borderColor: darkMode
-                            ? "rgba(99,102,241,0.08)"
+                            ? "rgba(29,78,216,0.08)"
                             : "rgba(15,23,42,0.06)",
                         }}
                       >
@@ -2225,13 +2225,13 @@ export function AIStudio({ darkMode }: AIStudioProps) {
               className="rounded-2xl border p-4"
               style={{
                 background: darkMode
-                  ? "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08))"
-                  : "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.05))",
-                borderColor: "rgba(99,102,241,0.16)",
+                  ? "linear-gradient(135deg, rgba(29,78,216,0.12), rgba(37,99,235,0.08))"
+                  : "linear-gradient(135deg, rgba(29,78,216,0.08), rgba(37,99,235,0.05))",
+                borderColor: "rgba(29,78,216,0.16)",
               }}
             >
               <div className="mb-2 flex items-center gap-2">
-                <Zap size={15} style={{ color: "#6366f1" }} />
+                <Zap size={15} style={{ color: "#1D4ED8" }} />
                 <p className="text-sm font-semibold" style={{ color: textPrimary }}>
                   Workflow Note
                 </p>
@@ -2285,10 +2285,10 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                       className="flex h-9 w-9 items-center justify-center rounded-xl"
                       style={{
                         background:
-                          "linear-gradient(135deg, rgba(99,102,241,0.22), rgba(139,92,246,0.18))",
+                          "linear-gradient(135deg, rgba(29,78,216,0.22), rgba(37,99,235,0.18))",
                       }}
                     >
-                      <Share2 size={16} style={{ color: "#818cf8" }} />
+                      <Share2 size={16} style={{ color: "#60A5FA" }} />
                     </div>
                     <div>
                       <h2
@@ -2389,13 +2389,13 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                         style={{
                           background: checked
                             ? darkMode
-                              ? "rgba(99,102,241,0.12)"
-                              : "rgba(99,102,241,0.06)"
+                              ? "rgba(29,78,216,0.12)"
+                              : "rgba(29,78,216,0.06)"
                             : darkMode
                               ? "rgba(255,255,255,0.025)"
                               : "#f8fafc",
                           borderColor: checked
-                            ? "rgba(99,102,241,0.34)"
+                            ? "rgba(29,78,216,0.34)"
                             : cardStyle.borderColor,
                           cursor: connected ? "pointer" : "not-allowed",
                           opacity: connected ? 1 : 0.58,
@@ -2525,7 +2525,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                                 target="_blank"
                                 rel="noreferrer"
                                 className="ml-auto inline-flex items-center gap-1 text-xs font-medium"
-                                style={{ color: "#6366f1" }}
+                                style={{ color: "#1D4ED8" }}
                               >
                                 Open post
                                 <ExternalLink size={11} />
@@ -2576,9 +2576,9 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                   className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all hover:opacity-90 disabled:opacity-50"
                   style={{
                     background:
-                      "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                      "linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)",
                     color: "#ffffff",
-                    boxShadow: "0 6px 18px rgba(99,102,241,0.28)",
+                    boxShadow: "0 6px 18px rgba(29,78,216,0.28)",
                   }}
                 >
                   {generatedPostActionKey ===

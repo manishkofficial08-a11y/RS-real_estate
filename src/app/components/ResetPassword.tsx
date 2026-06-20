@@ -57,7 +57,7 @@ export function ResetPassword({ darkMode, token, onBackToLogin }: ResetPasswordP
       className="fixed inset-0 flex items-center justify-center px-6"
       style={{
         background: darkMode
-          ? "radial-gradient(circle at top left, rgba(99,102,241,0.18), transparent 35%), #02020f"
+          ? "radial-gradient(circle at top left, rgba(29,78,216,0.18), transparent 35%), #07111F"
           : "linear-gradient(135deg, #eef2ff, #ffffff)",
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
@@ -68,8 +68,8 @@ export function ResetPassword({ darkMode, token, onBackToLogin }: ResetPasswordP
         transition={{ duration: 0.35 }}
         className="w-full max-w-md rounded-3xl p-8"
         style={{
-          background: darkMode ? "rgba(10,10,30,0.86)" : "rgba(255,255,255,0.92)",
-          border: darkMode ? "1px solid rgba(99,102,241,0.18)" : "1px solid rgba(15,23,42,0.08)",
+          background: darkMode ? "rgba(15,23,42,0.86)" : "rgba(255,255,255,0.92)",
+          border: darkMode ? "1px solid rgba(29,78,216,0.18)" : "1px solid rgba(15,23,42,0.08)",
           boxShadow: darkMode ? "0 24px 80px rgba(0,0,0,0.5)" : "0 24px 80px rgba(15,23,42,0.14)",
           backdropFilter: "blur(24px)",
         }}
@@ -78,7 +78,7 @@ export function ResetPassword({ darkMode, token, onBackToLogin }: ResetPasswordP
           <div
             className="flex h-11 w-11 items-center justify-center rounded-2xl"
             style={{
-              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
               color: "#ffffff",
             }}
           >
@@ -145,7 +145,7 @@ export function ResetPassword({ darkMode, token, onBackToLogin }: ResetPasswordP
                 className="w-full rounded-xl border py-3 pl-10 pr-12 text-sm outline-none"
                 style={{
                   background: darkMode ? "rgba(15,23,42,0.75)" : "#ffffff",
-                  borderColor: darkMode ? "rgba(99,102,241,0.18)" : "rgba(15,23,42,0.1)",
+                  borderColor: darkMode ? "rgba(29,78,216,0.18)" : "rgba(15,23,42,0.1)",
                   color: darkMode ? "#e2e8f0" : "#0f172a",
                 }}
                 required
@@ -176,7 +176,7 @@ export function ResetPassword({ darkMode, token, onBackToLogin }: ResetPasswordP
                 className="w-full rounded-xl border py-3 pl-10 pr-4 text-sm outline-none"
                 style={{
                   background: darkMode ? "rgba(15,23,42,0.75)" : "#ffffff",
-                  borderColor: darkMode ? "rgba(99,102,241,0.18)" : "rgba(15,23,42,0.1)",
+                  borderColor: darkMode ? "rgba(29,78,216,0.18)" : "rgba(15,23,42,0.1)",
                   color: darkMode ? "#e2e8f0" : "#0f172a",
                 }}
                 required
@@ -189,9 +189,9 @@ export function ResetPassword({ darkMode, token, onBackToLogin }: ResetPasswordP
             disabled={loading || Boolean(message)}
             className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-all disabled:opacity-60"
             style={{
-              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
               color: "#ffffff",
-              boxShadow: "0 12px 32px rgba(99,102,241,0.28)",
+              boxShadow: "0 12px 32px rgba(29,78,216,0.28)",
             }}
           >
             {loading && <Loader2 size={16} className="animate-spin" />}
@@ -204,7 +204,7 @@ export function ResetPassword({ darkMode, token, onBackToLogin }: ResetPasswordP
             className="flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all hover:opacity-80"
             style={{
               background: darkMode ? "rgba(15,23,42,0.45)" : "#ffffff",
-              borderColor: darkMode ? "rgba(99,102,241,0.18)" : "rgba(15,23,42,0.1)",
+              borderColor: darkMode ? "rgba(29,78,216,0.18)" : "rgba(15,23,42,0.1)",
               color: darkMode ? "#e2e8f0" : "#0f172a",
             }}
           >

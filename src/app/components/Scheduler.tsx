@@ -99,8 +99,8 @@ const platformMeta: Record<
   facebook: { label: "Facebook", color: "#1877f2", icon: Facebook },
   linkedin: { label: "LinkedIn", color: "#0077b5", icon: Linkedin },
   twitter: { label: "Twitter/X", color: "#1da1f2", icon: Twitter },
-  website: { label: "Website", color: "#6366f1", icon: Globe },
-  other: { label: "Other", color: "#8b5cf6", icon: Youtube },
+  website: { label: "Website", color: "#1D4ED8", icon: Globe },
+  other: { label: "Other", color: "#2563EB", icon: Youtube },
 };
 
 const statusMeta: Record<
@@ -114,8 +114,8 @@ const statusMeta: Record<
   },
   publishing: {
     label: "Publishing",
-    color: "#6366f1",
-    bg: "rgba(99,102,241,0.12)",
+    color: "#1D4ED8",
+    bg: "rgba(29,78,216,0.12)",
   },
   published: {
     label: "Published",
@@ -291,7 +291,7 @@ function platformLabel(platform: string): string {
 }
 
 function platformColor(platform: string): string {
-  return platformMeta[platform]?.color || "#8b5cf6";
+  return platformMeta[platform]?.color || "#2563EB";
 }
 
 function getGeneratedPostTitle(post?: ClientGeneratedPost): string {
@@ -418,14 +418,14 @@ export function Scheduler({ darkMode }: SchedulerProps) {
   }, []);
 
   const cardBase = {
-    background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+    background: darkMode ? "rgba(15,23,42,0.8)" : "#ffffff",
+    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
     backdropFilter: "blur(16px)",
   };
 
   const textPrimary = darkMode ? "#e2e8f0" : "#0f172a";
   const textMuted = darkMode ? "#64748b" : "#64748b";
-  const textSoft = darkMode ? "#4a5568" : "#94a3b8";
+  const textSoft = darkMode ? "#94A3B8" : "#94a3b8";
 
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -745,8 +745,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
         key={schedule.id}
         className="rounded-xl border p-3"
         style={{
-          background: darkMode ? "rgba(13,13,40,0.62)" : "#ffffff",
-          borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+          background: darkMode ? "rgba(15,23,42,0.62)" : "#ffffff",
+          borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
         }}
       >
         <div className="mb-2 flex items-start gap-2">
@@ -788,7 +788,7 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                 disabled={actionKey === `${schedule.id}:delay`}
                 className="rounded-lg border px-2 py-1 text-xs"
                 style={{
-                  borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                  borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                   color: textMuted,
                 }}
               >
@@ -816,8 +816,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
               rel="noreferrer"
               className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs"
               style={{
-                borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
-                color: "#6366f1",
+                borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
+                color: "#1D4ED8",
               }}
             >
               Open <ExternalLink size={11} />
@@ -828,7 +828,7 @@ export function Scheduler({ darkMode }: SchedulerProps) {
             onClick={() => copySchedule(schedule)}
             className="ml-auto rounded-lg border px-2 py-1 text-xs"
             style={{
-              borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+              borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
               color: textMuted,
             }}
           >
@@ -855,7 +855,7 @@ export function Scheduler({ darkMode }: SchedulerProps) {
               <span
                 className="rounded-full px-2 py-1 text-xs"
                 style={{
-                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                   color: "#ffffff",
                 }}
               >
@@ -871,15 +871,15 @@ export function Scheduler({ darkMode }: SchedulerProps) {
             <div
               className="flex gap-1 rounded-xl p-1"
               style={{
-                background: darkMode ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.04)",
+                background: darkMode ? "rgba(29,78,216,0.08)" : "rgba(29,78,216,0.04)",
               }}
             >
               <button
                 onClick={() => setView("calendar")}
                 className="rounded-lg p-2 transition-all"
                 style={{
-                  background: view === "calendar" ? (darkMode ? "rgba(99,102,241,0.2)" : "#ffffff") : "transparent",
-                  color: view === "calendar" ? "#6366f1" : textSoft,
+                  background: view === "calendar" ? (darkMode ? "rgba(29,78,216,0.2)" : "#ffffff") : "transparent",
+                  color: view === "calendar" ? "#1D4ED8" : textSoft,
                 }}
               >
                 <LayoutGrid size={14} />
@@ -888,8 +888,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                 onClick={() => setView("list")}
                 className="rounded-lg p-2 transition-all"
                 style={{
-                  background: view === "list" ? (darkMode ? "rgba(99,102,241,0.2)" : "#ffffff") : "transparent",
-                  color: view === "list" ? "#6366f1" : textSoft,
+                  background: view === "list" ? (darkMode ? "rgba(29,78,216,0.2)" : "#ffffff") : "transparent",
+                  color: view === "list" ? "#1D4ED8" : textSoft,
                 }}
               >
                 <List size={14} />
@@ -900,7 +900,7 @@ export function Scheduler({ darkMode }: SchedulerProps) {
               onClick={() => void loadSchedulerData()}
               className="flex items-center gap-2 rounded-xl border px-4 py-2 text-sm"
               style={{
-                borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                 color: textMuted,
               }}
             >
@@ -911,8 +911,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
               onClick={() => openScheduleModal()}
               className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-white"
               style={{
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
+                background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
+                boxShadow: "0 4px 14px rgba(29,78,216,0.3)",
               }}
             >
               <Plus size={14} /> Schedule Post
@@ -941,9 +941,9 @@ export function Scheduler({ darkMode }: SchedulerProps) {
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {[
-            { label: "Total this month", value: stats.total, color: "#6366f1" },
+            { label: "Total this month", value: stats.total, color: "#1D4ED8" },
             { label: "Scheduled", value: stats.scheduled, color: "#10b981" },
-            { label: "Publishing", value: stats.publishing, color: "#8b5cf6" },
+            { label: "Publishing", value: stats.publishing, color: "#2563EB" },
             { label: "Published", value: stats.published, color: "#14b8a6" },
             { label: "Failed", value: stats.failed, color: "#ef4444" },
           ].map((item) => (
@@ -967,13 +967,13 @@ export function Scheduler({ darkMode }: SchedulerProps) {
           animate={{ opacity: 1, y: 0 }}
           className="rounded-2xl border p-4"
           style={{
-            background: darkMode ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.03)",
-            borderColor: darkMode ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.08)",
+            background: darkMode ? "rgba(29,78,216,0.06)" : "rgba(29,78,216,0.03)",
+            borderColor: darkMode ? "rgba(29,78,216,0.15)" : "rgba(29,78,216,0.08)",
           }}
         >
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)" }}>
                 <Sparkles size={14} className="text-white" />
               </div>
               <div>
@@ -992,8 +992,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                 onChange={handleContentTypeChange}
                 className="rounded-xl border px-3 py-2 text-xs"
                 style={{
-                  background: darkMode ? "rgba(13,13,40,0.9)" : "#ffffff",
-                  borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                  background: darkMode ? "rgba(15,23,42,0.9)" : "#ffffff",
+                  borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                   color: textPrimary,
                 }}
               >
@@ -1009,8 +1009,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                 onChange={handlePlatformChange}
                 className="rounded-xl border px-3 py-2 text-xs"
                 style={{
-                  background: darkMode ? "rgba(13,13,40,0.9)" : "#ffffff",
-                  borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                  background: darkMode ? "rgba(15,23,42,0.9)" : "#ffffff",
+                  borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                   color: textPrimary,
                 }}
               >
@@ -1030,12 +1030,12 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                 onClick={() => openScheduleModal(slot)}
                 className="min-w-[220px] rounded-2xl border p-3 text-left transition-all hover:scale-[1.01]"
                 style={{
-                  background: darkMode ? "rgba(13,13,40,0.82)" : "#ffffff",
-                  borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                  background: darkMode ? "rgba(15,23,42,0.82)" : "#ffffff",
+                  borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                 }}
               >
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold" style={{ color: "#6366f1" }}>
+                  <span className="text-xs font-semibold" style={{ color: "#1D4ED8" }}>
                     {slot.score}% fit
                   </span>
                   <span className="rounded-full px-2 py-1 text-[11px]" style={{ background: `${platformColor(slot.platform)}16`, color: platformColor(slot.platform) }}>
@@ -1075,8 +1075,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                   onClick={goToToday}
                   className="rounded-lg border px-3 py-1.5 text-xs"
                   style={{
-                    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
-                    color: "#6366f1",
+                    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
+                    color: "#1D4ED8",
                   }}
                 >
                   Today
@@ -1092,7 +1092,7 @@ export function Scheduler({ darkMode }: SchedulerProps) {
 
             {loading ? (
               <div className="flex h-64 items-center justify-center">
-                <Loader2 size={22} className="animate-spin" style={{ color: "#6366f1" }} />
+                <Loader2 size={22} className="animate-spin" style={{ color: "#1D4ED8" }} />
               </div>
             ) : view === "calendar" ? (
               <>
@@ -1121,22 +1121,22 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                         className="relative flex aspect-square flex-col items-center justify-center rounded-xl border p-1 transition-all disabled:opacity-0"
                         style={{
                           background: selected
-                            ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                            ? "linear-gradient(135deg, #1D4ED8, #2563EB)"
                             : isToday
                               ? darkMode
-                                ? "rgba(99,102,241,0.15)"
-                                : "rgba(99,102,241,0.08)"
+                                ? "rgba(29,78,216,0.15)"
+                                : "rgba(29,78,216,0.08)"
                               : "transparent",
                           borderColor:
                             isToday && !selected
-                              ? "rgba(99,102,241,0.25)"
+                              ? "rgba(29,78,216,0.25)"
                               : "transparent",
                         }}
                       >
                         <span
                           className="text-xs"
                           style={{
-                            color: selected ? "#ffffff" : isToday ? "#6366f1" : darkMode ? "#94a3b8" : "#475569",
+                            color: selected ? "#ffffff" : isToday ? "#1D4ED8" : darkMode ? "#94a3b8" : "#475569",
                             fontWeight: isToday || selected ? 700 : 400,
                           }}
                         >
@@ -1170,7 +1170,7 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                     <button
                       onClick={() => openScheduleModal()}
                       className="mt-3 rounded-xl px-4 py-2 text-sm text-white"
-                      style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+                      style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)" }}
                     >
                       Schedule first post
                     </button>
@@ -1202,8 +1202,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                 onClick={() => openScheduleModal()}
                 className="rounded-xl border p-2"
                 style={{
-                  borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
-                  color: "#6366f1",
+                  borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
+                  color: "#1D4ED8",
                 }}
               >
                 <Plus size={14} />
@@ -1220,7 +1220,7 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                   <button
                     onClick={() => openScheduleModal()}
                     className="mt-2 text-xs"
-                    style={{ color: "#6366f1" }}
+                    style={{ color: "#1D4ED8" }}
                   >
                     + Add post
                   </button>
@@ -1233,12 +1233,12 @@ export function Scheduler({ darkMode }: SchedulerProps) {
             <div
               className="mt-4 rounded-xl border p-3"
               style={{
-                background: darkMode ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.03)",
-                borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)",
+                background: darkMode ? "rgba(29,78,216,0.06)" : "rgba(29,78,216,0.03)",
+                borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(29,78,216,0.08)",
               }}
             >
               <div className="mb-2 flex items-center gap-2">
-                <Wand2 size={13} style={{ color: "#6366f1" }} />
+                <Wand2 size={13} style={{ color: "#1D4ED8" }} />
                 <span className="text-xs font-semibold" style={{ color: textPrimary }}>
                   AI scheduling note
                 </span>
@@ -1255,8 +1255,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
             <div
               className="w-full max-w-2xl rounded-2xl border p-5 shadow-2xl"
               style={{
-                background: darkMode ? "rgba(13,13,40,0.98)" : "#ffffff",
-                borderColor: darkMode ? "rgba(99,102,241,0.18)" : "rgba(15,23,42,0.08)",
+                background: darkMode ? "rgba(15,23,42,0.98)" : "#ffffff",
+                borderColor: darkMode ? "rgba(29,78,216,0.18)" : "rgba(15,23,42,0.08)",
               }}
             >
               <div className="mb-4 flex items-start justify-between">
@@ -1303,8 +1303,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                       onChange={(event) => updateForm("generated_post_id", event.target.value)}
                       className="w-full rounded-xl border px-3 py-2 text-sm"
                       style={{
-                        background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                        borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                        background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
+                        borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                         color: textPrimary,
                       }}
                     >
@@ -1331,8 +1331,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                         onChange={handleContentTypeChange}
                         className="w-full rounded-xl border px-3 py-2 text-sm"
                         style={{
-                          background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                          borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                          background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
+                          borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                           color: textPrimary,
                         }}
                       >
@@ -1353,8 +1353,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                         onChange={handlePlatformChange}
                         className="w-full rounded-xl border px-3 py-2 text-sm"
                         style={{
-                          background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                          borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                          background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
+                          borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                           color: textPrimary,
                         }}
                       >
@@ -1370,8 +1370,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                   <div
                     className="rounded-2xl border p-3"
                     style={{
-                      background: darkMode ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.03)",
-                      borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                      background: darkMode ? "rgba(29,78,216,0.06)" : "rgba(29,78,216,0.03)",
+                      borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                     }}
                   >
                     <p className="mb-2 text-xs font-semibold" style={{ color: textPrimary }}>
@@ -1390,12 +1390,12 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                           }
                           className="rounded-xl border p-2 text-left text-xs"
                           style={{
-                            background: darkMode ? "rgba(13,13,40,0.70)" : "#ffffff",
-                            borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                            background: darkMode ? "rgba(15,23,42,0.70)" : "#ffffff",
+                            borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                             color: textMuted,
                           }}
                         >
-                          <span className="font-semibold" style={{ color: "#6366f1" }}>
+                          <span className="font-semibold" style={{ color: "#1D4ED8" }}>
                             {slot.score}% - {slot.label}
                           </span>
                           <br />
@@ -1416,8 +1416,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                         onChange={(event) => updateForm("date", event.target.value)}
                         className="w-full rounded-xl border px-3 py-2 text-sm"
                         style={{
-                          background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                          borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                          background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
+                          borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                           color: textPrimary,
                         }}
                       />
@@ -1433,8 +1433,8 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                         onChange={(event) => updateForm("time", event.target.value)}
                         className="w-full rounded-xl border px-3 py-2 text-sm"
                         style={{
-                          background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                          borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                          background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
+                          borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                           color: textPrimary,
                         }}
                       />
@@ -1446,7 +1446,7 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                       onClick={() => setModalOpen(false)}
                       className="flex-1 rounded-xl border px-4 py-2 text-sm"
                       style={{
-                        borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                        borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                         color: textMuted,
                       }}
                     >
@@ -1456,7 +1456,7 @@ export function Scheduler({ darkMode }: SchedulerProps) {
                       onClick={handleCreateSchedule}
                       disabled={actionKey === "create"}
                       className="flex-1 rounded-xl px-4 py-2 text-sm font-medium text-white"
-                      style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+                      style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)" }}
                     >
                       {actionKey === "create" ? "Scheduling..." : "Schedule Post"}
                     </button>

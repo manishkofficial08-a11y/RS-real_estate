@@ -75,17 +75,17 @@ export function CommandPalette({ open, onClose, onNavigate, darkMode }: CommandP
               transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
               className="w-full max-w-xl rounded-2xl border overflow-hidden pointer-events-auto"
               style={{
-                background: darkMode ? "rgba(10,10,30,0.97)" : "#ffffff",
-                borderColor: darkMode ? "rgba(99,102,241,0.25)" : "rgba(15,23,42,0.1)",
+                background: darkMode ? "rgba(15,23,42,0.97)" : "#ffffff",
+                borderColor: darkMode ? "rgba(29,78,216,0.25)" : "rgba(15,23,42,0.1)",
                 boxShadow: darkMode
-                  ? "0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,102,241,0.1)"
+                  ? "0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(29,78,216,0.1)"
                   : "0 24px 80px rgba(0,0,0,0.15)",
                 backdropFilter: "blur(24px)",
               }}
             >
               {/* Input */}
-              <div className="flex items-center gap-3 px-4 py-3.5 border-b" style={{ borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)" }}>
-                <Search size={16} style={{ color: darkMode ? "#4a5568" : "#94a3b8", flexShrink: 0 }} />
+              <div className="flex items-center gap-3 px-4 py-3.5 border-b" style={{ borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)" }}>
+                <Search size={16} style={{ color: darkMode ? "#94A3B8" : "#94a3b8", flexShrink: 0 }} />
                 <input
                   ref={inputRef}
                   value={query}
@@ -94,7 +94,7 @@ export function CommandPalette({ open, onClose, onNavigate, darkMode }: CommandP
                   className="flex-1 bg-transparent outline-none text-sm"
                   style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
                 />
-                <kbd className="text-xs px-2 py-1 rounded" style={{ background: darkMode ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.06)", color: darkMode ? "#818cf8" : "#6366f1" }}>
+                <kbd className="text-xs px-2 py-1 rounded" style={{ background: darkMode ? "rgba(29,78,216,0.1)" : "rgba(29,78,216,0.06)", color: darkMode ? "#60A5FA" : "#1D4ED8" }}>
                   ESC
                 </kbd>
               </div>
@@ -103,7 +103,7 @@ export function CommandPalette({ open, onClose, onNavigate, darkMode }: CommandP
               <div className="py-2 max-h-80 overflow-y-auto">
                 {filtered.length === 0 ? (
                   <div className="px-4 py-8 text-center">
-                    <p className="text-sm" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>No commands found for "{query}"</p>
+                    <p className="text-sm" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>No commands found for "{query}"</p>
                   </div>
                 ) : (
                   <div className="px-2">
@@ -118,25 +118,25 @@ export function CommandPalette({ open, onClose, onNavigate, darkMode }: CommandP
                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
                         style={{
                           background: selected === i
-                            ? darkMode ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.08)"
+                            ? darkMode ? "rgba(29,78,216,0.15)" : "rgba(29,78,216,0.08)"
                             : "transparent",
                         }}
                       >
                         <div
                           className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                          style={{ background: selected === i ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.08)" }}
+                          style={{ background: selected === i ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.08)" }}
                         >
-                          <cmd.icon size={13} style={{ color: darkMode ? "#818cf8" : "#6366f1" }} />
+                          <cmd.icon size={13} style={{ color: darkMode ? "#60A5FA" : "#1D4ED8" }} />
                         </div>
                         <span className="flex-1 text-sm" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{cmd.label}</span>
                         <div className="flex items-center gap-1">
                           {cmd.shortcut.split(" ").map((key, ki) => (
-                            <kbd key={ki} className="text-xs px-1.5 py-0.5 rounded" style={{ background: darkMode ? "rgba(99,102,241,0.1)" : "rgba(15,23,42,0.06)", color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                            <kbd key={ki} className="text-xs px-1.5 py-0.5 rounded" style={{ background: darkMode ? "rgba(29,78,216,0.1)" : "rgba(15,23,42,0.06)", color: darkMode ? "#94A3B8" : "#94a3b8" }}>
                               {key}
                             </kbd>
                           ))}
                         </div>
-                        {selected === i && <ArrowRight size={12} style={{ color: "#6366f1" }} />}
+                        {selected === i && <ArrowRight size={12} style={{ color: "#1D4ED8" }} />}
                       </button>
                     ))}
                   </div>
@@ -144,13 +144,13 @@ export function CommandPalette({ open, onClose, onNavigate, darkMode }: CommandP
               </div>
 
               {/* Footer */}
-              <div className="px-4 py-2.5 border-t flex items-center gap-4" style={{ borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)" }}>
+              <div className="px-4 py-2.5 border-t flex items-center gap-4" style={{ borderColor: darkMode ? "rgba(29,78,216,0.08)" : "rgba(15,23,42,0.04)" }}>
                 <div className="flex items-center gap-1.5 text-xs" style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}>
-                  <kbd className="px-1.5 py-0.5 rounded text-xs" style={{ background: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)" }}>↑↓</kbd>
+                  <kbd className="px-1.5 py-0.5 rounded text-xs" style={{ background: darkMode ? "rgba(29,78,216,0.08)" : "rgba(15,23,42,0.04)" }}>↑↓</kbd>
                   <span>navigate</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-xs" style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}>
-                  <kbd className="px-1.5 py-0.5 rounded text-xs" style={{ background: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)" }}>↵</kbd>
+                  <kbd className="px-1.5 py-0.5 rounded text-xs" style={{ background: darkMode ? "rgba(29,78,216,0.08)" : "rgba(15,23,42,0.04)" }}>↵</kbd>
                   <span>open</span>
                 </div>
               </div>

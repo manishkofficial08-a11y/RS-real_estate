@@ -240,7 +240,7 @@ export default function App() {
     <div
       className="fixed inset-0 flex overflow-hidden"
       style={{
-        background: darkMode ? "#02020f" : "#f8fafc",
+        background: darkMode ? "#07111F" : "#f8fafc",
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
@@ -261,7 +261,7 @@ export default function App() {
               top: "-20%",
               left: "-10%",
               background:
-                "radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)",
+                "radial-gradient(circle, rgba(29,78,216,0.08) 0%, transparent 70%)",
               filter: "blur(60px)",
             }}
             animate={{ scale: [1, 1.1, 1], opacity: [0.6, 1, 0.6] }}
@@ -275,7 +275,7 @@ export default function App() {
               bottom: "-10%",
               right: "-5%",
               background:
-                "radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%)",
+                "radial-gradient(circle, rgba(37,99,235,0.07) 0%, transparent 70%)",
               filter: "blur(60px)",
             }}
             animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.9, 0.5] }}
@@ -337,7 +337,7 @@ export default function App() {
               ? "rgba(5,5,20,0.7)"
               : "rgba(255,255,255,0.85)",
             borderColor: darkMode
-              ? "rgba(99,102,241,0.1)"
+              ? "rgba(29,78,216,0.1)"
               : "rgba(15,23,42,0.06)",
             backdropFilter: "blur(20px)",
           }}
@@ -366,12 +366,12 @@ export default function App() {
               className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs transition-all hover:border-primary/20"
               style={{
                 background: darkMode
-                  ? "rgba(99,102,241,0.06)"
-                  : "rgba(99,102,241,0.03)",
+                  ? "rgba(29,78,216,0.06)"
+                  : "rgba(29,78,216,0.03)",
                 borderColor: darkMode
-                  ? "rgba(99,102,241,0.1)"
-                  : "rgba(99,102,241,0.06)",
-                color: darkMode ? "#4a5568" : "#94a3b8",
+                  ? "rgba(29,78,216,0.1)"
+                  : "rgba(29,78,216,0.06)",
+                color: darkMode ? "#94A3B8" : "#94a3b8",
               }}
             >
               <Search size={12} />
@@ -380,9 +380,9 @@ export default function App() {
                 className="px-1.5 py-0.5 rounded text-xs"
                 style={{
                   background: darkMode
-                    ? "rgba(99,102,241,0.1)"
-                    : "rgba(99,102,241,0.06)",
-                  color: darkMode ? "#818cf8" : "#6366f1",
+                    ? "rgba(29,78,216,0.1)"
+                    : "rgba(29,78,216,0.06)",
+                  color: darkMode ? "#60A5FA" : "#1D4ED8",
                 }}
               >
                 ⌘K
@@ -394,9 +394,9 @@ export default function App() {
               onClick={() => setActiveScreen("ai-studio")}
               className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:opacity-90"
               style={{
-                background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                background: "linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)",
                 color: "#ffffff",
-                boxShadow: "0 2px 8px rgba(99,102,241,0.3)",
+                boxShadow: "0 2px 8px rgba(29,78,216,0.3)",
               }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -410,7 +410,7 @@ export default function App() {
               <button
                 onClick={() => setNotifOpen((o) => !o)}
                 className="relative p-2 rounded-xl transition-all hover:bg-primary/5"
-                style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
               >
                 <Bell size={16} />
                 {unreadCount > 0 && (
@@ -442,10 +442,10 @@ export default function App() {
                       className="absolute right-0 top-full mt-2 w-80 rounded-2xl border z-30 overflow-hidden"
                       style={{
                         background: darkMode
-                          ? "rgba(10,10,30,0.97)"
+                          ? "rgba(15,23,42,0.97)"
                           : "#ffffff",
                         borderColor: darkMode
-                          ? "rgba(99,102,241,0.2)"
+                          ? "rgba(29,78,216,0.2)"
                           : "rgba(15,23,42,0.08)",
                         boxShadow: darkMode
                           ? "0 16px 48px rgba(0,0,0,0.5)"
@@ -457,7 +457,7 @@ export default function App() {
                         className="px-4 py-3 border-b"
                         style={{
                           borderColor: darkMode
-                            ? "rgba(99,102,241,0.1)"
+                            ? "rgba(29,78,216,0.1)"
                             : "rgba(15,23,42,0.06)",
                         }}
                       >
@@ -469,7 +469,7 @@ export default function App() {
                         </p>
                         <p
                           className="text-xs"
-                          style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                          style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
                         >
                           {notificationsLoading
                             ? "Loading..."
@@ -480,7 +480,7 @@ export default function App() {
                         className="divide-y"
                         style={{
                           borderColor: darkMode
-                            ? "rgba(99,102,241,0.06)"
+                            ? "rgba(29,78,216,0.06)"
                             : "rgba(15,23,42,0.04)",
                         }}
                       >
@@ -536,7 +536,7 @@ export default function App() {
                                 <p
                                   className="text-[11px] mt-1"
                                   style={{
-                                    color: darkMode ? "#4a5568" : "#94a3b8",
+                                    color: darkMode ? "#94A3B8" : "#94a3b8",
                                   }}
                                 >
                                   {notification.is_read ? "Read" : "Unread"}
