@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { CLIENT_BRANDING } from "../lib/clientBranding";
 import {
   Building2,
   CheckCircle2,
@@ -22,7 +23,9 @@ interface SettingsProps {
 
 function formatLabel(value?: string | null) {
   if (!value) return "Not set";
-  return value.replace(/[_-]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return value
+    .replace(/[_-]/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function getInitials(name?: string | null) {
@@ -38,7 +41,6 @@ function getInitials(name?: string | null) {
       .toUpperCase() || "RS"
   );
 }
-
 
 const socialIntegrationCards = [
   {
@@ -121,19 +123,19 @@ export function Settings({ darkMode }: SettingsProps) {
       {
         icon: User,
         label: "User Name",
-        value: profile?.full_name || "Client User",
+        value: CLIENT_BRANDING.ownerName,
         color: "#6366f1",
       },
       {
         icon: Mail,
         label: "Email",
-        value: profile?.email || "Email not available",
+        value: CLIENT_BRANDING.ownerEmail,
         color: "#06b6d4",
       },
       {
         icon: Building2,
         label: "Business",
-        value: profile?.business_name || "RS Real Estate",
+        value: CLIENT_BRANDING.businessName,
         color: "#8b5cf6",
       },
       {
@@ -151,7 +153,7 @@ export function Settings({ darkMode }: SettingsProps) {
       {
         icon: CheckCircle2,
         label: "Business Type",
-        value: formatLabel(profile?.business_type || "real_estate"),
+        value: CLIENT_BRANDING.businessType,
         color: "#ef4444",
       },
     ],
@@ -205,7 +207,9 @@ export function Settings({ darkMode }: SettingsProps) {
           <div
             className="rounded-2xl border px-4 py-3 text-sm"
             style={{
-              background: darkMode ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.06)",
+              background: darkMode
+                ? "rgba(239,68,68,0.08)"
+                : "rgba(239,68,68,0.06)",
               borderColor: "rgba(239,68,68,0.25)",
               color: "#ef4444",
             }}
@@ -240,7 +244,11 @@ export function Settings({ darkMode }: SettingsProps) {
                 boxShadow: "0 18px 42px rgba(99,102,241,0.35)",
               }}
             >
-              {getInitials(profile?.business_name || profile?.full_name)}
+              <img
+                src={CLIENT_BRANDING.logoUrl}
+                alt={`${CLIENT_BRANDING.businessName} logo`}
+                className="h-full w-full rounded-3xl object-contain bg-white p-1"
+              />
             </div>
 
             <div className="flex-1">
@@ -255,15 +263,14 @@ export function Settings({ darkMode }: SettingsProps) {
                 className="text-2xl font-semibold"
                 style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
               >
-                {profile?.business_name || "RS Real Estate"}
+                {CLIENT_BRANDING.businessName}
               </h2>
 
               <p
                 className="text-sm mt-1"
                 style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
               >
-                {formatLabel(profile?.business_type || "real_estate")} ·{" "}
-                {formatLabel(profile?.plan || "free")} Plan
+                {CLIENT_BRANDING.businessType} · {CLIENT_BRANDING.planLabel}
               </p>
             </div>
 
@@ -271,7 +278,9 @@ export function Settings({ darkMode }: SettingsProps) {
               onClick={handleLogout}
               className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
               style={{
-                background: darkMode ? "rgba(239,68,68,0.12)" : "rgba(239,68,68,0.08)",
+                background: darkMode
+                  ? "rgba(239,68,68,0.12)"
+                  : "rgba(239,68,68,0.08)",
                 color: "#ef4444",
               }}
             >
@@ -326,7 +335,6 @@ export function Settings({ darkMode }: SettingsProps) {
           ))}
         </div>
 
-
         <div
           className="rounded-2xl border p-5"
           style={{
@@ -346,8 +354,8 @@ export function Settings({ darkMode }: SettingsProps) {
                 className="mt-1 max-w-2xl text-sm"
                 style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
               >
-                Prepare platform connections for automated publishing. Live OAuth
-                connection will be enabled after publisher backend setup.
+                Prepare platform connections for automated publishing. Live
+                OAuth connection will be enabled after publisher backend setup.
               </p>
             </div>
 
@@ -374,9 +382,7 @@ export function Settings({ darkMode }: SettingsProps) {
                 transition={{ delay: 0.08 + index * 0.04 }}
                 className="rounded-2xl border p-4"
                 style={{
-                  background: darkMode
-                    ? "rgba(99,102,241,0.04)"
-                    : "#f8fafc",
+                  background: darkMode ? "rgba(99,102,241,0.04)" : "#f8fafc",
                   borderColor: darkMode
                     ? "rgba(99,102,241,0.10)"
                     : "rgba(15,23,42,0.06)",
@@ -434,10 +440,13 @@ export function Settings({ darkMode }: SettingsProps) {
                   </span>
                 </div>
 
-                <div className="mt-4 rounded-xl border p-3" style={{
-                  background: darkMode ? "rgba(13,13,40,0.45)" : "#ffffff",
-                  borderColor: cardBase.borderColor,
-                }}>
+                <div
+                  className="mt-4 rounded-xl border p-3"
+                  style={{
+                    background: darkMode ? "rgba(13,13,40,0.45)" : "#ffffff",
+                    borderColor: cardBase.borderColor,
+                  }}
+                >
                   <p
                     className="text-xs font-medium"
                     style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
@@ -482,8 +491,8 @@ export function Settings({ darkMode }: SettingsProps) {
             className="mt-4 text-xs"
             style={{ color: darkMode ? "#64748b" : "#94a3b8" }}
           >
-            This section is UI-only. It does not collect secrets, store tokens, or
-            start a real OAuth flow.
+            This section is UI-only. It does not collect secrets, store tokens,
+            or start a real OAuth flow.
           </p>
         </div>
 

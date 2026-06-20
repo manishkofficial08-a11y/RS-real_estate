@@ -62,20 +62,20 @@ const screenComponents: Record<
 };
 
 const screenTitles: Record<string, string> = {
-  dashboard: "Dashboard",
+  dashboard: "Overview",
   media: "Media Library",
-  "ai-studio": "AI Studio",
-  scheduler: "Scheduler",
+  "ai-studio": "AI Content Studio",
+  scheduler: "Campaign Scheduler",
   analytics: "Analytics",
-  crm: "CRM",
+  crm: "Leads",
   properties: "Properties",
-  reports: "Reports",
-  team: "Team",
-  automation: "Automation",
+  reports: "Business Reports",
+  team: "Team Access",
+  automation: "Social Accounts",
   billing: "Billing",
   support: "Support",
   settings: "Settings",
-  "ai-manager": "AI Manager",
+  "ai-manager": "AI Assistant",
 };
 
 export default function App() {
@@ -348,7 +348,7 @@ export default function App() {
               className="text-xs"
               style={{ color: darkMode ? "#2d3748" : "#94a3b8" }}
             >
-              {clientProfile?.business_name || "RS Real Estate"}
+              Ridhi Sidhi Real Estate
             </span>
             <span style={{ color: darkMode ? "#2d3748" : "#cbd5e1" }}>/</span>
             <span

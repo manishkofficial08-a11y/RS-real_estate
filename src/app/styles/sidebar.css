@@ -571,3 +571,34 @@
     animation: none;
   }
 }
+.rs-client-logo-mark {
+  background: #ffffff;
+  border-radius: 999px;
+  padding: 2px;
+  overflow: hidden;
+  box-shadow: 0 0 24px var(--rs-sidebar-glow);
+}
+
+.rs-client-logo-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: 999px;
+}
+
+.rs-client-website-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  color: var(--rs-sidebar-cyan);
+  font-size: 10px;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rs-client-website-link:hover {
+  text-decoration: underline;
+}

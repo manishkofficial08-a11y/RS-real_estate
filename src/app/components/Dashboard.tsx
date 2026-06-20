@@ -334,7 +334,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
               className="tracking-tight"
               style={{ color: darkMode ? "#e2e8f0" : "#0f172a", fontSize: "1.5rem", fontWeight: 600 }}
             >
-              Good morning ðŸ‘‹
+              WELCOME BACK, 👨
             </h1>
 
             <p className="text-sm mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
@@ -342,7 +342,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
                 ? "Loading your real dashboard data..."
                 : leadError
                   ? `Backend data unavailable Â· ${leadError}`
-                  : `Your AI health score is ${stats.healthScore}/100 â€” ${stats.activeLeads} active leads need attention.`}
+                  : `Your AI health score is ${stats.healthScore}/100 & ${stats.activeLeads} active leads need attention.`}
             </p>
           </div>
 
