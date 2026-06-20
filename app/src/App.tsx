@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+﻿import { Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import Layout from '@/components/Layout';
 import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
@@ -17,6 +17,7 @@ import WhatsAppAutomation from '@/pages/WhatsAppAutomation';
 import EmailAutomation from '@/pages/EmailAutomation';
 import SalesDashboard from '@/pages/SalesDashboard';
 import CustomInternalTools from '@/pages/CustomInternalTools';
+import ClientOnboarding from '@/pages/ClientOnboarding';
 
 export default function App() {
   return (
@@ -40,7 +41,7 @@ export default function App() {
           <Route path="whatsapp-automation" element={<WhatsAppAutomation />} />
           <Route path="email-automation" element={<EmailAutomation />} />
           <Route path="sales-dashboard" element={<SalesDashboard />} />
-          <Route path="custom-tools" element={<CustomInternalTools />} />
+          <Route path="custom-tools" element={<CustomInternalTools />} />`n          <Route path="client-onboarding" element={<ClientOnboarding />} />
         </Route>
       </Route>
 
