@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+﻿import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Building2,
@@ -25,6 +25,7 @@ type SidebarProps = {
 const navItems = [
   { label: 'Overview', icon: LayoutDashboard, path: '/admin/overview' },
   { label: 'Companies', icon: Building2, path: '/admin/companies' },
+  { label: 'Client Onboarding', icon: Users, path: '/admin/client-onboarding' },
   { label: 'Leads', icon: Rocket, path: '/admin/leads' },
   { label: 'Users', icon: Users, path: '/admin/users' },
   { label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
@@ -181,3 +182,4 @@ export default function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse
     </aside>
   );
 }
+
