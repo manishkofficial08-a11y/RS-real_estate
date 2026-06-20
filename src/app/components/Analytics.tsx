@@ -83,7 +83,15 @@ function formatPrice(price: number) {
 }
 
 export function Analytics({ darkMode }: AnalyticsProps) {
+  const [signalFilter, setSignalFilter] = useState<"all" | "CRM" | "Property">("all");
   const [period, setPeriod] = useState("7d");
+  const periodLabelMap: Record<string, string> = {
+    "7d": "7-day",
+    "30d": "30-day",
+    "90d": "90-day",
+    "1y": "1-year",
+  };
+  const periodLabel = periodLabelMap[period] || period;
   const [metric, setMetric] = useState<"leads" | "properties" | "score">("leads");
   const [leads, setLeads] = useState<ClientLead[]>([]);
   const [properties, setProperties] = useState<ClientProperty[]>([]);
@@ -232,6 +240,58 @@ export function Analytics({ darkMode }: AnalyticsProps) {
     return rows.length > 0 ? rows : fallbackSignals;
   }, [leads, properties]);
 
+  const filteredSignals = useMemo(() => {
+    if (signalFilter === "all") return crmSignals;
+    return crmSignals.filter((signal) => signal.platform === signalFilter);
+  }, [crmSignals, signalFilter]);
+
+
+  function handleExportAnalytics() {
+    const escapeCsv = (value: unknown) =>
+      `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+    const rows: unknown[][] = [
+      ["Report", "Riddhi Sidhi Real Estate Analytics"],
+      ["Snapshot Window", periodLabel],
+      ["Total Leads", analyticsStats.totalLeads],
+      ["Hot Leads", analyticsStats.hotLeads],
+      ["Total Properties", analyticsStats.totalProperties],
+      ["Available Properties", analyticsStats.availableProperties],
+      ["Sold Properties", analyticsStats.soldProperties],
+      ["Rented Properties", analyticsStats.rentedProperties],
+      ["Business Health Score", analyticsStats.healthScore],
+      [],
+      ["Signals"],
+      ["#", "Type", "Title", "Metric", "Score / Value", "Status"],
+    ];
+
+    filteredSignals.forEach((signal, index) => {
+      rows.push([
+        index + 1,
+        signal.platform,
+        signal.content,
+        signal.reach,
+        signal.eng,
+        signal.trend,
+      ]);
+    });
+
+    const csv = rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `rs-real-estate-analytics-${period}.csv`;
+    link.style.display = "none";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    window.URL.revokeObjectURL(url);
+  }
+
   const chartColor = darkMode ? "#60A5FA" : "#1D4ED8";
   const tickColor = darkMode ? "#2d3748" : "#cbd5e1";
   const tooltipBg = darkMode ? "#0F172A" : "#ffffff";
@@ -263,14 +323,21 @@ export function Analytics({ darkMode }: AnalyticsProps) {
 
             <p className="text-sm mt-0.5" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
               {loading
-                ? "Loading real analytics from backend..."
+                ? "Loading business snapshot..."
                 : apiMessage
-                  ? `Backend analytics unavailable · ${apiMessage}`
-                  : `Live insights from ${analyticsStats.totalLeads} leads and ${analyticsStats.totalProperties} properties`}
+                  ? `Business analytics unavailable · ${apiMessage}`
+                  : `Current ${periodLabel} snapshot from ${analyticsStats.totalLeads} leads and ${analyticsStats.totalProperties} properties`}
             </p>
           </div>
 
           <div className="flex items-center gap-2">
+            <span
+              className="hidden sm:inline text-xs"
+              style={{ color: darkMode ? "#94A3B8" : "#64748B" }}
+            >
+              Snapshot window
+            </span>
+
             <div
               className="flex gap-1 p-1 rounded-xl"
               style={{ background: darkMode ? "rgba(29,78,216,0.08)" : "rgba(29,78,216,0.04)" }}
@@ -302,13 +369,15 @@ export function Analytics({ darkMode }: AnalyticsProps) {
                 </button>
               ))}
             </div>
-
             <button
+              type="button"
+              onClick={handleExportAnalytics}
               className="flex items-center gap-2 px-3 py-2 rounded-xl border text-xs transition-all hover:bg-primary/5"
               style={{ borderColor: cardBase.borderColor, color: darkMode ? "#94A3B8" : "#94a3b8" }}
+              title="Download analytics CSV"
             >
               <Download size={13} />
-              Export
+              Export CSV
             </button>
           </div>
         </motion.div>
@@ -318,7 +387,7 @@ export function Analytics({ darkMode }: AnalyticsProps) {
             {
               label: "Total Leads",
               value: formatNumber(analyticsStats.totalLeads),
-              change: "Live",
+              change: "Current",
               icon: Users,
               color: "#1D4ED8",
             },
@@ -400,10 +469,10 @@ export function Analytics({ darkMode }: AnalyticsProps) {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                  Business Overview
+                  Business Snapshot
                 </h3>
                 <p className="text-xs mt-0.5" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
-                  Daily backend trend
+                  {periodLabel} snapshot from current records
                 </p>
               </div>
 
@@ -604,13 +673,57 @@ export function Analytics({ darkMode }: AnalyticsProps) {
                 CRM & Property Signals
               </h3>
 
-              <button className="text-xs flex items-center gap-1" style={{ color: darkMode ? "#60A5FA" : "#1D4ED8" }}>
-                <Filter size={11} /> Filter
-              </button>
+              <div
+                className="flex items-center gap-1 rounded-xl p-1"
+                style={{
+                  background: darkMode
+                    ? "rgba(29,78,216,0.08)"
+                    : "rgba(29,78,216,0.04)",
+                }}
+              >
+                {[
+                  { label: "All", value: "all" },
+                  { label: "Leads", value: "CRM" },
+                  { label: "Properties", value: "Property" },
+                ].map((option) => {
+                  const isActive = signalFilter === option.value;
+
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() =>
+                        setSignalFilter(option.value as "all" | "CRM" | "Property")
+                      }
+                      className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-all"
+                      style={{
+                        background: isActive
+                          ? darkMode
+                            ? "rgba(29,78,216,0.28)"
+                            : "#ffffff"
+                          : "transparent",
+                        color: isActive
+                          ? darkMode
+                            ? "#93C5FD"
+                            : "#1D4ED8"
+                          : darkMode
+                            ? "#94A3B8"
+                            : "#64748B",
+                        boxShadow: isActive && !darkMode
+                          ? "0 1px 4px rgba(15,23,42,0.08)"
+                          : "none",
+                      }}
+                    >
+                      {option.value === "all" && <Filter size={11} />}
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="space-y-2">
-              {crmSignals.map((post, i) => (
+              {filteredSignals.map((post, i) => (
                 <div
                   key={`${post.content}-${i}`}
                   className="flex items-center gap-3 p-3 rounded-xl border transition-all hover:border-primary/20 cursor-pointer group"

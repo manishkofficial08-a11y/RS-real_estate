@@ -403,7 +403,7 @@ export function Reports({ darkMode }: ReportsProps) {
           }
         : {
             type: "attention",
-            text: "No real leads found yet. Add CRM leads to generate stronger report insights.",
+            text: "No client enquiries found yet. Add leads to generate stronger business insights.",
           },
     );
 
@@ -439,7 +439,7 @@ export function Reports({ darkMode }: ReportsProps) {
           }
         : {
             type: "attention",
-            text: "No generated posts yet. Create AI Studio drafts to activate marketing reports.",
+            text: "No marketing drafts found yet. Create social posts to activate marketing reports.",
           },
     );
 
@@ -459,17 +459,17 @@ export function Reports({ darkMode }: ReportsProps) {
       reportStats.generatedFailed + reportStats.scheduleFailed > 0
         ? {
             type: "attention",
-            text: `${reportStats.generatedFailed + reportStats.scheduleFailed} marketing items need review due to failed/generated or scheduled status.`,
+            text: `${reportStats.generatedFailed + reportStats.scheduleFailed} marketing items need review due to failed publishing or scheduling status.`,
           }
         : {
             type: "win",
-            text: "No failed generated/scheduled posts detected in the current report snapshot.",
+            text: "No failed marketing or scheduled items detected in the current report snapshot.",
           },
     );
 
     points.push({
       type: reportStats.businessScore >= 70 ? "win" : "attention",
-      text: `AI Business Health Score is ${reportStats.businessScore}/100 based on CRM, inventory, generated posts, scheduler and publishing signals.`,
+      text: `Business Health Score is ${reportStats.businessScore}/100 based on CRM, inventory, generated posts, scheduler and publishing signals.`,
     });
 
     return points;
@@ -561,9 +561,9 @@ export function Reports({ darkMode }: ReportsProps) {
       `Mock Published: ${reportStats.mockPublished}`,
       `Real Published: ${reportStats.realPublished}`,
       "",
-      `AI Business Health Score: ${reportStats.businessScore}/100`,
+      `Business Health Score: ${reportStats.businessScore}/100`,
       "",
-      "AI Summary:",
+      "Report Summary:",
       ...aiSummaryPoints.map((point, index) => `${index + 1}. ${point.text}`),
     ].join("\n");
   }, [activeReport, aiSummaryPoints, reportStats]);
@@ -577,7 +577,11 @@ export function Reports({ darkMode }: ReportsProps) {
 
     link.href = url;
     link.download = `rs-real-estate-${activeReport}-business-report.txt`;
+    link.style.display = "none";
+
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
 
     window.URL.revokeObjectURL(url);
     setTimeout(() => setExporting(false), 800);
@@ -596,6 +600,11 @@ export function Reports({ darkMode }: ReportsProps) {
         .split(",")
         .map((email) => email.trim())
         .filter(Boolean);
+
+      if (!sendCopyToMe && recipients.length === 0) {
+        setApiMessage("Add at least one recipient or keep 'Send copy to login email' enabled.");
+        return;
+      }
 
       const result = await emailReport({
         recipients,
@@ -741,8 +750,8 @@ export function Reports({ darkMode }: ReportsProps) {
             </div>
             <p className="text-sm" style={{ color: textSoft }}>
               {loading
-                ? "Loading live business intelligence report..."
-                : `Live report from ${reportStats.totalLeads} leads, ${reportStats.totalProperties} properties, ${reportStats.generatedTotal} posts and ${reportStats.scheduleTotal} schedules`}
+                ? "Loading current business report..."
+                : `Current report snapshot from ${reportStats.totalLeads} leads, ${reportStats.totalProperties} properties, ${reportStats.generatedTotal} posts and ${reportStats.scheduleTotal} schedules`}
             </p>
           </div>
 
@@ -901,7 +910,7 @@ export function Reports({ darkMode }: ReportsProps) {
                 AI Executive Summary
               </span>
               <span className="ml-2 text-xs" style={{ color: textSoft }}>
-                {activeReport} report · generated just now
+                {activeReport} report · current snapshot
               </span>
             </div>
             {loading && <LoaderBadge />}
