@@ -58,7 +58,7 @@ const automationAgents = [
     status: "Ready",
     description: "Media upload and asset preparation pipeline.",
     icon: Upload,
-    color: "#6366f1",
+    color: "#1D4ED8",
     action: "Open Media Library",
     screen: "media",
   },
@@ -67,7 +67,7 @@ const automationAgents = [
     status: "Ready",
     description: "Generate real estate captions from assets and property context.",
     icon: Wand2,
-    color: "#8b5cf6",
+    color: "#2563EB",
     action: "Open Campaign Studio",
     screen: "ai-studio",
   },
@@ -128,7 +128,7 @@ const socialPlatforms: Array<{
     key: "youtube",
     name: "YouTube Shorts",
     platform: "Google",
-    liveRequirement: "Google OAuth + YouTube upload permission",
+    liveRequirement: "Google account access + YouTube upload permission",
     usedFor: "Short-form property video publishing.",
     icon: Play,
     color: "#ef4444",
@@ -252,7 +252,7 @@ function getStatusStyle(status: string) {
   return {
     background: "rgba(99, 102, 241, 0.10)",
     border: "1px solid rgba(99, 102, 241, 0.18)",
-    color: "#818cf8",
+    color: "#60A5FA",
   };
 }
 
@@ -295,12 +295,12 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
   const [error, setError] = useState("");
 
   const surfaceStyle = {
-    background: darkMode ? "rgba(13,13,40,0.82)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+    background: darkMode ? "rgba(15,23,42,0.82)" : "#ffffff",
+    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
   };
 
   const mutedColor = darkMode ? "#94a3b8" : "#64748b";
-  const faintColor = darkMode ? "#4a5568" : "#94a3b8";
+  const faintColor = darkMode ? "#94A3B8" : "#94a3b8";
   const textColor = darkMode ? "#e2e8f0" : "#0f172a";
 
   const accountMap = useMemo(() => {
@@ -460,9 +460,9 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
             <div
               className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1"
               style={{
-                background: "rgba(99,102,241,0.10)",
-                border: "1px solid rgba(99,102,241,0.18)",
-                color: "#818cf8",
+                background: "rgba(29,78,216,0.10)",
+                border: "1px solid rgba(29,78,216,0.18)",
+                color: "#60A5FA",
               }}
             >
               <Zap size={14} />
@@ -486,7 +486,7 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: "Accounts", value: `${connectedCount}/${totalSocialAccounts}`, color: "#6366f1" },
+              { label: "Accounts", value: `${connectedCount}/${totalSocialAccounts}`, color: "#1D4ED8" },
               { label: "Mode", value: readiness?.live_ready ? "Live-ready" : "Setup needed", color: readiness?.live_ready ? "#10b981" : "#f59e0b" },
               { label: "Missing", value: `${missingCount}`, color: missingCount ? "#f59e0b" : "#10b981" },
               { label: "Flow", value: "Media → Publish", color: "#06b6d4" },
@@ -520,8 +520,8 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
           className="rounded-2xl border p-5"
           style={{
             background: darkMode
-              ? "linear-gradient(135deg, rgba(16,185,129,0.13), rgba(99,102,241,0.06))"
-              : "linear-gradient(135deg, rgba(16,185,129,0.10), rgba(99,102,241,0.04))",
+              ? "linear-gradient(135deg, rgba(16,185,129,0.13), rgba(29,78,216,0.06))"
+              : "linear-gradient(135deg, rgba(16,185,129,0.10), rgba(29,78,216,0.04))",
             borderColor: readiness?.live_ready
               ? "rgba(16,185,129,0.24)"
               : "rgba(245,158,11,0.24)",
@@ -558,8 +558,8 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
                 onClick={loadSocialAccounts}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium"
                 style={{
-                  borderColor: darkMode ? "rgba(99,102,241,0.24)" : "rgba(99,102,241,0.16)",
-                  color: darkMode ? "#818cf8" : "#6366f1",
+                  borderColor: darkMode ? "rgba(29,78,216,0.24)" : "rgba(29,78,216,0.16)",
+                  color: darkMode ? "#60A5FA" : "#1D4ED8",
                 }}
               >
                 {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />}
@@ -568,7 +568,7 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
               <button
                 onClick={() => navigate("ai-studio")}
                 className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium"
-                style={{ background: "#6366f1", color: "#ffffff" }}
+                style={{ background: "#1D4ED8", color: "#ffffff" }}
               >
                 <Sparkles size={13} />
                 Open Campaign Studio
@@ -796,16 +796,16 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
                       onClick={() => navigate(step.screen)}
                       className="w-full rounded-2xl p-3 text-left transition-all hover:bg-primary/5"
                       style={{
-                        border: "1px solid rgba(99,102,241,0.10)",
-                        background: darkMode ? "rgba(99,102,241,0.035)" : "rgba(99,102,241,0.025)",
+                        border: "1px solid rgba(29,78,216,0.10)",
+                        background: darkMode ? "rgba(29,78,216,0.035)" : "rgba(29,78,216,0.025)",
                       }}
                     >
                       <div className="flex gap-3">
                         <div
                           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
                           style={{
-                            background: "rgba(99,102,241,0.12)",
-                            color: "#818cf8",
+                            background: "rgba(29,78,216,0.12)",
+                            color: "#60A5FA",
                           }}
                         >
                           <Icon size={15} />
@@ -888,8 +888,8 @@ export function AutomationCenter({ darkMode, onNavigate }: AutomationCenterProps
           <div
             className="w-full max-w-2xl rounded-3xl border p-5 shadow-2xl"
             style={{
-              background: darkMode ? "#0d0d28" : "#ffffff",
-              borderColor: darkMode ? "rgba(99,102,241,0.22)" : "rgba(15,23,42,0.10)",
+              background: darkMode ? "#0F172A" : "#ffffff",
+              borderColor: darkMode ? "rgba(29,78,216,0.22)" : "rgba(15,23,42,0.10)",
             }}
           >
             <div className="flex items-start justify-between gap-4">

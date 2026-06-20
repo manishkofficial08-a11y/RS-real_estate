@@ -54,7 +54,7 @@ export class ErrorBoundary extends Component<
           justifyContent: "center",
           padding: "24px",
           background:
-            "radial-gradient(circle at top, rgba(99,102,241,0.16), transparent 35%), #020617",
+            "radial-gradient(circle at top, rgba(29,78,216,0.16), transparent 35%), #020617",
           color: "#e5e7eb",
           fontFamily: "Inter, system-ui, sans-serif",
         }}
@@ -132,7 +132,7 @@ export class ErrorBoundary extends Component<
                 border: "0",
                 borderRadius: "12px",
                 padding: "10px 14px",
-                background: "#6366f1",
+                background: "#1D4ED8",
                 color: "#fff",
                 fontWeight: 700,
                 cursor: "pointer",

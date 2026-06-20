@@ -47,7 +47,7 @@ export function Background3D({ darkMode }: Background3DProps) {
         canvas.width * (0.3 + 0.2 * Math.sin(t * 0.7)), canvas.height * 0.2,
         canvas.width * 0.5
       );
-      aurora1.addColorStop(0, "rgba(99,102,241,0.06)");
+      aurora1.addColorStop(0, "rgba(29,78,216,0.06)");
       aurora1.addColorStop(1, "transparent");
 
       const aurora2 = ctx.createRadialGradient(
@@ -56,7 +56,7 @@ export function Background3D({ darkMode }: Background3DProps) {
         canvas.width * (0.7 + 0.15 * Math.cos(t * 0.5)), canvas.height * 0.6,
         canvas.width * 0.4
       );
-      aurora2.addColorStop(0, "rgba(139,92,246,0.05)");
+      aurora2.addColorStop(0, "rgba(37,99,235,0.05)");
       aurora2.addColorStop(1, "transparent");
 
       const aurora3 = ctx.createRadialGradient(
@@ -76,7 +76,7 @@ export function Background3D({ darkMode }: Background3DProps) {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Grid lines
-      ctx.strokeStyle = "rgba(99,102,241,0.04)";
+      ctx.strokeStyle = "rgba(29,78,216,0.04)";
       ctx.lineWidth = 1;
       const gridSize = 80;
       for (let x = 0; x < canvas.width; x += gridSize) {
@@ -103,7 +103,7 @@ export function Background3D({ darkMode }: Background3DProps) {
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(99,102,241,${p.opacity})`;
+        ctx.fillStyle = `rgba(29,78,216,${p.opacity})`;
         ctx.fill();
       });
 

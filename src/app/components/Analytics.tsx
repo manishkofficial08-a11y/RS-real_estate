@@ -64,7 +64,7 @@ const fallbackSignals = [
 ];
 
 const platformColors: Record<string, string> = {
-  CRM: "#6366f1",
+  CRM: "#1D4ED8",
   Property: "#10b981",
 };
 
@@ -232,13 +232,13 @@ export function Analytics({ darkMode }: AnalyticsProps) {
     return rows.length > 0 ? rows : fallbackSignals;
   }, [leads, properties]);
 
-  const chartColor = darkMode ? "#818cf8" : "#6366f1";
+  const chartColor = darkMode ? "#60A5FA" : "#1D4ED8";
   const tickColor = darkMode ? "#2d3748" : "#cbd5e1";
-  const tooltipBg = darkMode ? "#0d0d28" : "#ffffff";
+  const tooltipBg = darkMode ? "#0F172A" : "#ffffff";
 
   const cardBase = {
-    background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+    background: darkMode ? "rgba(15,23,42,0.8)" : "#ffffff",
+    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
     backdropFilter: "blur(16px)",
   };
 
@@ -261,7 +261,7 @@ export function Analytics({ darkMode }: AnalyticsProps) {
               Analytics
             </h1>
 
-            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
               {loading
                 ? "Loading real analytics from backend..."
                 : apiMessage
@@ -273,7 +273,7 @@ export function Analytics({ darkMode }: AnalyticsProps) {
           <div className="flex items-center gap-2">
             <div
               className="flex gap-1 p-1 rounded-xl"
-              style={{ background: darkMode ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.04)" }}
+              style={{ background: darkMode ? "rgba(29,78,216,0.08)" : "rgba(29,78,216,0.04)" }}
             >
               {["7d", "30d", "90d", "1y"].map((p) => (
                 <button
@@ -284,16 +284,16 @@ export function Analytics({ darkMode }: AnalyticsProps) {
                     background:
                       period === p
                         ? darkMode
-                          ? "rgba(99,102,241,0.2)"
+                          ? "rgba(29,78,216,0.2)"
                           : "#ffffff"
                         : "transparent",
                     color:
                       period === p
                         ? darkMode
-                          ? "#818cf8"
-                          : "#6366f1"
+                          ? "#60A5FA"
+                          : "#1D4ED8"
                         : darkMode
-                          ? "#4a5568"
+                          ? "#94A3B8"
                           : "#94a3b8",
                     boxShadow: period === p && !darkMode ? "0 1px 4px rgba(0,0,0,0.06)" : "none",
                   }}
@@ -305,7 +305,7 @@ export function Analytics({ darkMode }: AnalyticsProps) {
 
             <button
               className="flex items-center gap-2 px-3 py-2 rounded-xl border text-xs transition-all hover:bg-primary/5"
-              style={{ borderColor: cardBase.borderColor, color: darkMode ? "#4a5568" : "#94a3b8" }}
+              style={{ borderColor: cardBase.borderColor, color: darkMode ? "#94A3B8" : "#94a3b8" }}
             >
               <Download size={13} />
               Export
@@ -320,7 +320,7 @@ export function Analytics({ darkMode }: AnalyticsProps) {
               value: formatNumber(analyticsStats.totalLeads),
               change: "Live",
               icon: Users,
-              color: "#6366f1",
+              color: "#1D4ED8",
             },
             {
               label: "Hot Leads",
@@ -382,7 +382,7 @@ export function Analytics({ darkMode }: AnalyticsProps) {
                 {kpi.value}
               </div>
 
-              <p className="text-xs mt-2" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+              <p className="text-xs mt-2" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
                 {kpi.label}
               </p>
             </motion.div>
@@ -402,7 +402,7 @@ export function Analytics({ darkMode }: AnalyticsProps) {
                 <h3 className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
                   Business Overview
                 </h3>
-                <p className="text-xs mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                <p className="text-xs mt-0.5" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
                   Daily backend trend
                 </p>
               </div>
@@ -417,16 +417,16 @@ export function Analytics({ darkMode }: AnalyticsProps) {
                       background:
                         metric === m
                           ? darkMode
-                            ? "rgba(99,102,241,0.2)"
-                            : "rgba(99,102,241,0.1)"
+                            ? "rgba(29,78,216,0.2)"
+                            : "rgba(29,78,216,0.1)"
                           : "transparent",
                       color:
                         metric === m
                           ? darkMode
-                            ? "#818cf8"
-                            : "#6366f1"
+                            ? "#60A5FA"
+                            : "#1D4ED8"
                           : darkMode
-                            ? "#4a5568"
+                            ? "#94A3B8"
                             : "#94a3b8",
                     }}
                   >
@@ -451,7 +451,7 @@ export function Analytics({ darkMode }: AnalyticsProps) {
                 <Tooltip
                   contentStyle={{
                     background: tooltipBg,
-                    border: `1px solid ${darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)"}`,
+                    border: `1px solid ${darkMode ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.1)"}`,
                     borderRadius: "12px",
                     fontSize: "12px",
                     color: darkMode ? "#e2e8f0" : "#0f172a",
@@ -482,26 +482,26 @@ export function Analytics({ darkMode }: AnalyticsProps) {
               Business Health
             </h3>
 
-            <p className="text-xs mb-3" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+            <p className="text-xs mb-3" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
               Lead + property strength
             </p>
 
             <ResponsiveContainer width="100%" height={200}>
               <RadarChart data={liveAudienceData}>
-                <PolarGrid stroke={darkMode ? "rgba(99,102,241,0.1)" : "rgba(15,23,42,0.06)"} />
+                <PolarGrid stroke={darkMode ? "rgba(29,78,216,0.1)" : "rgba(15,23,42,0.06)"} />
                 <PolarAngleAxis
                   dataKey="subject"
-                  tick={{ fill: darkMode ? "#4a5568" : "#94a3b8", fontSize: 10 }}
+                  tick={{ fill: darkMode ? "#94A3B8" : "#94a3b8", fontSize: 10 }}
                 />
-                <Radar dataKey="A" stroke="#6366f1" fill="#6366f1" fillOpacity={0.2} strokeWidth={1.5} />
+                <Radar dataKey="A" stroke="#1D4ED8" fill="#1D4ED8" fillOpacity={0.2} strokeWidth={1.5} />
               </RadarChart>
             </ResponsiveContainer>
 
             <div className="mt-2 text-center">
-              <span className="text-2xl font-bold" style={{ color: "#6366f1" }}>
+              <span className="text-2xl font-bold" style={{ color: "#1D4ED8" }}>
                 {analyticsStats.healthScore}
               </span>
-              <span className="text-xs ml-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+              <span className="text-xs ml-1" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
                 / 100 health score
               </span>
             </div>
@@ -549,7 +549,7 @@ export function Analytics({ darkMode }: AnalyticsProps) {
                 <Tooltip
                   contentStyle={{
                     background: tooltipBg,
-                    border: `1px solid ${darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)"}`,
+                    border: `1px solid ${darkMode ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.1)"}`,
                     borderRadius: "12px",
                     fontSize: "12px",
                     color: darkMode ? "#e2e8f0" : "#0f172a",
@@ -571,17 +571,17 @@ export function Analytics({ darkMode }: AnalyticsProps) {
               {[
                 { label: "Available", value: analyticsStats.availableProperties, color: "#10b981" },
                 { label: "Sold", value: analyticsStats.soldProperties, color: "#ef4444" },
-                { label: "Rented", value: analyticsStats.rentedProperties, color: "#6366f1" },
+                { label: "Rented", value: analyticsStats.rentedProperties, color: "#1D4ED8" },
               ].map((item) => (
                 <div
                   key={item.label}
                   className="rounded-xl border px-3 py-2"
                   style={{
-                    borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)",
-                    background: darkMode ? "rgba(99,102,241,0.03)" : "rgba(99,102,241,0.02)",
+                    borderColor: darkMode ? "rgba(29,78,216,0.08)" : "rgba(15,23,42,0.04)",
+                    background: darkMode ? "rgba(29,78,216,0.03)" : "rgba(29,78,216,0.02)",
                   }}
                 >
-                  <p className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                  <p className="text-xs" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
                     {item.label}
                   </p>
                   <p className="text-sm font-semibold mt-1" style={{ color: item.color }}>
@@ -604,7 +604,7 @@ export function Analytics({ darkMode }: AnalyticsProps) {
                 CRM & Property Signals
               </h3>
 
-              <button className="text-xs flex items-center gap-1" style={{ color: darkMode ? "#818cf8" : "#6366f1" }}>
+              <button className="text-xs flex items-center gap-1" style={{ color: darkMode ? "#60A5FA" : "#1D4ED8" }}>
                 <Filter size={11} /> Filter
               </button>
             </div>
@@ -615,8 +615,8 @@ export function Analytics({ darkMode }: AnalyticsProps) {
                   key={`${post.content}-${i}`}
                   className="flex items-center gap-3 p-3 rounded-xl border transition-all hover:border-primary/20 cursor-pointer group"
                   style={{
-                    borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)",
-                    background: darkMode ? "rgba(99,102,241,0.02)" : "rgba(99,102,241,0.01)",
+                    borderColor: darkMode ? "rgba(29,78,216,0.08)" : "rgba(15,23,42,0.04)",
+                    background: darkMode ? "rgba(29,78,216,0.02)" : "rgba(29,78,216,0.01)",
                   }}
                 >
                   <span
@@ -632,7 +632,7 @@ export function Analytics({ darkMode }: AnalyticsProps) {
                     </p>
 
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                      <span className="text-xs" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
                         {post.reach}
                       </span>
                       <span className="text-xs" style={{ color: "#10b981" }}>
@@ -644,7 +644,7 @@ export function Analytics({ darkMode }: AnalyticsProps) {
                   <div className="flex items-center gap-2">
                     <div
                       className="w-2 h-2 rounded-full"
-                      style={{ background: platformColors[post.platform] || "#6366f1" }}
+                      style={{ background: platformColors[post.platform] || "#1D4ED8" }}
                     />
                     <span className="text-xs font-semibold capitalize" style={{ color: "#10b981" }}>
                       {post.trend}
@@ -652,7 +652,7 @@ export function Analytics({ darkMode }: AnalyticsProps) {
                     <ArrowUpRight
                       size={12}
                       className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: darkMode ? "#818cf8" : "#6366f1" }}
+                      style={{ color: darkMode ? "#60A5FA" : "#1D4ED8" }}
                     />
                   </div>
                 </div>

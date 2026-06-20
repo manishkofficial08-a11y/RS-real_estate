@@ -63,8 +63,8 @@ const emptyLeadForm: LeadForm = {
 
 const stageColors: Record<UiLead["stage"], string> = {
   Prospecting: "#94a3b8",
-  Discovery: "#6366f1",
-  Proposal: "#8b5cf6",
+  Discovery: "#1D4ED8",
+  Proposal: "#2563EB",
   Negotiation: "#f59e0b",
   Closing: "#10b981",
 };
@@ -122,7 +122,7 @@ function mapStatusToStage(status: string): UiLead["stage"] {
 }
 
 function mapApiLeadToUiLead(lead: ClientLead, index: number): UiLead {
-  const colorList = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b"];
+  const colorList = ["#1D4ED8", "#2563EB", "#06b6d4", "#10b981", "#f59e0b"];
   const stage = mapStatusToStage(lead.status || "new");
 
   return {
@@ -158,7 +158,7 @@ function ScoreRing({ score, color }: { score: number; color: string }) {
           cy="20"
           r={r}
           fill="none"
-          stroke="rgba(99,102,241,0.1)"
+          stroke="rgba(29,78,216,0.1)"
           strokeWidth="3"
         />
         <circle
@@ -408,8 +408,8 @@ export function CRM({ darkMode }: CRMProps) {
   }, [leads]);
 
   const cardBase = {
-    background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+    background: darkMode ? "rgba(15,23,42,0.8)" : "#ffffff",
+    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
   };
 
   return (
@@ -429,7 +429,7 @@ export function CRM({ darkMode }: CRMProps) {
 
             <p
               className="text-sm mt-0.5"
-              style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+              style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
             >
               {loadingLeads
                 ? "Loading real leads..."
@@ -444,9 +444,9 @@ export function CRM({ darkMode }: CRMProps) {
               onClick={openCreateLeadModal}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
               style={{
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                 color: "#ffffff",
-                boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
+                boxShadow: "0 4px 14px rgba(29,78,216,0.3)",
               }}
             >
               <Plus size={14} /> Add Lead
@@ -472,12 +472,12 @@ export function CRM({ darkMode }: CRMProps) {
                 className="px-4 py-2 rounded-xl text-sm border transition-all"
                 style={{
                   background: isActive
-                    ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                    ? "linear-gradient(135deg, #1D4ED8, #2563EB)"
                     : darkMode
-                      ? "rgba(99,102,241,0.04)"
+                      ? "rgba(29,78,216,0.04)"
                       : "#ffffff",
                   borderColor: isActive
-                    ? "rgba(99,102,241,0.35)"
+                    ? "rgba(29,78,216,0.35)"
                     : cardBase.borderColor,
                   color: isActive
                     ? "#ffffff"
@@ -519,7 +519,7 @@ export function CRM({ darkMode }: CRMProps) {
                 <div className="flex items-center justify-between mb-1">
                   <span
                     className="text-xs"
-                    style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                    style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
                   >
                     {typedStage}
                   </span>
@@ -553,13 +553,13 @@ export function CRM({ darkMode }: CRMProps) {
         <div
           className="flex items-center gap-2 px-3 py-2 rounded-xl border mb-4"
           style={{
-            background: darkMode ? "rgba(99,102,241,0.04)" : "#ffffff",
+            background: darkMode ? "rgba(29,78,216,0.04)" : "#ffffff",
             borderColor: cardBase.borderColor,
           }}
         >
           <Search
             size={14}
-            style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+            style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
           />
           <input
             value={searchQ}
@@ -598,12 +598,12 @@ export function CRM({ darkMode }: CRMProps) {
                 background:
                   selectedLead?.id === lead.id
                     ? darkMode
-                      ? "rgba(99,102,241,0.12)"
-                      : "rgba(99,102,241,0.06)"
+                      ? "rgba(29,78,216,0.12)"
+                      : "rgba(29,78,216,0.06)"
                     : cardBase.background,
                 borderColor:
                   selectedLead?.id === lead.id
-                    ? "rgba(99,102,241,0.35)"
+                    ? "rgba(29,78,216,0.35)"
                     : cardBase.borderColor,
               }}
             >
@@ -624,7 +624,7 @@ export function CRM({ darkMode }: CRMProps) {
                   </p>
                   <p
                     className="text-xs truncate"
-                    style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                    style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
                   >
                     {lead.email || lead.phone || "Real Estate Lead"}
                   </p>
@@ -650,8 +650,8 @@ export function CRM({ darkMode }: CRMProps) {
                     className="text-xs px-2 py-1 rounded-full"
                     style={{
                       background: darkMode
-                        ? "rgba(99,102,241,0.08)"
-                        : "rgba(99,102,241,0.06)",
+                        ? "rgba(29,78,216,0.08)"
+                        : "rgba(29,78,216,0.06)",
                       color: darkMode ? "#94a3b8" : "#64748b",
                     }}
                   >
@@ -692,7 +692,7 @@ export function CRM({ darkMode }: CRMProps) {
                   </h2>
                   <p
                     className="text-sm"
-                    style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                    style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
                   >
                     {selectedLead.email ||
                       selectedLead.phone ||
@@ -738,12 +738,12 @@ export function CRM({ darkMode }: CRMProps) {
                   style={{
                     borderColor: cardBase.borderColor,
                     background: darkMode
-                      ? "rgba(99,102,241,0.03)"
-                      : "rgba(99,102,241,0.02)",
+                      ? "rgba(29,78,216,0.03)"
+                      : "rgba(29,78,216,0.02)",
                   }}
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <Brain size={14} style={{ color: "#6366f1" }} />
+                    <Brain size={14} style={{ color: "#1D4ED8" }} />
                     <span
                       className="text-sm font-medium"
                       style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
@@ -769,8 +769,8 @@ export function CRM({ darkMode }: CRMProps) {
                   style={{
                     borderColor: cardBase.borderColor,
                     background: darkMode
-                      ? "rgba(99,102,241,0.03)"
-                      : "rgba(99,102,241,0.02)",
+                      ? "rgba(29,78,216,0.03)"
+                      : "rgba(29,78,216,0.02)",
                   }}
                 >
                   <div className="flex items-center gap-2 mb-2">
@@ -810,7 +810,7 @@ export function CRM({ darkMode }: CRMProps) {
                     onClick={() => openEditLeadModal(selectedLead)}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
                     style={{
-                      background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                      background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                       color: "#ffffff",
                     }}
                   >
@@ -843,7 +843,7 @@ export function CRM({ darkMode }: CRMProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             className="relative w-full max-w-2xl rounded-2xl border p-5"
             style={{
-              background: darkMode ? "#0d0d28" : "#ffffff",
+              background: darkMode ? "#0F172A" : "#ffffff",
               borderColor: cardBase.borderColor,
             }}
           >
@@ -857,7 +857,7 @@ export function CRM({ darkMode }: CRMProps) {
                 </h2>
                 <p
                   className="text-xs mt-1"
-                  style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                  style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
                 >
                   {editingLeadId
                     ? "Update this lead directly in backend CRM."
@@ -1089,7 +1089,7 @@ export function CRM({ darkMode }: CRMProps) {
                   disabled={savingLead || deletingLead}
                   className="px-4 py-2 rounded-xl text-sm font-medium"
                   style={{
-                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                    background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                     color: "#ffffff",
                     opacity: savingLead ? 0.7 : 1,
                   }}

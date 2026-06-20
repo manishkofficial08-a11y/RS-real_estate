@@ -12,8 +12,8 @@ interface GenericScreenProps {
 }
 
 const cardBase = (darkMode: boolean) => ({
-  background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
-  borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+  background: darkMode ? "rgba(15,23,42,0.8)" : "#ffffff",
+  borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
 });
 
 function MediaLibrary({ darkMode }: { darkMode: boolean }) {
@@ -32,9 +32,9 @@ function MediaLibrary({ darkMode }: { darkMode: boolean }) {
         <div className="flex items-center justify-between">
           <div>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: darkMode ? "#e2e8f0" : "#0f172a" }}>Media Library</h1>
-            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>284 files Ã‚Â· 4.2 GB used of 10 GB</p>
+            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>284 files Ã‚Â· 4.2 GB used of 10 GB</p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#ffffff", boxShadow: "0 4px 14px rgba(99,102,241,0.3)" }}>
+          <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium" style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)", color: "#ffffff", boxShadow: "0 4px 14px rgba(29,78,216,0.3)" }}>
             <Upload size={14} /> Upload Files
           </button>
         </div>
@@ -42,13 +42,13 @@ function MediaLibrary({ darkMode }: { darkMode: boolean }) {
         {/* Upload zone */}
         <div
           className="border-2 border-dashed rounded-2xl p-12 text-center transition-all hover:border-primary/40 cursor-pointer"
-          style={{ borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.15)", background: darkMode ? "rgba(99,102,241,0.03)" : "rgba(99,102,241,0.02)" }}
+          style={{ borderColor: darkMode ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.15)", background: darkMode ? "rgba(29,78,216,0.03)" : "rgba(29,78,216,0.02)" }}
         >
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ background: "rgba(99,102,241,0.1)" }}>
-            <Upload size={20} style={{ color: "#6366f1" }} />
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ background: "rgba(29,78,216,0.1)" }}>
+            <Upload size={20} style={{ color: "#1D4ED8" }} />
           </div>
           <p className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>Drag & drop files here</p>
-          <p className="text-xs mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>PNG, JPG, MP4, MOV up to 500MB Ã‚Â· AI auto-analysis on upload</p>
+          <p className="text-xs mt-1" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>PNG, JPG, MP4, MOV up to 500MB Ã‚Â· AI auto-analysis on upload</p>
         </div>
 
         {/* Files grid */}
@@ -61,14 +61,14 @@ function MediaLibrary({ darkMode }: { darkMode: boolean }) {
               whileHover={{ y: -2 }}
               transition={{ duration: 0.15 }}
             >
-              <div className="h-36 flex items-center justify-center" style={{ background: darkMode ? "rgba(99,102,241,0.05)" : "rgba(99,102,241,0.03)" }}>
+              <div className="h-36 flex items-center justify-center" style={{ background: darkMode ? "rgba(29,78,216,0.05)" : "rgba(29,78,216,0.03)" }}>
                 <Image size={28} style={{ color: darkMode ? "#2d3748" : "#cbd5e1" }} />
               </div>
               <div className="p-3">
                 <p className="text-xs font-medium truncate" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{file.name}</p>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{file.size}</span>
-                  <span className="text-xs px-1.5 py-0.5 rounded capitalize" style={{ background: "rgba(99,102,241,0.1)", color: "#818cf8" }}>{file.type}</span>
+                  <span className="text-xs" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>{file.size}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded capitalize" style={{ background: "rgba(29,78,216,0.1)", color: "#60A5FA" }}>{file.type}</span>
                 </div>
               </div>
             </motion.div>
@@ -81,8 +81,8 @@ function MediaLibrary({ darkMode }: { darkMode: boolean }) {
 
 function Team({ darkMode }: { darkMode: boolean }) {
   const members = [
-    { name: "Account Owner", role: "Owner", email: "Email from profile", avatar: "JD", color: "#6366f1", status: "online" },
-    { name: "Alex Kim", role: "Admin", email: "alex@company.com", avatar: "AK", color: "#8b5cf6", status: "online" },
+    { name: "Account Owner", role: "Owner", email: "Email from profile", avatar: "JD", color: "#1D4ED8", status: "online" },
+    { name: "Alex Kim", role: "Admin", email: "alex@company.com", avatar: "AK", color: "#2563EB", status: "online" },
     { name: "Maria Santos", role: "Editor", email: "maria@company.com", avatar: "MS", color: "#06b6d4", status: "away" },
     { name: "Tom Walker", role: "Analyst", email: "tom@company.com", avatar: "TW", color: "#10b981", status: "offline" },
     { name: "Priya Patel", role: "Editor", email: "priya@company.com", avatar: "PP", color: "#f59e0b", status: "online" },
@@ -96,14 +96,14 @@ function Team({ darkMode }: { darkMode: boolean }) {
         <div className="flex items-center justify-between">
           <div>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: darkMode ? "#e2e8f0" : "#0f172a" }}>Team</h1>
-            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>5 members Ã‚Â· 2 seats remaining</p>
+            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>5 members Ã‚Â· 2 seats remaining</p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#ffffff" }}>
+          <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium" style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)", color: "#ffffff" }}>
             <Plus size={14} /> Invite Member
           </button>
         </div>
 
-        <div className="rounded-2xl border divide-y overflow-hidden" style={{ ...cardBase(darkMode), divideColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)" }}>
+        <div className="rounded-2xl border divide-y overflow-hidden" style={{ ...cardBase(darkMode), divideColor: darkMode ? "rgba(29,78,216,0.08)" : "rgba(15,23,42,0.04)" }}>
           {members.map((member) => (
             <div key={member.name} className="flex items-center gap-4 p-4 transition-all hover:bg-primary/5">
               <div className="relative">
@@ -114,7 +114,7 @@ function Team({ darkMode }: { darkMode: boolean }) {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{member.name}</p>
-                <p className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{member.email}</p>
+                <p className="text-xs" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>{member.email}</p>
               </div>
               <span className="text-xs px-2 py-1 rounded-full" style={{ background: `${member.color}15`, color: member.color }}>{member.role}</span>
             </div>
@@ -141,9 +141,9 @@ function Integrations({ darkMode }: { darkMode: boolean }) {
         <div className="flex items-center justify-between">
           <div>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: darkMode ? "#e2e8f0" : "#0f172a" }}>Integrations</h1>
-            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>3 connected Ã‚Â· 60+ available</p>
+            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>3 connected Ã‚Â· 60+ available</p>
           </div>
-          <button className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs border transition-all" style={{ borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)", color: darkMode ? "#818cf8" : "#6366f1" }}>
+          <button className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs border transition-all" style={{ borderColor: darkMode ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.1)", color: darkMode ? "#60A5FA" : "#1D4ED8" }}>
             Browse all
           </button>
         </div>
@@ -156,13 +156,13 @@ function Integrations({ darkMode }: { darkMode: boolean }) {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{intg.name}</p>
-                <p className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{intg.desc}</p>
+                <p className="text-xs" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>{intg.desc}</p>
               </div>
               <button
                 className="text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all"
                 style={intg.connected
                   ? { background: "rgba(16,185,129,0.1)", borderColor: "rgba(16,185,129,0.2)", color: "#10b981" }
-                  : { borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)", color: darkMode ? "#818cf8" : "#6366f1" }
+                  : { borderColor: darkMode ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.1)", color: darkMode ? "#60A5FA" : "#1D4ED8" }
                 }
               >
                 {intg.connected ? <><Check size={11} /> Connected</> : <>Connect</>}
@@ -182,15 +182,15 @@ function Billing({ darkMode }: { darkMode: boolean }) {
         <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: darkMode ? "#e2e8f0" : "#0f172a" }}>Billing</h1>
 
         {/* Current plan */}
-        <div className="rounded-2xl border p-5 relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.08) 100%)", borderColor: "rgba(99,102,241,0.2)" }}>
-          <div className="absolute top-0 right-0 w-48 h-48 pointer-events-none" style={{ background: "radial-gradient(circle at 80% 20%, rgba(99,102,241,0.15) 0%, transparent 60%)" }} />
+        <div className="rounded-2xl border p-5 relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(29,78,216,0.12) 0%, rgba(37,99,235,0.08) 100%)", borderColor: "rgba(29,78,216,0.2)" }}>
+          <div className="absolute top-0 right-0 w-48 h-48 pointer-events-none" style={{ background: "radial-gradient(circle at 80% 20%, rgba(29,78,216,0.15) 0%, transparent 60%)" }} />
           <div className="flex items-start justify-between">
             <div>
-              <span className="text-xs px-2 py-0.5 rounded-full mb-2 inline-block" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#ffffff" }}>Enterprise Plan</span>
-              <div style={{ fontSize: "2rem", fontWeight: 700, color: darkMode ? "#e2e8f0" : "#0f172a", letterSpacing: "-0.03em" }}>$499<span className="text-sm font-normal" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>/mo</span></div>
-              <p className="text-xs mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Next billing: July 1, 2026 Ã‚Â· Auto-renew enabled</p>
+              <span className="text-xs px-2 py-0.5 rounded-full mb-2 inline-block" style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)", color: "#ffffff" }}>Enterprise Plan</span>
+              <div style={{ fontSize: "2rem", fontWeight: 700, color: darkMode ? "#e2e8f0" : "#0f172a", letterSpacing: "-0.03em" }}>$499<span className="text-sm font-normal" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>/mo</span></div>
+              <p className="text-xs mt-1" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>Next billing: July 1, 2026 Ã‚Â· Auto-renew enabled</p>
             </div>
-            <button className="px-4 py-2 rounded-xl border text-sm transition-all" style={{ borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)", color: darkMode ? "#818cf8" : "#6366f1" }}>
+            <button className="px-4 py-2 rounded-xl border text-sm transition-all" style={{ borderColor: darkMode ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.1)", color: darkMode ? "#60A5FA" : "#1D4ED8" }}>
               Manage Plan
             </button>
           </div>
@@ -200,9 +200,9 @@ function Billing({ darkMode }: { darkMode: boolean }) {
               { label: "Team Members", value: "7 / 10" },
               { label: "Storage", value: "4.2 / 10 GB" },
             ].map(item => (
-              <div key={item.label} className="p-3 rounded-xl" style={{ background: darkMode ? "rgba(13,13,40,0.6)" : "rgba(255,255,255,0.6)" }}>
+              <div key={item.label} className="p-3 rounded-xl" style={{ background: darkMode ? "rgba(15,23,42,0.6)" : "rgba(255,255,255,0.6)" }}>
                 <p className="text-sm font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{item.value}</p>
-                <p className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{item.label}</p>
+                <p className="text-xs" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>{item.label}</p>
               </div>
             ))}
           </div>
@@ -211,13 +211,13 @@ function Billing({ darkMode }: { darkMode: boolean }) {
         {/* Payment method */}
         <div className="rounded-2xl border p-5" style={cardBase(darkMode)}>
           <h3 className="text-sm font-semibold mb-4" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>Payment Method</h3>
-          <div className="flex items-center gap-3 p-4 rounded-xl border" style={{ borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)" }}>
-            <CreditCardIcon size={20} style={{ color: "#6366f1" }} />
+          <div className="flex items-center gap-3 p-4 rounded-xl border" style={{ borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)" }}>
+            <CreditCardIcon size={20} style={{ color: "#1D4ED8" }} />
             <div>
               <p className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>Visa ending in 4242</p>
-              <p className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Expires 09/28</p>
+              <p className="text-xs" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>Expires 09/28</p>
             </div>
-            <button className="ml-auto text-xs" style={{ color: darkMode ? "#818cf8" : "#6366f1" }}>Update</button>
+            <button className="ml-auto text-xs" style={{ color: darkMode ? "#60A5FA" : "#1D4ED8" }}>Update</button>
           </div>
         </div>
       </div>
@@ -250,18 +250,18 @@ function SettingsScreen({ darkMode }: { darkMode: boolean }) {
           },
         ].map((group) => (
           <div key={group.section} className="rounded-2xl border overflow-hidden" style={cardBase(darkMode)}>
-            <div className="px-5 py-3 border-b" style={{ borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)" }}>
-              <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{group.section}</h3>
+            <div className="px-5 py-3 border-b" style={{ borderColor: darkMode ? "rgba(29,78,216,0.08)" : "rgba(15,23,42,0.04)" }}>
+              <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>{group.section}</h3>
             </div>
-            <div className="divide-y" style={{ borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)" }}>
+            <div className="divide-y" style={{ borderColor: darkMode ? "rgba(29,78,216,0.08)" : "rgba(15,23,42,0.04)" }}>
               {group.items.map((item) => (
                 <button key={item.label} className="w-full flex items-center gap-4 p-4 transition-all hover:bg-primary/5 text-left">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(99,102,241,0.08)" }}>
-                    <item.icon size={14} style={{ color: "#6366f1" }} />
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(29,78,216,0.08)" }}>
+                    <item.icon size={14} style={{ color: "#1D4ED8" }} />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{item.label}</p>
-                    <p className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>{item.desc}</p>
+                    <p className="text-xs" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>{item.desc}</p>
                   </div>
                   <ArrowRight size={13} style={{ color: darkMode ? "#2d3748" : "#cbd5e1" }} />
                 </button>
@@ -289,9 +289,9 @@ function AutomationScreen({ darkMode }: { darkMode: boolean }) {
         <div className="flex items-center justify-between">
           <div>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: darkMode ? "#e2e8f0" : "#0f172a" }}>Automation</h1>
-            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>4 active automations Ã‚Â· 591 total runs</p>
+            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>4 active automations Ã‚Â· 591 total runs</p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#ffffff" }}>
+          <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium" style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)", color: "#ffffff" }}>
             <Plus size={14} /> New Automation
           </button>
         </div>
@@ -299,12 +299,12 @@ function AutomationScreen({ darkMode }: { darkMode: boolean }) {
         <div className="space-y-3">
           {automations.map((auto, i) => (
             <div key={i} className="flex items-center gap-4 p-4 rounded-2xl border transition-all hover:border-primary/20" style={cardBase(darkMode)}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: auto.status === "active" ? "rgba(16,185,129,0.1)" : "rgba(99,102,241,0.08)" }}>
-                <Zap size={16} style={{ color: auto.status === "active" ? "#10b981" : "#6366f1" }} />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: auto.status === "active" ? "rgba(16,185,129,0.1)" : "rgba(29,78,216,0.08)" }}>
+                <Zap size={16} style={{ color: auto.status === "active" ? "#10b981" : "#1D4ED8" }} />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{auto.name}</p>
-                <p className="text-xs mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>Trigger: {auto.trigger}</p>
+                <p className="text-xs mt-0.5" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>Trigger: {auto.trigger}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs font-semibold" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{auto.runs} runs</p>
@@ -329,11 +329,11 @@ export function GenericScreen({ screen, darkMode }: GenericScreenProps) {
   return (
     <div className="h-full flex items-center justify-center">
       <div className="text-center">
-        <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-4" style={{ background: "rgba(99,102,241,0.1)" }}>
-          <Settings size={24} style={{ color: "#6366f1" }} />
+        <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-4" style={{ background: "rgba(29,78,216,0.1)" }}>
+          <Settings size={24} style={{ color: "#1D4ED8" }} />
         </div>
         <h2 className="capitalize" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>{screen.replace("-", " ")}</h2>
-        <p className="text-sm mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>This module is under active development</p>
+        <p className="text-sm mt-1" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>This module is under active development</p>
       </div>
     </div>
   );

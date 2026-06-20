@@ -51,7 +51,7 @@ function formatPrice(price: number) {
 function statusColor(status: string) {
   if (status === "available") return "#10b981";
   if (status === "sold") return "#ef4444";
-  if (status === "rented") return "#6366f1";
+  if (status === "rented") return "#1D4ED8";
   return "#94a3b8";
 }
 
@@ -88,8 +88,8 @@ export function Properties({ darkMode }: PropertiesProps) {
   const [form, setForm] = useState<PropertyForm>(emptyForm);
 
   const cardBase = {
-    background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+    background: darkMode ? "rgba(15,23,42,0.8)" : "#ffffff",
+    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
   };
 
   async function loadProperties() {
@@ -229,7 +229,7 @@ export function Properties({ darkMode }: PropertiesProps) {
               Properties
             </h1>
 
-            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+            <p className="text-sm mt-0.5" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
               {loading
                 ? "Loading backend properties..."
                 : `${stats.total} properties · ${formatPrice(stats.totalValue)} portfolio value`}
@@ -252,9 +252,9 @@ export function Properties({ darkMode }: PropertiesProps) {
               onClick={openCreateForm}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
               style={{
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                 color: "#ffffff",
-                boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
+                boxShadow: "0 4px 14px rgba(29,78,216,0.3)",
               }}
             >
               <Plus size={14} /> Add Property
@@ -285,7 +285,7 @@ export function Properties({ darkMode }: PropertiesProps) {
 
         <div className="grid grid-cols-4 gap-3 mb-5">
           {[
-            { label: "Total Properties", value: stats.total, color: "#6366f1", icon: Building2 },
+            { label: "Total Properties", value: stats.total, color: "#1D4ED8", icon: Building2 },
             { label: "Available", value: stats.available, color: "#10b981", icon: Home },
             { label: "Sold", value: stats.sold, color: "#ef4444", icon: IndianRupee },
             { label: "Portfolio Value", value: formatPrice(stats.totalValue), color: "#f59e0b", icon: IndianRupee },
@@ -293,7 +293,7 @@ export function Properties({ darkMode }: PropertiesProps) {
             <div key={item.label} className="rounded-2xl border p-4" style={cardBase}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs mb-2" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                  <p className="text-xs mb-2" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
                     {item.label}
                   </p>
 
@@ -327,7 +327,7 @@ export function Properties({ darkMode }: PropertiesProps) {
               <Search
                 size={13}
                 className="absolute left-3 top-1/2 -translate-y-1/2"
-                style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
               />
 
               <input
@@ -336,7 +336,7 @@ export function Properties({ darkMode }: PropertiesProps) {
                 placeholder="Search properties..."
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm"
                 style={{
-                  background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                  background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                   borderColor: cardBase.borderColor,
                   color: darkMode ? "#e2e8f0" : "#0f172a",
                 }}
@@ -348,7 +348,7 @@ export function Properties({ darkMode }: PropertiesProps) {
               onChange={(event) => setActiveStatus(event.target.value)}
               className="rounded-xl border px-3 text-sm"
               style={{
-                background: darkMode ? "#0d0d28" : "#ffffff",
+                background: darkMode ? "#0F172A" : "#ffffff",
                 borderColor: cardBase.borderColor,
                 color: darkMode ? "#e2e8f0" : "#0f172a",
               }}
@@ -383,12 +383,12 @@ export function Properties({ darkMode }: PropertiesProps) {
                   background:
                     selectedProperty?.id === property.id
                       ? darkMode
-                        ? "rgba(99,102,241,0.12)"
-                        : "rgba(99,102,241,0.06)"
+                        ? "rgba(29,78,216,0.12)"
+                        : "rgba(29,78,216,0.06)"
                       : cardBase.background,
                   borderColor:
                     selectedProperty?.id === property.id
-                      ? "rgba(99,102,241,0.35)"
+                      ? "rgba(29,78,216,0.35)"
                       : cardBase.borderColor,
                 }}
                 whileHover={{ x: 2 }}
@@ -399,10 +399,10 @@ export function Properties({ darkMode }: PropertiesProps) {
                     className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                     style={{
                       background:
-                        "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.12))",
+                        "linear-gradient(135deg, rgba(29,78,216,0.18), rgba(37,99,235,0.12))",
                     }}
                   >
-                    <Building2 size={20} style={{ color: "#818cf8" }} />
+                    <Building2 size={20} style={{ color: "#60A5FA" }} />
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -427,7 +427,7 @@ export function Properties({ darkMode }: PropertiesProps) {
 
                     <p
                       className="text-xs mt-1 flex items-center gap-1"
-                      style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                      style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
                     >
                       <MapPin size={11} /> {property.location}
                     </p>
@@ -464,10 +464,10 @@ export function Properties({ darkMode }: PropertiesProps) {
                 className="h-56 rounded-2xl mb-5 flex items-center justify-center overflow-hidden"
                 style={{
                   background:
-                    "linear-gradient(135deg, rgba(99,102,241,0.24), rgba(139,92,246,0.16), rgba(6,182,212,0.12))",
+                    "linear-gradient(135deg, rgba(29,78,216,0.24), rgba(37,99,235,0.16), rgba(6,182,212,0.12))",
                 }}
               >
-                <Building2 size={64} style={{ color: darkMode ? "#818cf8" : "#6366f1" }} />
+                <Building2 size={64} style={{ color: darkMode ? "#60A5FA" : "#1D4ED8" }} />
               </div>
 
               <div className="flex items-start justify-between gap-4 mb-5">
@@ -481,7 +481,7 @@ export function Properties({ darkMode }: PropertiesProps) {
 
                   <p
                     className="text-sm mt-1 flex items-center gap-1"
-                    style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                    style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
                   >
                     <MapPin size={13} /> {selectedProperty.location}
                   </p>
@@ -510,12 +510,12 @@ export function Properties({ darkMode }: PropertiesProps) {
                     className="rounded-xl border p-3"
                     style={{
                       borderColor: cardBase.borderColor,
-                      background: darkMode ? "rgba(99,102,241,0.04)" : "rgba(99,102,241,0.03)",
+                      background: darkMode ? "rgba(29,78,216,0.04)" : "rgba(29,78,216,0.03)",
                     }}
                   >
-                    <item.icon size={15} style={{ color: "#818cf8" }} />
+                    <item.icon size={15} style={{ color: "#60A5FA" }} />
 
-                    <p className="text-xs mt-2" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                    <p className="text-xs mt-2" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
                       {item.label}
                     </p>
 
@@ -533,7 +533,7 @@ export function Properties({ darkMode }: PropertiesProps) {
                 className="rounded-xl border p-4 mb-5"
                 style={{
                   borderColor: cardBase.borderColor,
-                  background: darkMode ? "rgba(99,102,241,0.04)" : "rgba(99,102,241,0.03)",
+                  background: darkMode ? "rgba(29,78,216,0.04)" : "rgba(29,78,216,0.03)",
                 }}
               >
                 <h3
@@ -552,7 +552,7 @@ export function Properties({ darkMode }: PropertiesProps) {
                 onClick={() => openEditForm(selectedProperty)}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
                 style={{
-                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                   color: "#ffffff",
                 }}
               >
@@ -583,7 +583,7 @@ export function Properties({ darkMode }: PropertiesProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             className="relative w-full max-w-3xl rounded-2xl border p-5"
             style={{
-              background: darkMode ? "#0d0d28" : "#ffffff",
+              background: darkMode ? "#0F172A" : "#ffffff",
               borderColor: cardBase.borderColor,
             }}
           >
@@ -596,7 +596,7 @@ export function Properties({ darkMode }: PropertiesProps) {
                   {editingPropertyId ? "Edit Property" : "Add Property"}
                 </h2>
 
-                <p className="text-xs mt-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+                <p className="text-xs mt-1" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
                   {editingPropertyId
                     ? "Update this property directly in backend."
                     : "Create a new property in backend inventory."}
@@ -619,7 +619,7 @@ export function Properties({ darkMode }: PropertiesProps) {
                 placeholder="Property title"
                 className="rounded-xl border px-3 py-2 text-sm"
                 style={{
-                  background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                  background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                   borderColor: cardBase.borderColor,
                   color: darkMode ? "#e2e8f0" : "#0f172a",
                 }}
@@ -631,7 +631,7 @@ export function Properties({ darkMode }: PropertiesProps) {
                 placeholder="Location"
                 className="rounded-xl border px-3 py-2 text-sm"
                 style={{
-                  background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                  background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                   borderColor: cardBase.borderColor,
                   color: darkMode ? "#e2e8f0" : "#0f172a",
                 }}
@@ -644,7 +644,7 @@ export function Properties({ darkMode }: PropertiesProps) {
                 placeholder="Price"
                 className="rounded-xl border px-3 py-2 text-sm"
                 style={{
-                  background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                  background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                   borderColor: cardBase.borderColor,
                   color: darkMode ? "#e2e8f0" : "#0f172a",
                 }}
@@ -655,7 +655,7 @@ export function Properties({ darkMode }: PropertiesProps) {
                 onChange={(event) => setForm({ ...form, property_type: event.target.value })}
                 className="rounded-xl border px-3 py-2 text-sm"
                 style={{
-                  background: darkMode ? "#0d0d28" : "#ffffff",
+                  background: darkMode ? "#0F172A" : "#ffffff",
                   borderColor: cardBase.borderColor,
                   color: darkMode ? "#e2e8f0" : "#0f172a",
                 }}
@@ -674,7 +674,7 @@ export function Properties({ darkMode }: PropertiesProps) {
                 placeholder="Bedrooms"
                 className="rounded-xl border px-3 py-2 text-sm"
                 style={{
-                  background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                  background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                   borderColor: cardBase.borderColor,
                   color: darkMode ? "#e2e8f0" : "#0f172a",
                 }}
@@ -687,7 +687,7 @@ export function Properties({ darkMode }: PropertiesProps) {
                 placeholder="Bathrooms"
                 className="rounded-xl border px-3 py-2 text-sm"
                 style={{
-                  background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                  background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                   borderColor: cardBase.borderColor,
                   color: darkMode ? "#e2e8f0" : "#0f172a",
                 }}
@@ -700,7 +700,7 @@ export function Properties({ darkMode }: PropertiesProps) {
                 placeholder="Area sqft"
                 className="rounded-xl border px-3 py-2 text-sm"
                 style={{
-                  background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                  background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                   borderColor: cardBase.borderColor,
                   color: darkMode ? "#e2e8f0" : "#0f172a",
                 }}
@@ -711,7 +711,7 @@ export function Properties({ darkMode }: PropertiesProps) {
                 onChange={(event) => setForm({ ...form, status: event.target.value })}
                 className="rounded-xl border px-3 py-2 text-sm"
                 style={{
-                  background: darkMode ? "#0d0d28" : "#ffffff",
+                  background: darkMode ? "#0F172A" : "#ffffff",
                   borderColor: cardBase.borderColor,
                   color: darkMode ? "#e2e8f0" : "#0f172a",
                 }}
@@ -729,7 +729,7 @@ export function Properties({ darkMode }: PropertiesProps) {
               className="mt-3 w-full rounded-xl border px-3 py-2 text-sm"
               rows={4}
               style={{
-                background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                 borderColor: cardBase.borderColor,
                 color: darkMode ? "#e2e8f0" : "#0f172a",
               }}
@@ -753,7 +753,7 @@ export function Properties({ darkMode }: PropertiesProps) {
                 disabled={saving}
                 className="px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-60"
                 style={{
-                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                   color: "#ffffff",
                 }}
               >

@@ -218,16 +218,16 @@ export function Reports({ darkMode }: ReportsProps) {
   const [emailSending, setEmailSending] = useState(false);
 
   const cardBase = {
-    background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+    background: darkMode ? "rgba(15,23,42,0.8)" : "#ffffff",
+    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
   };
 
   const textPrimary = darkMode ? "#e2e8f0" : "#0f172a";
   const textMuted = darkMode ? "#64748b" : "#64748b";
-  const textSoft = darkMode ? "#4a5568" : "#94a3b8";
-  const chartColor = darkMode ? "#818cf8" : "#6366f1";
+  const textSoft = darkMode ? "#94A3B8" : "#94a3b8";
+  const chartColor = darkMode ? "#60A5FA" : "#1D4ED8";
   const tickColor = darkMode ? "#2d3748" : "#cbd5e1";
-  const tooltipBg = darkMode ? "#0d0d28" : "#ffffff";
+  const tooltipBg = darkMode ? "#0F172A" : "#ffffff";
 
   const loadReportData = async () => {
     try {
@@ -481,7 +481,7 @@ export function Reports({ darkMode }: ReportsProps) {
       meta: `${lead.status || "new"} · ${lead.score || 50}/100 score`,
       type: "CRM",
       signal: (lead.score || 0) >= 80 ? "Hot" : "Active",
-      color: "#6366f1",
+      color: "#1D4ED8",
     }));
 
     const propertyRows: RecentReportItem[] = properties.slice(0, 3).map((property) => ({
@@ -497,7 +497,7 @@ export function Reports({ darkMode }: ReportsProps) {
       meta: `${platformLabel(post.platform)} · ${post.status}`,
       type: "Marketing",
       signal: post.status,
-      color: "#8b5cf6",
+      color: "#2563EB",
     }));
 
     const scheduleRows: RecentReportItem[] = scheduledPosts.slice(0, 3).map((schedule) => ({
@@ -636,7 +636,7 @@ export function Reports({ darkMode }: ReportsProps) {
       value: formatNumber(reportStats.totalLeads),
       change: `${reportStats.hotLeads} hot`,
       icon: Target,
-      color: "#8b5cf6",
+      color: "#2563EB",
       sub: "CRM pipeline",
       section: "overview",
     },
@@ -654,7 +654,7 @@ export function Reports({ darkMode }: ReportsProps) {
       value: formatNumber(reportStats.generatedTotal),
       change: `${reportStats.generatedPublished} published`,
       icon: Megaphone,
-      color: "#6366f1",
+      color: "#1D4ED8",
       sub: "marketing",
       section: "marketing",
     },
@@ -689,27 +689,27 @@ export function Reports({ darkMode }: ReportsProps) {
 
   const sectionCards: Record<ReportSection, Array<{ label: string; value: string; color: string }>> = {
     overview: [
-      { label: "New Leads", value: formatNumber(reportStats.newLeads), color: "#6366f1" },
-      { label: "Contacted", value: formatNumber(reportStats.contactedLeads), color: "#8b5cf6" },
+      { label: "New Leads", value: formatNumber(reportStats.newLeads), color: "#1D4ED8" },
+      { label: "Contacted", value: formatNumber(reportStats.contactedLeads), color: "#2563EB" },
       { label: "Qualified", value: formatNumber(reportStats.qualifiedLeads), color: "#06b6d4" },
       { label: "Converted", value: formatNumber(reportStats.convertedLeads), color: "#10b981" },
       { label: "Lost", value: formatNumber(reportStats.lostLeads), color: "#ef4444" },
     ],
     marketing: [
       { label: "Drafts", value: formatNumber(reportStats.generatedDraft), color: "#f59e0b" },
-      { label: "Scheduled", value: formatNumber(reportStats.generatedScheduled), color: "#6366f1" },
+      { label: "Scheduled", value: formatNumber(reportStats.generatedScheduled), color: "#1D4ED8" },
       { label: "Published", value: formatNumber(reportStats.generatedPublished), color: "#10b981" },
       { label: "Failed", value: formatNumber(reportStats.generatedFailed), color: "#ef4444" },
     ],
     scheduler: [
       { label: "Queued", value: formatNumber(reportStats.scheduleScheduled), color: "#10b981" },
-      { label: "Publishing", value: formatNumber(reportStats.schedulePublishing), color: "#6366f1" },
+      { label: "Publishing", value: formatNumber(reportStats.schedulePublishing), color: "#1D4ED8" },
       { label: "Published", value: formatNumber(reportStats.schedulePublished), color: "#14b8a6" },
       { label: "Failed", value: formatNumber(reportStats.scheduleFailed), color: "#ef4444" },
-      { label: "Upcoming", value: formatNumber(reportStats.upcomingInPeriod), color: "#8b5cf6" },
+      { label: "Upcoming", value: formatNumber(reportStats.upcomingInPeriod), color: "#2563EB" },
     ],
     publisher: [
-      { label: "Campaigns", value: formatNumber(reportStats.campaignCount), color: "#6366f1" },
+      { label: "Campaigns", value: formatNumber(reportStats.campaignCount), color: "#1D4ED8" },
       { label: "Mock Mode", value: formatNumber(reportStats.mockPublished), color: "#f59e0b" },
       { label: "Real Mode", value: formatNumber(reportStats.realPublished), color: "#10b981" },
       { label: "Failures", value: formatNumber(reportStats.generatedFailed + reportStats.scheduleFailed), color: "#ef4444" },
@@ -732,7 +732,7 @@ export function Reports({ darkMode }: ReportsProps) {
               <span
                 className="rounded-full px-2 py-1 text-xs"
                 style={{
-                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                   color: "#ffffff",
                 }}
               >
@@ -750,7 +750,7 @@ export function Reports({ darkMode }: ReportsProps) {
             <div
               className="flex gap-1 rounded-xl p-1"
               style={{
-                background: darkMode ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.04)",
+                background: darkMode ? "rgba(29,78,216,0.08)" : "rgba(29,78,216,0.04)",
               }}
             >
               {(["daily", "weekly", "monthly"] as const).map((report) => (
@@ -762,14 +762,14 @@ export function Reports({ darkMode }: ReportsProps) {
                     background:
                       activeReport === report
                         ? darkMode
-                          ? "rgba(99,102,241,0.2)"
+                          ? "rgba(29,78,216,0.2)"
                           : "#ffffff"
                         : "transparent",
                     color:
                       activeReport === report
                         ? darkMode
-                          ? "#818cf8"
-                          : "#6366f1"
+                          ? "#60A5FA"
+                          : "#1D4ED8"
                         : textSoft,
                     boxShadow:
                       activeReport === report && !darkMode
@@ -887,13 +887,13 @@ export function Reports({ darkMode }: ReportsProps) {
           className="rounded-2xl border p-5"
           style={{
             background: darkMode
-              ? "linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.07) 50%, rgba(13,13,40,0.9) 100%)"
-              : "linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(139,92,246,0.03) 100%)",
-            borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)",
+              ? "linear-gradient(135deg, rgba(29,78,216,0.1) 0%, rgba(37,99,235,0.07) 50%, rgba(15,23,42,0.9) 100%)"
+              : "linear-gradient(135deg, rgba(29,78,216,0.05) 0%, rgba(37,99,235,0.03) 100%)",
+            borderColor: darkMode ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.1)",
           }}
         >
           <div className="mb-4 flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)" }}>
               <Sparkles size={14} className="text-white" />
             </div>
             <div>
@@ -970,7 +970,7 @@ export function Reports({ darkMode }: ReportsProps) {
                 <Tooltip
                   contentStyle={{
                     background: tooltipBg,
-                    border: `1px solid ${darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)"}`,
+                    border: `1px solid ${darkMode ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.1)"}`,
                     borderRadius: "12px",
                     fontSize: "12px",
                     color: textPrimary,
@@ -980,7 +980,7 @@ export function Reports({ darkMode }: ReportsProps) {
                   {trendData.map((_, index) => (
                     <Cell
                       key={index}
-                      fill={index === trendData.length - 1 ? "#6366f1" : darkMode ? "rgba(99,102,241,0.3)" : "rgba(99,102,241,0.2)"}
+                      fill={index === trendData.length - 1 ? "#1D4ED8" : darkMode ? "rgba(29,78,216,0.3)" : "rgba(29,78,216,0.2)"}
                     />
                   ))}
                 </Bar>
@@ -1012,7 +1012,7 @@ export function Reports({ darkMode }: ReportsProps) {
                 <Tooltip
                   contentStyle={{
                     background: tooltipBg,
-                    border: `1px solid ${darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)"}`,
+                    border: `1px solid ${darkMode ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.1)"}`,
                     borderRadius: "12px",
                     fontSize: "12px",
                     color: textPrimary,
@@ -1047,8 +1047,8 @@ export function Reports({ darkMode }: ReportsProps) {
                   key={`${item.title}-${index}`}
                   className="flex items-center gap-3 rounded-xl border p-3"
                   style={{
-                    borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.06)",
-                    background: darkMode ? "rgba(99,102,241,0.03)" : "#f8fafc",
+                    borderColor: darkMode ? "rgba(29,78,216,0.08)" : "rgba(15,23,42,0.06)",
+                    background: darkMode ? "rgba(29,78,216,0.03)" : "#f8fafc",
                   }}
                 >
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: `${item.color}15` }}>
@@ -1104,12 +1104,12 @@ export function Reports({ darkMode }: ReportsProps) {
                   key={action}
                   className="flex items-start gap-3 rounded-xl p-3"
                   style={{
-                    background: darkMode ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.04)",
+                    background: darkMode ? "rgba(29,78,216,0.06)" : "rgba(29,78,216,0.04)",
                   }}
                 >
                   <div
                     className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                    style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+                    style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)" }}
                   >
                     {index + 1}
                   </div>
@@ -1127,8 +1127,8 @@ export function Reports({ darkMode }: ReportsProps) {
             <div
               className="w-full max-w-lg rounded-2xl border p-5 shadow-2xl"
               style={{
-                background: darkMode ? "rgba(13,13,40,0.98)" : "#ffffff",
-                borderColor: darkMode ? "rgba(99,102,241,0.18)" : "rgba(15,23,42,0.08)",
+                background: darkMode ? "rgba(15,23,42,0.98)" : "#ffffff",
+                borderColor: darkMode ? "rgba(29,78,216,0.18)" : "rgba(15,23,42,0.08)",
               }}
             >
               <div className="mb-4 flex items-start justify-between gap-4">
@@ -1169,8 +1169,8 @@ export function Reports({ darkMode }: ReportsProps) {
                     placeholder="owner@company.com, sales@company.com"
                     className="w-full rounded-xl border px-3 py-2 text-sm"
                     style={{
-                      background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
-                      borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                      background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
+                      borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                       color: textPrimary,
                     }}
                   />
@@ -1182,8 +1182,8 @@ export function Reports({ darkMode }: ReportsProps) {
                 <div
                   className="rounded-xl border p-3 text-xs"
                   style={{
-                    background: darkMode ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.04)",
-                    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                    background: darkMode ? "rgba(29,78,216,0.06)" : "rgba(29,78,216,0.04)",
+                    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                     color: textMuted,
                   }}
                 >
@@ -1195,7 +1195,7 @@ export function Reports({ darkMode }: ReportsProps) {
                     onClick={() => setEmailModalOpen(false)}
                     className="flex-1 rounded-xl border px-4 py-2 text-sm"
                     style={{
-                      borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.08)",
+                      borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.08)",
                       color: textMuted,
                     }}
                   >
@@ -1205,7 +1205,7 @@ export function Reports({ darkMode }: ReportsProps) {
                     onClick={handleSendEmailReport}
                     disabled={emailSending}
                     className="flex-1 rounded-xl px-4 py-2 text-sm font-medium text-white"
-                    style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+                    style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)" }}
                   >
                     {emailSending ? "Sending..." : "Send Report"}
                   </button>
@@ -1222,7 +1222,7 @@ export function Reports({ darkMode }: ReportsProps) {
 
 function LoaderBadge() {
   return (
-    <span className="ml-auto inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs" style={{ color: "#6366f1", background: "rgba(99,102,241,0.10)" }}>
+    <span className="ml-auto inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs" style={{ color: "#1D4ED8", background: "rgba(29,78,216,0.10)" }}>
       <Clock size={11} /> Loading
     </span>
   );

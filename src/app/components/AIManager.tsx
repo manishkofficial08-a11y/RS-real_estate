@@ -418,8 +418,8 @@ export function AIManager({ darkMode }: AIManagerProps) {
   const snapshot = useMemo(() => buildSnapshot(data), [data]);
 
   const cardBase = {
-    background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+    background: darkMode ? "rgba(15,23,42,0.8)" : "#ffffff",
+    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
   };
 
   const textPrimary = darkMode ? "#e2e8f0" : "#0f172a";
@@ -503,13 +503,13 @@ export function AIManager({ darkMode }: AIManagerProps) {
       icon: Video,
       label: "Video assets",
       value: formatNumber(snapshot.videoAssets),
-      color: "#6366f1",
+      color: "#1D4ED8",
     },
     {
       icon: Target,
       label: "Drafts ready",
       value: formatNumber(snapshot.totalCampaignDrafts),
-      color: "#8b5cf6",
+      color: "#2563EB",
     },
   ];
 
@@ -577,8 +577,8 @@ export function AIManager({ darkMode }: AIManagerProps) {
             <div
               className="w-8 h-8 rounded-xl flex items-center justify-center"
               style={{
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                boxShadow: "0 0 20px rgba(99,102,241,0.3)",
+                background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
+                boxShadow: "0 0 20px rgba(29,78,216,0.3)",
               }}
             >
               <Bot size={15} className="text-white" />
@@ -598,7 +598,7 @@ export function AIManager({ darkMode }: AIManagerProps) {
         </div>
 
         <div className="p-3 space-y-2 flex-shrink-0">
-          <p className="text-xs font-semibold px-1" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+          <p className="text-xs font-semibold px-1" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
             LIVE BUSINESS SNAPSHOT
           </p>
 
@@ -650,7 +650,7 @@ export function AIManager({ darkMode }: AIManagerProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-3">
-          <p className="text-xs font-semibold px-1 mb-2" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+          <p className="text-xs font-semibold px-1 mb-2" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
             ASK ABOUT
           </p>
           <div className="space-y-1.5">
@@ -660,7 +660,7 @@ export function AIManager({ darkMode }: AIManagerProps) {
                 onClick={() => sendMessage(s)}
                 className="w-full text-left p-2.5 rounded-xl border text-xs transition-all hover:border-primary/20 group"
                 style={{
-                  borderColor: darkMode ? "rgba(99,102,241,0.08)" : "rgba(15,23,42,0.04)",
+                  borderColor: darkMode ? "rgba(29,78,216,0.08)" : "rgba(15,23,42,0.04)",
                   color: textSoft,
                 }}
               >
@@ -676,12 +676,12 @@ export function AIManager({ darkMode }: AIManagerProps) {
           className="flex items-center gap-3 px-5 py-4 border-b flex-shrink-0"
           style={{
             borderColor: cardBase.borderColor,
-            background: darkMode ? "rgba(13,13,40,0.6)" : "rgba(255,255,255,0.8)",
+            background: darkMode ? "rgba(15,23,42,0.6)" : "rgba(255,255,255,0.8)",
           }}
         >
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center relative"
-            style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+            style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)" }}
           >
             <Brain size={16} className="text-white" />
             <div
@@ -695,7 +695,7 @@ export function AIManager({ darkMode }: AIManagerProps) {
             <p className="text-sm font-semibold" style={{ color: textPrimary }}>
               AI Business Manager
             </p>
-            <p className="text-xs" style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}>
+            <p className="text-xs" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
               {snapshot.businessName} - live business context
             </p>
           </div>
@@ -731,7 +731,7 @@ export function AIManager({ darkMode }: AIManagerProps) {
                 }}
               >
                 <div className="flex items-center gap-2">
-                  <item.icon size={13} style={{ color: "#6366f1" }} />
+                  <item.icon size={13} style={{ color: "#1D4ED8" }} />
                   <span className="text-[11px]" style={{ color: textSoft }}>{item.label}</span>
                 </div>
                 <p className="mt-1 text-lg font-semibold" style={{ color: textPrimary }}>
@@ -753,7 +753,7 @@ export function AIManager({ darkMode }: AIManagerProps) {
               {msg.role === "ai" && (
                 <div
                   className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+                  style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)" }}
                 >
                   <Bot size={14} className="text-white" />
                 </div>
@@ -765,9 +765,9 @@ export function AIManager({ darkMode }: AIManagerProps) {
                     background:
                       msg.role === "ai"
                         ? darkMode
-                          ? "rgba(13,13,40,0.9)"
+                          ? "rgba(15,23,42,0.9)"
                           : "#ffffff"
-                        : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                        : "linear-gradient(135deg, #1D4ED8, #2563EB)",
                     color:
                       msg.role === "ai"
                         ? darkMode
@@ -777,12 +777,12 @@ export function AIManager({ darkMode }: AIManagerProps) {
                     border:
                       msg.role === "ai"
                         ? `1px solid ${
-                            darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)"
+                            darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)"
                           }`
                         : "none",
                     boxShadow:
                       msg.role === "user"
-                        ? "0 4px 14px rgba(99,102,241,0.3)"
+                        ? "0 4px 14px rgba(29,78,216,0.3)"
                         : darkMode
                           ? "0 2px 16px rgba(0,0,0,0.3)"
                           : "0 1px 4px rgba(0,0,0,0.06)",
@@ -825,14 +825,14 @@ export function AIManager({ darkMode }: AIManagerProps) {
               >
                 <div
                   className="w-8 h-8 rounded-xl flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+                  style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)" }}
                 >
                   <Bot size={14} className="text-white" />
                 </div>
                 <div
                   className="px-4 py-3 rounded-2xl"
                   style={{
-                    background: darkMode ? "rgba(13,13,40,0.9)" : "#ffffff",
+                    background: darkMode ? "rgba(15,23,42,0.9)" : "#ffffff",
                     border: `1px solid ${cardBase.borderColor}`,
                   }}
                 >
@@ -864,11 +864,11 @@ export function AIManager({ darkMode }: AIManagerProps) {
           <div
             className="flex items-center gap-2 rounded-2xl border px-4 py-2"
             style={{
-              borderColor: darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.12)",
-              background: darkMode ? "rgba(99,102,241,0.05)" : "rgba(248,250,252,0.8)",
+              borderColor: darkMode ? "rgba(29,78,216,0.2)" : "rgba(29,78,216,0.12)",
+              background: darkMode ? "rgba(29,78,216,0.05)" : "rgba(248,250,252,0.8)",
             }}
           >
-            <Lightbulb size={16} style={{ color: "#8b5cf6" }} />
+            <Lightbulb size={16} style={{ color: "#2563EB" }} />
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -883,10 +883,10 @@ export function AIManager({ darkMode }: AIManagerProps) {
               className="w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-50"
               style={{
                 background: input.trim()
-                  ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                  ? "linear-gradient(135deg, #1D4ED8, #2563EB)"
                   : darkMode
-                    ? "rgba(99,102,241,0.08)"
-                    : "rgba(99,102,241,0.08)",
+                    ? "rgba(29,78,216,0.08)"
+                    : "rgba(29,78,216,0.08)",
                 color: input.trim() ? "#ffffff" : textSoft,
               }}
             >

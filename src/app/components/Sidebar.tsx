@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { CLIENT_BRANDING } from "../lib/clientBranding";
 import {
   LayoutDashboard,
   Image,
@@ -20,6 +20,7 @@ import {
   Moon,
   Sun,
   Command,
+  ExternalLink,
 } from "lucide-react";
 import { motion } from "motion/react";
 import type { ClientProfile } from "../lib/clientApi";
@@ -33,20 +34,42 @@ type FloorItem = {
 };
 
 const floors: FloorItem[] = [
-  { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", floor: "F01" },
-  { id: "media", icon: Image, label: "Media Library", floor: "F02" },
-  { id: "ai-studio", icon: Sparkles, label: "AI Studio", floor: "F03", badge: "New" },
-  { id: "scheduler", icon: Calendar, label: "Scheduler", floor: "F04" },
-  { id: "analytics", icon: BarChart3, label: "Analytics", floor: "F05" },
-  { id: "crm", icon: Users2, label: "CRM", floor: "F06", badge: "3" },
-  { id: "properties", icon: Building2, label: "Properties", floor: "F07" },
-  { id: "reports", icon: FileBarChart, label: "Reports", floor: "F08" },
-  { id: "team", icon: UserSquare2, label: "Team", floor: "F09" },
-  { id: "automation", icon: Zap, label: "Automation", floor: "F10" },
-  { id: "billing", icon: CreditCard, label: "Billing", floor: "F11" },
-  { id: "support", icon: LifeBuoy, label: "Support", floor: "F12" },
-  { id: "settings", icon: Settings, label: "Settings", floor: "F13" },
-  { id: "ai-manager", icon: Bot, label: "AI Manager", floor: "F14", badge: "●" },
+  { id: "dashboard", icon: LayoutDashboard, label: "Overview", floor: "F01" },
+  { id: "crm", icon: Users2, label: "Leads", floor: "F02", badge: "3" },
+  { id: "properties", icon: Building2, label: "Properties", floor: "F03" },
+  { id: "media", icon: Image, label: "Media Library", floor: "F04" },
+  {
+    id: "ai-studio",
+    icon: Sparkles,
+    label: "AI Content Studio",
+    floor: "F05",
+    badge: "New",
+  },
+  {
+    id: "scheduler",
+    icon: Calendar,
+    label: "Campaign Scheduler",
+    floor: "F06",
+  },
+  { id: "automation", icon: Zap, label: "Social Accounts", floor: "F07" },
+  { id: "analytics", icon: BarChart3, label: "Analytics", floor: "F08" },
+  {
+    id: "reports",
+    icon: FileBarChart,
+    label: "Business Reports",
+    floor: "F09",
+  },
+  { id: "billing", icon: CreditCard, label: "Billing", floor: "F10" },
+  { id: "support", icon: LifeBuoy, label: "Support", floor: "F11" },
+  { id: "settings", icon: Settings, label: "Settings", floor: "F12" },
+  { id: "team", icon: UserSquare2, label: "Team Access", floor: "F13" },
+  {
+    id: "ai-manager",
+    icon: Bot,
+    label: "AI Assistant",
+    floor: "F14",
+    badge: "●",
+  },
 ];
 
 interface SidebarProps {
@@ -79,21 +102,10 @@ export function Sidebar({
 
   const activeFloor = floors[activeIndex] || floors[0];
 
-  const businessName = profile?.business_name || "RS Real Estate";
-  const userName = profile?.full_name || profile?.business_name || "RS Client";
-  const userEmail = profile?.email || "Email not available";
-
-  const initials = useMemo(() => {
-    return (
-      userName
-        .trim()
-        .split(" ")
-        .slice(0, 2)
-        .map((part) => part[0])
-        .join("")
-        .toUpperCase() || "RS"
-    );
-  }, [userName]);
+  const businessName = CLIENT_BRANDING.businessName;
+  const userName = CLIENT_BRANDING.ownerName;
+  const userEmail =
+    CLIENT_BRANDING.ownerEmail || profile?.email || "Email not available";
 
   return (
     <motion.aside
@@ -102,20 +114,31 @@ export function Sidebar({
       className={`rs-elevator-sidebar ${darkMode ? "rs-elevator-dark" : "rs-elevator-light"} ${
         collapsed ? "rs-elevator-collapsed" : ""
       }`}
-      aria-label="RS Real Estate floor navigation"
+      aria-label={`${CLIENT_BRANDING.businessName} portal navigation`}
     >
       <div className="rs-building-glow" aria-hidden="true" />
 
       <div className="rs-building-header">
         <div className="rs-building-logo">
-          <div className="rs-building-logo-mark">
-            <Building2 size={17} />
+          <div className="rs-building-logo-mark rs-client-logo-mark">
+            <img
+              src={CLIENT_BRANDING.logoUrl}
+              alt={`${CLIENT_BRANDING.businessName} logo`}
+            />
           </div>
 
           {!collapsed && (
             <div className="rs-building-brand-copy">
               <p>{businessName}</p>
-              <span>Building Command OS</span>
+              <span>Real Estate Business Portal</span>
+              <a
+                href={CLIENT_BRANDING.websiteUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rs-client-website-link"
+              >
+                Visit Website <ExternalLink size={10} />
+              </a>
             </div>
           )}
         </div>
@@ -168,18 +191,29 @@ export function Sidebar({
         {!collapsed && (
           <>
             <span className="rs-elevator-current">{activeFloor.floor}</span>
-            <span className="rs-elevator-current-label">{activeFloor.label}</span>
+            <span className="rs-elevator-current-label">
+              {activeFloor.label}
+            </span>
           </>
         )}
       </div>
 
-      <nav className="rs-floor-shaft" role="tablist" aria-label="Client dashboard floors">
+      <nav
+        className="rs-floor-shaft"
+        role="tablist"
+        aria-label="Client dashboard floors"
+      >
         <div className="rs-shaft-rail" aria-hidden="true" />
 
         <motion.div
           className="rs-lift-cabin"
           animate={{ y: activeIndex * 45 }}
-          transition={{ type: "spring", stiffness: 260, damping: 28, mass: 0.9 }}
+          transition={{
+            type: "spring",
+            stiffness: 260,
+            damping: 28,
+            mass: 0.9,
+          }}
           aria-hidden="true"
         >
           <div className="rs-lift-door rs-lift-door-left" />
@@ -232,7 +266,12 @@ export function Sidebar({
 
       <div className="rs-building-footer">
         <div className="rs-building-profile">
-          <div className="rs-building-avatar">{initials}</div>
+          <div className="rs-building-avatar rs-client-owner-avatar">
+            <img
+              src={CLIENT_BRANDING.ownerAvatarUrl}
+              alt={CLIENT_BRANDING.ownerName}
+            />
+          </div>
 
           {!collapsed && (
             <div className="rs-building-profile-copy">

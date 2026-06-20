@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { CLIENT_BRANDING } from "../lib/clientBranding";
 import {
   Building2,
   CheckCircle2,
@@ -22,7 +23,9 @@ interface SettingsProps {
 
 function formatLabel(value?: string | null) {
   if (!value) return "Not set";
-  return value.replace(/[_-]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return value
+    .replace(/[_-]/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function getInitials(name?: string | null) {
@@ -39,23 +42,22 @@ function getInitials(name?: string | null) {
   );
 }
 
-
 const socialIntegrationCards = [
   {
     name: "Instagram Business",
     description:
       "Connect a professional Instagram account for reels, posts, and listing creatives.",
     status: "Setup required",
-    requiredInfo: ["Instagram Business Account ID", "Facebook Page ID"],
-    buttonLabel: "Connect after backend setup",
-    color: "#e879f9",
+    requiredInfo: ["Instagram Business Account", "Facebook Business Page"],
+    buttonLabel: "Start Setup",
+    color: "#F97316",
   },
   {
     name: "Facebook Page",
     description:
       "Prepare a business Page connection for automated property and campaign publishing.",
-    status: "Token needed",
-    requiredInfo: ["Facebook Page ID", "Page access token"],
+    status: "Connection Required",
+    requiredInfo: ["Facebook Business Page", "Page access token"],
     buttonLabel: "Coming soon",
     color: "#3b82f6",
   },
@@ -65,8 +67,8 @@ const socialIntegrationCards = [
       "Enable company or profile publishing for professional real estate updates.",
     status: "Ready after deployment",
     requiredInfo: ["LinkedIn Author URN"],
-    buttonLabel: "Connect after backend setup",
-    color: "#06b6d4",
+    buttonLabel: "Start Setup",
+    color: "#1D4ED8",
   },
   {
     name: "YouTube",
@@ -81,9 +83,9 @@ const socialIntegrationCards = [
     name: "Twitter/X",
     description:
       "Prepare short-form publishing for listing announcements and campaign updates.",
-    status: "Token needed",
+    status: "Connection Required",
     requiredInfo: ["Twitter/X API credentials"],
-    buttonLabel: "Connect after backend setup",
+    buttonLabel: "Start Setup",
     color: "#94a3b8",
   },
 ];
@@ -94,8 +96,8 @@ export function Settings({ darkMode }: SettingsProps) {
   const [message, setMessage] = useState<string | null>(null);
 
   const cardBase = {
-    background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+    background: darkMode ? "rgba(15,23,42,0.8)" : "#ffffff",
+    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
   };
 
   async function loadProfile() {
@@ -121,20 +123,20 @@ export function Settings({ darkMode }: SettingsProps) {
       {
         icon: User,
         label: "User Name",
-        value: profile?.full_name || "Client User",
-        color: "#6366f1",
+        value: CLIENT_BRANDING.ownerName,
+        color: "#1D4ED8",
       },
       {
         icon: Mail,
         label: "Email",
-        value: profile?.email || "Email not available",
-        color: "#06b6d4",
+        value: CLIENT_BRANDING.ownerEmail,
+        color: "#1D4ED8",
       },
       {
         icon: Building2,
         label: "Business",
-        value: profile?.business_name || "RS Real Estate",
-        color: "#8b5cf6",
+        value: CLIENT_BRANDING.businessName,
+        color: "#2563EB",
       },
       {
         icon: ShieldCheck,
@@ -151,7 +153,7 @@ export function Settings({ darkMode }: SettingsProps) {
       {
         icon: CheckCircle2,
         label: "Business Type",
-        value: formatLabel(profile?.business_type || "real_estate"),
+        value: CLIENT_BRANDING.businessType,
         color: "#ef4444",
       },
     ],
@@ -180,7 +182,7 @@ export function Settings({ darkMode }: SettingsProps) {
 
             <p
               className="text-sm mt-1"
-              style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+              style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
             >
               Manage your business profile, account identity and portal details.
             </p>
@@ -191,7 +193,7 @@ export function Settings({ darkMode }: SettingsProps) {
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm border disabled:opacity-60"
             style={{
-              background: darkMode ? "rgba(99,102,241,0.04)" : "#ffffff",
+              background: darkMode ? "rgba(29,78,216,0.04)" : "#ffffff",
               borderColor: cardBase.borderColor,
               color: darkMode ? "#94a3b8" : "#64748b",
             }}
@@ -205,7 +207,9 @@ export function Settings({ darkMode }: SettingsProps) {
           <div
             className="rounded-2xl border px-4 py-3 text-sm"
             style={{
-              background: darkMode ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.06)",
+              background: darkMode
+                ? "rgba(239,68,68,0.08)"
+                : "rgba(239,68,68,0.06)",
               borderColor: "rgba(239,68,68,0.25)",
               color: "#ef4444",
             }}
@@ -227,7 +231,7 @@ export function Settings({ darkMode }: SettingsProps) {
             className="absolute inset-x-0 top-0 h-28 pointer-events-none"
             style={{
               background:
-                "linear-gradient(135deg, rgba(99,102,241,0.22), rgba(139,92,246,0.12), rgba(6,182,212,0.10))",
+                "linear-gradient(135deg, rgba(29,78,216,0.22), rgba(37,99,235,0.12), rgba(6,182,212,0.10))",
             }}
           />
 
@@ -235,18 +239,22 @@ export function Settings({ darkMode }: SettingsProps) {
             <div
               className="w-20 h-20 rounded-3xl flex items-center justify-center text-xl font-semibold"
               style={{
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                 color: "#ffffff",
-                boxShadow: "0 18px 42px rgba(99,102,241,0.35)",
+                boxShadow: "0 18px 42px rgba(29,78,216,0.35)",
               }}
             >
-              {getInitials(profile?.business_name || profile?.full_name)}
+              <img
+                src={CLIENT_BRANDING.logoUrl}
+                alt={`${CLIENT_BRANDING.businessName} logo`}
+                className="h-full w-full rounded-3xl object-contain bg-white p-1"
+              />
             </div>
 
             <div className="flex-1">
               <p
                 className="text-xs uppercase tracking-[0.2em] mb-2"
-                style={{ color: darkMode ? "#818cf8" : "#6366f1" }}
+                style={{ color: darkMode ? "#60A5FA" : "#1D4ED8" }}
               >
                 Workspace
               </p>
@@ -255,15 +263,14 @@ export function Settings({ darkMode }: SettingsProps) {
                 className="text-2xl font-semibold"
                 style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
               >
-                {profile?.business_name || "RS Real Estate"}
+                {CLIENT_BRANDING.businessName}
               </h2>
 
               <p
                 className="text-sm mt-1"
                 style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
               >
-                {formatLabel(profile?.business_type || "real_estate")} ·{" "}
-                {formatLabel(profile?.plan || "free")} Plan
+                {CLIENT_BRANDING.businessType} · {CLIENT_BRANDING.planLabel}
               </p>
             </div>
 
@@ -271,7 +278,9 @@ export function Settings({ darkMode }: SettingsProps) {
               onClick={handleLogout}
               className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
               style={{
-                background: darkMode ? "rgba(239,68,68,0.12)" : "rgba(239,68,68,0.08)",
+                background: darkMode
+                  ? "rgba(239,68,68,0.12)"
+                  : "rgba(239,68,68,0.08)",
                 color: "#ef4444",
               }}
             >
@@ -308,7 +317,7 @@ export function Settings({ darkMode }: SettingsProps) {
                 <div className="min-w-0 flex-1">
                   <p
                     className="text-xs"
-                    style={{ color: darkMode ? "#4a5568" : "#94a3b8" }}
+                    style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
                   >
                     {item.label}
                   </p>
@@ -326,7 +335,6 @@ export function Settings({ darkMode }: SettingsProps) {
           ))}
         </div>
 
-
         <div
           className="rounded-2xl border p-5"
           style={{
@@ -340,14 +348,13 @@ export function Settings({ darkMode }: SettingsProps) {
                 className="text-sm font-semibold"
                 style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
               >
-                Social Integrations
+                Publishing Channels
               </h3>
               <p
                 className="mt-1 max-w-2xl text-sm"
                 style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
               >
-                Prepare platform connections for automated publishing. Live OAuth
-                connection will be enabled after publisher backend setup.
+                Connect your marketing channels to publish property campaigns, listings, and marketing updates directly from the portal.
               </p>
             </div>
 
@@ -355,13 +362,13 @@ export function Settings({ darkMode }: SettingsProps) {
               className="w-fit rounded-full border px-3 py-1 text-xs font-medium"
               style={{
                 background: darkMode
-                  ? "rgba(99,102,241,0.10)"
-                  : "rgba(99,102,241,0.08)",
-                borderColor: "rgba(99,102,241,0.22)",
-                color: darkMode ? "#a5b4fc" : "#6366f1",
+                  ? "rgba(29,78,216,0.10)"
+                  : "rgba(29,78,216,0.08)",
+                borderColor: "rgba(29,78,216,0.22)",
+                color: darkMode ? "#a5b4fc" : "#1D4ED8",
               }}
             >
-              Readiness preview
+              Setup Status
             </span>
           </div>
 
@@ -374,11 +381,9 @@ export function Settings({ darkMode }: SettingsProps) {
                 transition={{ delay: 0.08 + index * 0.04 }}
                 className="rounded-2xl border p-4"
                 style={{
-                  background: darkMode
-                    ? "rgba(99,102,241,0.04)"
-                    : "#f8fafc",
+                  background: darkMode ? "rgba(29,78,216,0.04)" : "#f8fafc",
                   borderColor: darkMode
-                    ? "rgba(99,102,241,0.10)"
+                    ? "rgba(29,78,216,0.10)"
                     : "rgba(15,23,42,0.06)",
                 }}
               >
@@ -430,19 +435,22 @@ export function Settings({ darkMode }: SettingsProps) {
                       color: darkMode ? "#64748b" : "#94a3b8",
                     }}
                   >
-                    No OAuth yet
+                    Setup Required
                   </span>
                 </div>
 
-                <div className="mt-4 rounded-xl border p-3" style={{
-                  background: darkMode ? "rgba(13,13,40,0.45)" : "#ffffff",
-                  borderColor: cardBase.borderColor,
-                }}>
+                <div
+                  className="mt-4 rounded-xl border p-3"
+                  style={{
+                    background: darkMode ? "rgba(15,23,42,0.45)" : "#ffffff",
+                    borderColor: cardBase.borderColor,
+                  }}
+                >
                   <p
                     className="text-xs font-medium"
                     style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
                   >
-                    Information needed
+                    Details Required
                   </p>
                   <div className="mt-2 space-y-2">
                     {platform.requiredInfo.map((item) => (
@@ -482,8 +490,8 @@ export function Settings({ darkMode }: SettingsProps) {
             className="mt-4 text-xs"
             style={{ color: darkMode ? "#64748b" : "#94a3b8" }}
           >
-            This section is UI-only. It does not collect secrets, store tokens, or
-            start a real OAuth flow.
+            Your account details are used only to prepare publishing access.
+            Secure channel connection will be completed during setup.
           </p>
         </div>
 

@@ -74,7 +74,7 @@ const assetTypeOptions: Array<{
   icon: LucideIcon;
   color: string;
 }> = [
-  { value: "image", label: "Images", icon: Image, color: "#6366f1" },
+  { value: "image", label: "Images", icon: Image, color: "#1D4ED8" },
   { value: "video", label: "Videos", icon: Video, color: "#ef4444" },
   { value: "pdf", label: "PDFs", icon: FileText, color: "#f59e0b" },
   { value: "text", label: "Text", icon: FileText, color: "#10b981" },
@@ -281,13 +281,13 @@ export function MediaLibrary({
   }
 
   const cardBase = {
-    background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+    background: darkMode ? "rgba(15,23,42,0.8)" : "#ffffff",
+    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
   };
 
   const subtlePanel = {
-    background: darkMode ? "rgba(99,102,241,0.05)" : "#f8fafc",
-    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+    background: darkMode ? "rgba(29,78,216,0.05)" : "#f8fafc",
+    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
   };
 
   const textPrimary = darkMode ? "#e2e8f0" : "#0f172a";
@@ -858,7 +858,7 @@ export function MediaLibrary({
             <div
               className="flex h-10 w-10 items-center justify-center rounded-xl"
               style={{
-                background: "linear-gradient(135deg, #6366f1, #06b6d4)",
+                background: "linear-gradient(135deg, #1D4ED8, #06b6d4)",
                 color: "#ffffff",
               }}
             >
@@ -892,9 +892,9 @@ export function MediaLibrary({
               onClick={() => startCreate("upload")}
               className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
               style={{
-                background: "linear-gradient(135deg, #6366f1, #06b6d4)",
+                background: "linear-gradient(135deg, #1D4ED8, #06b6d4)",
                 color: "#ffffff",
-                boxShadow: "0 4px 14px rgba(99,102,241,0.28)",
+                boxShadow: "0 4px 14px rgba(29,78,216,0.28)",
               }}
             >
               <Plus size={14} />
@@ -933,11 +933,11 @@ export function MediaLibrary({
             style={{
               background:
                 typeFilter === "all"
-                  ? "rgba(99,102,241,0.08)"
+                  ? "rgba(29,78,216,0.08)"
                   : cardBase.background,
               borderColor:
                 typeFilter === "all"
-                  ? "rgba(99,102,241,0.32)"
+                  ? "rgba(29,78,216,0.32)"
                   : cardBase.borderColor,
             }}
           >
@@ -1008,7 +1008,7 @@ export function MediaLibrary({
             <button
               type="submit"
               className="rounded-xl px-4 py-2 text-sm font-medium"
-              style={{ background: "rgba(99,102,241,0.12)", color: "#6366f1" }}
+              style={{ background: "rgba(29,78,216,0.12)", color: "#1D4ED8" }}
             >
               Search
             </button>
@@ -1044,8 +1044,8 @@ export function MediaLibrary({
                 <div
                   className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl"
                   style={{
-                    background: "rgba(99,102,241,0.10)",
-                    color: "#6366f1",
+                    background: "rgba(29,78,216,0.10)",
+                    color: "#1D4ED8",
                   }}
                 >
                   <Image size={22} />
@@ -1068,7 +1068,7 @@ export function MediaLibrary({
                   onClick={() => startCreate("upload")}
                   className="mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
                   style={{
-                    background: "linear-gradient(135deg, #6366f1, #06b6d4)",
+                    background: "linear-gradient(135deg, #1D4ED8, #06b6d4)",
                     color: "#ffffff",
                   }}
                 >
@@ -1097,11 +1097,11 @@ export function MediaLibrary({
                       style={{
                         background: active
                           ? darkMode
-                            ? "rgba(99,102,241,0.14)"
-                            : "rgba(99,102,241,0.07)"
+                            ? "rgba(29,78,216,0.14)"
+                            : "rgba(29,78,216,0.07)"
                           : cardBase.background,
                         borderColor: active
-                          ? "rgba(99,102,241,0.35)"
+                          ? "rgba(29,78,216,0.35)"
                           : cardBase.borderColor,
                       }}
                     >
@@ -1258,9 +1258,9 @@ export function MediaLibrary({
                         className="rounded-full px-2 py-1 text-xs"
                         style={{
                           background: darkMode
-                            ? "rgba(99,102,241,0.10)"
-                            : "rgba(99,102,241,0.08)",
-                          color: "#6366f1",
+                            ? "rgba(29,78,216,0.10)"
+                            : "rgba(29,78,216,0.08)",
+                          color: "#1D4ED8",
                         }}
                       >
                         {tag}
@@ -1301,7 +1301,7 @@ export function MediaLibrary({
                       disabled={saving}
                       className="flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-60"
                       style={{
-                        background: "linear-gradient(135deg, #6366f1, #06b6d4)",
+                        background: "linear-gradient(135deg, #1D4ED8, #06b6d4)",
                         color: "#ffffff",
                       }}
                     >
@@ -1324,19 +1324,19 @@ export function MediaLibrary({
                     className="rounded-xl border p-4"
                     style={{
                       background: darkMode
-                        ? "rgba(99,102,241,0.08)"
-                        : "rgba(99,102,241,0.05)",
+                        ? "rgba(29,78,216,0.08)"
+                        : "rgba(29,78,216,0.05)",
                       borderColor: darkMode
-                        ? "rgba(99,102,241,0.18)"
-                        : "rgba(99,102,241,0.12)",
+                        ? "rgba(29,78,216,0.18)"
+                        : "rgba(29,78,216,0.12)",
                     }}
                   >
                     <div className="flex items-start gap-3">
                       <div
                         className="rounded-xl p-2"
                         style={{
-                          background: "rgba(99,102,241,0.14)",
-                          color: "#818cf8",
+                          background: "rgba(29,78,216,0.14)",
+                          color: "#60A5FA",
                         }}
                       >
                         <Video size={17} />
@@ -1383,7 +1383,7 @@ export function MediaLibrary({
                       disabled={saving}
                       className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-60"
                       style={{
-                        background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                        background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                         color: "#ffffff",
                       }}
                     >
@@ -1430,8 +1430,8 @@ export function MediaLibrary({
                     onClick={() => startEdit(selectedAsset)}
                     className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
                     style={{
-                      background: "rgba(99,102,241,0.12)",
-                      color: "#6366f1",
+                      background: "rgba(29,78,216,0.12)",
+                      color: "#1D4ED8",
                     }}
                   >
                     <Pencil size={14} />
@@ -1479,7 +1479,7 @@ export function MediaLibrary({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border p-5"
             style={{
-              background: darkMode ? "#0d0d28" : "#ffffff",
+              background: darkMode ? "#0F172A" : "#ffffff",
               borderColor: cardBase.borderColor,
             }}
           >
@@ -1534,16 +1534,16 @@ export function MediaLibrary({
                     className="rounded-2xl border p-4 text-left transition-all"
                     style={{
                       background: active
-                        ? "rgba(99,102,241,0.10)"
+                        ? "rgba(29,78,216,0.10)"
                         : subtlePanel.background,
                       borderColor: active
-                        ? "rgba(99,102,241,0.36)"
+                        ? "rgba(29,78,216,0.36)"
                         : subtlePanel.borderColor,
                     }}
                   >
                     <Icon
                       size={18}
-                      style={{ color: active ? "#6366f1" : textSoft }}
+                      style={{ color: active ? "#1D4ED8" : textSoft }}
                     />
                     <p
                       className="mt-2 text-sm font-semibold"
@@ -1617,14 +1617,14 @@ export function MediaLibrary({
                 <label
                   className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed p-6 text-center transition-all hover:border-primary/40"
                   style={{
-                    background: darkMode ? "rgba(99,102,241,0.06)" : "#ffffff",
+                    background: darkMode ? "rgba(29,78,216,0.06)" : "#ffffff",
                     borderColor: darkMode
-                      ? "rgba(99,102,241,0.24)"
-                      : "rgba(99,102,241,0.22)",
+                      ? "rgba(29,78,216,0.24)"
+                      : "rgba(29,78,216,0.22)",
                     color: textMuted,
                   }}
                 >
-                  <Upload size={24} style={{ color: "#6366f1" }} />
+                  <Upload size={24} style={{ color: "#1D4ED8" }} />
                   <span
                     className="mt-2 text-sm font-medium"
                     style={{ color: textPrimary }}
@@ -1789,7 +1789,7 @@ export function MediaLibrary({
                 disabled={saving}
                 className="flex items-center justify-center gap-2 rounded-xl px-5 py-2 text-sm font-medium disabled:opacity-70"
                 style={{
-                  background: "linear-gradient(135deg, #6366f1, #06b6d4)",
+                  background: "linear-gradient(135deg, #1D4ED8, #06b6d4)",
                   color: "#ffffff",
                 }}
               >

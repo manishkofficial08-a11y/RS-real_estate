@@ -38,8 +38,8 @@ const roles: Array<{ value: ClientTeamRole; label: string }> = [
 ];
 
 const roleColors: Record<ClientTeamRole, string> = {
-  owner: "#8b5cf6",
-  admin: "#6366f1",
+  owner: "#2563EB",
+  admin: "#1D4ED8",
   marketer: "#ec4899",
   sales: "#06b6d4",
   viewer: "#94a3b8",
@@ -78,10 +78,10 @@ export function TeamManagement({ darkMode }: TeamManagementProps) {
 
   const textPrimary = darkMode ? "#e2e8f0" : "#0f172a";
   const textMuted = darkMode ? "#94a3b8" : "#64748b";
-  const textSoft = darkMode ? "#4a5568" : "#94a3b8";
+  const textSoft = darkMode ? "#94A3B8" : "#94a3b8";
   const cardStyle = {
-    background: darkMode ? "rgba(13,13,40,0.82)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.13)" : "rgba(15,23,42,0.07)",
+    background: darkMode ? "rgba(15,23,42,0.82)" : "#ffffff",
+    borderColor: darkMode ? "rgba(29,78,216,0.13)" : "rgba(15,23,42,0.07)",
   };
   const currentRole = normalizeRole(profile?.role);
   const canManage = currentRole === "owner" || currentRole === "admin";
@@ -216,7 +216,7 @@ export function TeamManagement({ darkMode }: TeamManagementProps) {
   }
 
   const statCards = [
-    { label: "Total members", value: stats.total, icon: Users2, color: "#6366f1" },
+    { label: "Total members", value: stats.total, icon: Users2, color: "#1D4ED8" },
     {
       label: "Active members",
       value: stats.active,
@@ -233,7 +233,7 @@ export function TeamManagement({ darkMode }: TeamManagementProps) {
       label: "Owners & admins",
       value: stats.admins,
       icon: ShieldCheck,
-      color: "#8b5cf6",
+      color: "#2563EB",
     },
   ];
 
@@ -243,7 +243,7 @@ export function TeamManagement({ darkMode }: TeamManagementProps) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2">
-              <Users2 size={20} style={{ color: "#6366f1" }} />
+              <Users2 size={20} style={{ color: "#1D4ED8" }} />
               <h1 className="text-2xl font-semibold" style={{ color: textPrimary }}>
                 Team Management
               </h1>
@@ -269,8 +269,8 @@ export function TeamManagement({ darkMode }: TeamManagementProps) {
                 onClick={() => setInviteOpen(true)}
                 className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-white"
                 style={{
-                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                  boxShadow: "0 6px 20px rgba(99,102,241,0.28)",
+                  background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
+                  boxShadow: "0 6px 20px rgba(29,78,216,0.28)",
                 }}
               >
                 <MailPlus size={14} />
@@ -304,9 +304,9 @@ export function TeamManagement({ darkMode }: TeamManagementProps) {
             className="rounded-2xl border px-4 py-3 text-sm"
             style={{
               background: darkMode
-                ? "rgba(99,102,241,0.08)"
-                : "rgba(99,102,241,0.05)",
-              borderColor: "rgba(99,102,241,0.20)",
+                ? "rgba(29,78,216,0.08)"
+                : "rgba(29,78,216,0.05)",
+              borderColor: "rgba(29,78,216,0.20)",
               color: textMuted,
             }}
           >
@@ -390,7 +390,7 @@ export function TeamManagement({ darkMode }: TeamManagementProps) {
                       <tr key={member.id} className="border-t" style={{ borderColor: cardStyle.borderColor }}>
                         <td className="px-5 py-4">
                           <p className="text-sm font-medium" style={{ color: textPrimary }}>
-                            {member.full_name} {isSelf && <span style={{ color: "#6366f1" }}>(you)</span>}
+                            {member.full_name} {isSelf && <span style={{ color: "#1D4ED8" }}>(you)</span>}
                           </p>
                           <p className="mt-1 text-xs" style={{ color: textSoft }}>{member.email}</p>
                         </td>
@@ -572,7 +572,7 @@ export function TeamManagement({ darkMode }: TeamManagementProps) {
                   onClick={() => void submitInvitation()}
                   disabled={actionKey === "invite"}
                   className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-                  style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+                  style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)" }}
                 >
                   {actionKey === "invite" && <RefreshCw size={13} className="animate-spin" />}
                   Send invite

@@ -62,7 +62,7 @@ function formatDate(value?: string | null) {
 }
 
 function statusColor(status: string) {
-  if (status === "open") return "#6366f1";
+  if (status === "open") return "#1D4ED8";
   if (status === "in_progress") return "#f59e0b";
   if (status === "resolved") return "#10b981";
   if (status === "closed") return "#64748b";
@@ -85,8 +85,8 @@ export function Support({ darkMode }: SupportProps) {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
   const cardBase = {
-    background: darkMode ? "rgba(13,13,40,0.8)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.12)" : "rgba(15,23,42,0.06)",
+    background: darkMode ? "rgba(15,23,42,0.8)" : "#ffffff",
+    borderColor: darkMode ? "rgba(29,78,216,0.12)" : "rgba(15,23,42,0.06)",
   };
 
   async function loadTickets() {
@@ -161,7 +161,7 @@ export function Support({ darkMode }: SupportProps) {
               <div
                 className="w-9 h-9 rounded-xl flex items-center justify-center"
                 style={{
-                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                   color: "#ffffff",
                 }}
               >
@@ -252,7 +252,7 @@ export function Support({ darkMode }: SupportProps) {
                 }
                 className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
                 style={{
-                  background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                  background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                   borderColor: cardBase.borderColor,
                   color: darkMode ? "#e2e8f0" : "#0f172a",
                 }}
@@ -278,7 +278,7 @@ export function Support({ darkMode }: SupportProps) {
                   }
                   className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
                   style={{
-                    background: darkMode ? "#0d0d28" : "#ffffff",
+                    background: darkMode ? "#0F172A" : "#ffffff",
                     borderColor: cardBase.borderColor,
                     color: darkMode ? "#e2e8f0" : "#0f172a",
                   }}
@@ -308,7 +308,7 @@ export function Support({ darkMode }: SupportProps) {
                   }
                   className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none"
                   style={{
-                    background: darkMode ? "#0d0d28" : "#ffffff",
+                    background: darkMode ? "#0F172A" : "#ffffff",
                     borderColor: cardBase.borderColor,
                     color: darkMode ? "#e2e8f0" : "#0f172a",
                   }}
@@ -336,7 +336,7 @@ export function Support({ darkMode }: SupportProps) {
                 }
                 className="mt-1 w-full rounded-xl border px-3 py-2 text-sm min-h-32 resize-none outline-none"
                 style={{
-                  background: darkMode ? "rgba(99,102,241,0.06)" : "#f8fafc",
+                  background: darkMode ? "rgba(29,78,216,0.06)" : "#f8fafc",
                   borderColor: cardBase.borderColor,
                   color: darkMode ? "#e2e8f0" : "#0f172a",
                 }}
@@ -349,7 +349,7 @@ export function Support({ darkMode }: SupportProps) {
               disabled={submitting}
               className="w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium disabled:opacity-60"
               style={{
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                 color: "#ffffff",
               }}
             >
@@ -361,7 +361,7 @@ export function Support({ darkMode }: SupportProps) {
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: "Open", value: counts.open, icon: Inbox, color: "#6366f1" },
+                { label: "Open", value: counts.open, icon: Inbox, color: "#1D4ED8" },
                 {
                   label: "In Progress",
                   value: counts.inProgress,
@@ -421,10 +421,10 @@ export function Support({ darkMode }: SupportProps) {
                           className="w-full rounded-xl border p-3 text-left transition-all"
                           style={{
                             background: isActive
-                              ? "rgba(99,102,241,0.12)"
+                              ? "rgba(29,78,216,0.12)"
                               : "transparent",
                             borderColor: isActive
-                              ? "rgba(99,102,241,0.35)"
+                              ? "rgba(29,78,216,0.35)"
                               : cardBase.borderColor,
                           }}
                         >

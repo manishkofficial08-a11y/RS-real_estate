@@ -38,9 +38,9 @@ const usageLabels: Record<string, string> = {
 };
 
 const usageColors: Record<string, string> = {
-  team_members: "#6366f1",
+  team_members: "#1D4ED8",
   media_uploads: "#06b6d4",
-  generated_posts: "#8b5cf6",
+  generated_posts: "#2563EB",
   scheduled_posts: "#f59e0b",
   reports: "#10b981",
 };
@@ -78,10 +78,10 @@ export function Billing({ darkMode }: BillingProps) {
 
   const textPrimary = darkMode ? "#e2e8f0" : "#0f172a";
   const textMuted = darkMode ? "#94a3b8" : "#64748b";
-  const textSoft = darkMode ? "#4a5568" : "#94a3b8";
+  const textSoft = darkMode ? "#94A3B8" : "#94a3b8";
   const cardStyle = {
-    background: darkMode ? "rgba(13,13,40,0.82)" : "#ffffff",
-    borderColor: darkMode ? "rgba(99,102,241,0.13)" : "rgba(15,23,42,0.07)",
+    background: darkMode ? "rgba(15,23,42,0.82)" : "#ffffff",
+    borderColor: darkMode ? "rgba(29,78,216,0.13)" : "rgba(15,23,42,0.07)",
   };
   const profileRole = profile?.role === "client" ? "owner" : profile?.role;
   const canManage = profileRole === "owner" || profileRole === "admin";
@@ -153,7 +153,7 @@ export function Billing({ darkMode }: BillingProps) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2">
-              <CreditCard size={20} style={{ color: "#6366f1" }} />
+              <CreditCard size={20} style={{ color: "#1D4ED8" }} />
               <h1 className="text-2xl font-semibold" style={{ color: textPrimary }}>
                 Billing & Subscription
               </h1>
@@ -211,7 +211,7 @@ export function Billing({ darkMode }: BillingProps) {
                 className="pointer-events-none absolute inset-x-0 top-0 h-36"
                 style={{
                   background:
-                    "linear-gradient(135deg, rgba(99,102,241,0.24), rgba(139,92,246,0.12), rgba(6,182,212,0.08))",
+                    "linear-gradient(135deg, rgba(29,78,216,0.24), rgba(37,99,235,0.12), rgba(6,182,212,0.08))",
                 }}
               />
               <div className="relative grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -221,8 +221,8 @@ export function Billing({ darkMode }: BillingProps) {
                       className="rounded-full border px-3 py-1 text-xs font-medium"
                       style={{
                         color: "#a5b4fc",
-                        background: "rgba(99,102,241,0.12)",
-                        borderColor: "rgba(99,102,241,0.25)",
+                        background: "rgba(29,78,216,0.12)",
+                        borderColor: "rgba(29,78,216,0.25)",
                       }}
                     >
                       Current plan
@@ -352,7 +352,7 @@ export function Billing({ darkMode }: BillingProps) {
                   const percentage = unlimited
                     ? 12
                     : Math.min(100, Math.round((usage.used / Math.max(usage.limit || 1, 1)) * 100));
-                  const color = usageColors[key] || "#6366f1";
+                  const color = usageColors[key] || "#1D4ED8";
                   return (
                     <div key={key} className="rounded-2xl border p-4" style={cardStyle}>
                       <div className="flex items-center justify-between gap-2">
@@ -400,8 +400,8 @@ export function Billing({ darkMode }: BillingProps) {
                   className="flex w-fit rounded-xl p-1"
                   style={{
                     background: darkMode
-                      ? "rgba(99,102,241,0.08)"
-                      : "rgba(99,102,241,0.05)",
+                      ? "rgba(29,78,216,0.08)"
+                      : "rgba(29,78,216,0.05)",
                   }}
                 >
                   {(["monthly", "yearly"] as ClientBillingCycle[]).map((cycle) => (
@@ -414,11 +414,11 @@ export function Billing({ darkMode }: BillingProps) {
                         background:
                           billingCycle === cycle
                             ? darkMode
-                              ? "rgba(99,102,241,0.22)"
+                              ? "rgba(29,78,216,0.22)"
                               : "#ffffff"
                             : "transparent",
                         color:
-                          billingCycle === cycle ? "#6366f1" : textMuted,
+                          billingCycle === cycle ? "#1D4ED8" : textMuted,
                       }}
                     >
                       {cycle}
@@ -446,10 +446,10 @@ export function Billing({ darkMode }: BillingProps) {
                       style={{
                         ...cardStyle,
                         borderColor: current
-                          ? "rgba(99,102,241,0.40)"
+                          ? "rgba(29,78,216,0.40)"
                           : cardStyle.borderColor,
                         boxShadow: current
-                          ? "0 14px 40px rgba(99,102,241,0.12)"
+                          ? "0 14px 40px rgba(29,78,216,0.12)"
                           : "none",
                       }}
                     >
@@ -458,13 +458,13 @@ export function Billing({ darkMode }: BillingProps) {
                           className="absolute right-4 top-4 rounded-full px-2.5 py-1 text-xs font-medium"
                           style={{
                             color: "#ffffff",
-                            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                            background: "linear-gradient(135deg, #1D4ED8, #2563EB)",
                           }}
                         >
                           Current
                         </span>
                       )}
-                      <Sparkles size={18} style={{ color: plan.id === "enterprise" ? "#f59e0b" : "#6366f1" }} />
+                      <Sparkles size={18} style={{ color: plan.id === "enterprise" ? "#f59e0b" : "#1D4ED8" }} />
                       <h3 className="mt-4 text-lg font-semibold" style={{ color: textPrimary }}>
                         {plan.name}
                       </h3>
@@ -510,7 +510,7 @@ export function Billing({ darkMode }: BillingProps) {
                             ? darkMode
                               ? "rgba(255,255,255,0.06)"
                               : "rgba(15,23,42,0.05)"
-                            : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                            : "linear-gradient(135deg, #1D4ED8, #2563EB)",
                           color: current ? textMuted : "#ffffff",
                         }}
                       >
@@ -533,7 +533,7 @@ export function Billing({ darkMode }: BillingProps) {
             <section className="overflow-hidden rounded-2xl border" style={cardStyle}>
               <div className="border-b p-5" style={{ borderColor: cardStyle.borderColor }}>
                 <div className="flex items-center gap-2">
-                  <FileText size={16} style={{ color: "#6366f1" }} />
+                  <FileText size={16} style={{ color: "#1D4ED8" }} />
                   <h2 className="text-sm font-semibold" style={{ color: textPrimary }}>
                     Invoices
                   </h2>
@@ -579,7 +579,7 @@ export function Billing({ darkMode }: BillingProps) {
                           <td className="px-5 py-4 text-xs" style={{ color: textMuted }}>{formatDate(invoice.paid_at)}</td>
                           <td className="px-5 py-4">
                             {invoice.invoice_url ? (
-                              <a href={invoice.invoice_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: "#6366f1" }}>
+                              <a href={invoice.invoice_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: "#1D4ED8" }}>
                                 <Download size={12} /> View
                               </a>
                             ) : (
