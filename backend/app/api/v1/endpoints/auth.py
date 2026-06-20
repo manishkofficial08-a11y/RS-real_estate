@@ -14,6 +14,7 @@ from pydantic import BaseModel, EmailStr
 import hashlib
 import secrets
 import uuid
+import os
 from datetime import datetime, timedelta, timezone
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -71,9 +72,25 @@ def _get_frontend_origin(request: Request) -> str:
     return "http://localhost:5173"
 
 
+
+def _public_registration_enabled() -> bool:
+    return os.getenv("ENABLE_PUBLIC_REGISTRATION", "false").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 # Endpoints
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    if not _public_registration_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Public signup is disabled. Please contact MMe AI for client onboarding.",
+        )
+
     # Check if email exists
     result = await db.execute(select(User).where(User.email == data.email))
     if result.scalar_one_or_none():
