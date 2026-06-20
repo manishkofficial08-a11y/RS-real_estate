@@ -2,6 +2,7 @@ import "./styles/sidebar.css";
 import { Properties } from "./components/Properties";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { createPortal } from "react-dom";
 import { Sidebar } from "./components/Sidebar";
 import { Dashboard } from "./components/Dashboard";
 import { AIStudio } from "./components/AIStudio";
@@ -100,6 +101,19 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
+    if (!notifOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setNotifOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [notifOpen]);
+
+  useEffect(() => {
     const handleClientSessionExpired = () => {
       setClientProfile(null);
       setNotifications([]);
@@ -191,6 +205,20 @@ export default function App() {
       window.clearInterval(intervalId);
     };
   }, [clientLoggedIn]);
+
+
+  useEffect(() => {
+    if (!notifOpen) return;
+
+    const handleNotificationEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setNotifOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleNotificationEscape);
+    return () => window.removeEventListener("keydown", handleNotificationEscape);
+  }, [notifOpen]);
 
   if (passwordResetToken && !clientLoggedIn) {
     return (
@@ -355,7 +383,10 @@ export default function App() {
               className="text-sm font-medium"
               style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
             >
-              {(screenTitles[activeScreen] || screenTitles.media || "Media Library") || activeScreen}
+              {screenTitles[activeScreen] ||
+                screenTitles.media ||
+                "Media Library" ||
+                activeScreen}
             </span>
           </div>
 
@@ -408,148 +439,61 @@ export default function App() {
             {/* Notifications */}
             <div className="relative">
               <button
-                onClick={() => setNotifOpen((o) => !o)}
-                className="relative p-2 rounded-xl transition-all hover:bg-primary/5"
-                style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setNotifOpen((open) => !open);
+                }}
+                className="relative flex h-10 w-10 items-center justify-center rounded-2xl border transition-all hover:-translate-y-0.5"
+                style={{
+                  background: notifOpen
+                    ? darkMode
+                      ? "#102A5C"
+                      : "#EAF2FF"
+                    : darkMode
+                      ? "#0F172A"
+                      : "#FFFFFF",
+                  borderColor: notifOpen
+                    ? "#60A5FA"
+                    : darkMode
+                      ? "rgba(203,213,225,0.18)"
+                      : "rgba(15,23,42,0.12)",
+                  color: notifOpen
+                    ? darkMode
+                      ? "#93C5FD"
+                      : "#1D4ED8"
+                    : darkMode
+                      ? "#CBD5E1"
+                      : "#475569",
+                  boxShadow: notifOpen
+                    ? "0 12px 30px rgba(29,78,216,0.28)"
+                    : "none",
+                }}
+                aria-label={
+                  unreadCount > 0
+                    ? `${unreadCount} unread business updates`
+                    : "Open business updates"
+                }
+                aria-expanded={notifOpen}
+                title="Business updates"
               >
-                <Bell size={16} />
+                <Bell size={17} />
+
                 {unreadCount > 0 && (
                   <span
-                    className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full text-[10px] font-semibold flex items-center justify-center"
+                    className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold"
                     style={{
-                      background: "#ef4444",
-                      color: "#ffffff",
-                      boxShadow: "0 0 8px rgba(239,68,68,0.65)",
+                      background: "#DC2626",
+                      color: "#FFFFFF",
+                      boxShadow: darkMode
+                        ? "0 0 0 3px #07111F"
+                        : "0 0 0 3px #FFFFFF",
                     }}
                   >
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
               </button>
-
-              <AnimatePresence>
-                {notifOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-20"
-                      onClick={() => setNotifOpen(false)}
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-2 w-80 rounded-2xl border z-30 overflow-hidden"
-                      style={{
-                        background: darkMode
-                          ? "rgba(15,23,42,0.97)"
-                          : "#ffffff",
-                        borderColor: darkMode
-                          ? "rgba(29,78,216,0.2)"
-                          : "rgba(15,23,42,0.08)",
-                        boxShadow: darkMode
-                          ? "0 16px 48px rgba(0,0,0,0.5)"
-                          : "0 16px 48px rgba(0,0,0,0.12)",
-                        backdropFilter: "blur(24px)",
-                      }}
-                    >
-                      <div
-                        className="px-4 py-3 border-b"
-                        style={{
-                          borderColor: darkMode
-                            ? "rgba(29,78,216,0.1)"
-                            : "rgba(15,23,42,0.06)",
-                        }}
-                      >
-                        <p
-                          className="text-sm font-semibold"
-                          style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
-                        >
-                          Notifications
-                        </p>
-                        <p
-                          className="text-xs"
-                          style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
-                        >
-                          {notificationsLoading
-                            ? "Loading..."
-                            : `${unreadCount} unread`}
-                        </p>
-                      </div>
-                      <div
-                        className="divide-y"
-                        style={{
-                          borderColor: darkMode
-                            ? "rgba(29,78,216,0.06)"
-                            : "rgba(15,23,42,0.04)",
-                        }}
-                      >
-                        {notifications.length === 0 ? (
-                          <div className="px-4 py-6 text-center">
-                            <p
-                              className="text-xs"
-                              style={{
-                                color: darkMode ? "#64748b" : "#94a3b8",
-                              }}
-                            >
-                              No notifications yet
-                            </p>
-                          </div>
-                        ) : (
-                          notifications.map((notification) => (
-                            <button
-                              key={notification.id}
-                              type="button"
-                              onClick={() =>
-                                handleNotificationClick(notification)
-                              }
-                              className="w-full flex gap-3 px-4 py-3 text-left transition-all hover:bg-primary/5 cursor-pointer"
-                            >
-                              <div
-                                className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
-                                style={{
-                                  background: notification.is_read
-                                    ? "#64748b"
-                                    : "#ef4444",
-                                  boxShadow: notification.is_read
-                                    ? "none"
-                                    : "0 0 6px rgba(239,68,68,0.8)",
-                                }}
-                              />
-                              <div className="min-w-0">
-                                <p
-                                  className="text-xs font-medium"
-                                  style={{
-                                    color: darkMode ? "#e2e8f0" : "#0f172a",
-                                  }}
-                                >
-                                  {notification.title}
-                                </p>
-                                <p
-                                  className="text-xs mt-1 line-clamp-2"
-                                  style={{
-                                    color: darkMode ? "#94a3b8" : "#475569",
-                                  }}
-                                >
-                                  {notification.message}
-                                </p>
-                                <p
-                                  className="text-[11px] mt-1"
-                                  style={{
-                                    color: darkMode ? "#94A3B8" : "#94a3b8",
-                                  }}
-                                >
-                                  {notification.is_read ? "Read" : "Unread"}
-                                </p>
-                              </div>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -578,6 +522,217 @@ export default function App() {
         </div>
       </div>
 
+      {/* Business updates portal */}
+      {notifOpen &&
+        createPortal(
+          <>
+            <motion.div
+              className="fixed inset-0"
+              style={{
+                zIndex: 2147483646,
+                background: "rgba(2,6,23,0.28)",
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setNotifOpen(false)}
+            />
+
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Business updates"
+              initial={{ opacity: 0, scale: 0.96, y: -12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: -12 }}
+              transition={{ duration: 0.16, ease: [0.4, 0, 0.2, 1] }}
+              className="fixed right-5 top-[72px] w-[420px] max-w-[calc(100vw-24px)] overflow-hidden rounded-3xl border"
+              style={{
+                zIndex: 2147483647,
+                background: darkMode ? "#08111F" : "#FFFFFF",
+                borderColor: darkMode
+                  ? "rgba(96,165,250,0.38)"
+                  : "rgba(15,23,42,0.12)",
+                boxShadow: darkMode
+                  ? "0 30px 100px rgba(0,0,0,0.92)"
+                  : "0 30px 90px rgba(15,23,42,0.24)",
+              }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div
+                className="flex items-start justify-between gap-4 border-b px-5 py-4"
+                style={{
+                  background: darkMode ? "#0F172A" : "#F8FAFC",
+                  borderColor: darkMode
+                    ? "rgba(148,163,184,0.16)"
+                    : "rgba(15,23,42,0.08)",
+                }}
+              >
+                <div>
+                  <p
+                    className="text-sm font-bold"
+                    style={{ color: darkMode ? "#F8FAFC" : "#0F172A" }}
+                  >
+                    Business Updates
+                  </p>
+
+                  <p
+                    className="mt-1 text-xs"
+                    style={{ color: darkMode ? "#CBD5E1" : "#64748B" }}
+                  >
+                    {notificationsLoading
+                      ? "Checking latest updates..."
+                      : unreadCount > 0
+                        ? `${unreadCount} update${unreadCount > 1 ? "s" : ""} need attention`
+                        : "No urgent updates right now"}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setNotifOpen(false)}
+                  className="rounded-xl px-3 py-1.5 text-xs font-semibold transition-all hover:opacity-80"
+                  style={{
+                    color: darkMode ? "#CBD5E1" : "#475569",
+                    background: darkMode ? "#172033" : "#E2E8F0",
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+
+              {notifications.length === 0 ? (
+                <div
+                  className="px-5 py-7 text-center"
+                  style={{ background: darkMode ? "#08111F" : "#FFFFFF" }}
+                >
+                  <div
+                    className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl"
+                    style={{
+                      background: darkMode ? "#102A5C" : "#EAF2FF",
+                      color: darkMode ? "#93C5FD" : "#1D4ED8",
+                    }}
+                  >
+                    <Bell size={20} />
+                  </div>
+
+                  <p
+                    className="mt-4 text-sm font-bold"
+                    style={{ color: darkMode ? "#F8FAFC" : "#0F172A" }}
+                  >
+                    No business updates yet
+                  </p>
+
+                  <p
+                    className="mx-auto mt-2 max-w-[300px] text-xs leading-relaxed"
+                    style={{ color: darkMode ? "#CBD5E1" : "#64748B" }}
+                  >
+                    Lead alerts, support replies, campaign activity, and important portal updates will appear here.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveScreen("support");
+                      setNotifOpen(false);
+                    }}
+                    className="mt-5 rounded-xl px-4 py-2 text-xs font-semibold transition-all hover:opacity-90"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #1D4ED8, #2563EB)",
+                      color: "#FFFFFF",
+                      boxShadow: "0 10px 24px rgba(29,78,216,0.28)",
+                    }}
+                  >
+                    Open Support Center
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className="max-h-[430px] overflow-y-auto p-3"
+                  style={{ background: darkMode ? "#08111F" : "#FFFFFF" }}
+                >
+                  <div className="space-y-3">
+                    {notifications.map((notification) => (
+                      <button
+                        key={notification.id}
+                        type="button"
+                        onClick={() => handleNotificationClick(notification)}
+                        className="flex w-full gap-3 rounded-2xl border px-4 py-3 text-left transition-all hover:-translate-y-0.5"
+                        style={{
+                          background: darkMode ? "#0F172A" : "#F8FAFC",
+                          borderColor: notification.is_read
+                            ? darkMode
+                              ? "rgba(148,163,184,0.16)"
+                              : "rgba(15,23,42,0.08)"
+                            : "rgba(220,38,38,0.48)",
+                        }}
+                      >
+                        <span
+                          className="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                          style={{
+                            background: notification.is_read
+                              ? "#64748B"
+                              : "#DC2626",
+                            boxShadow: notification.is_read
+                              ? "none"
+                              : "0 0 10px rgba(220,38,38,0.85)",
+                          }}
+                        />
+
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className="block text-sm font-bold"
+                            style={{
+                              color: darkMode ? "#F8FAFC" : "#0F172A",
+                            }}
+                          >
+                            {notification.title}
+                          </span>
+
+                          <span
+                            className="mt-1 block text-xs leading-relaxed"
+                            style={{
+                              color: darkMode ? "#CBD5E1" : "#475569",
+                            }}
+                          >
+                            {notification.message}
+                          </span>
+
+                          <span
+                            className="mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                            style={{
+                              background: notification.is_read
+                                ? darkMode
+                                  ? "#172033"
+                                  : "#E2E8F0"
+                                : darkMode
+                                  ? "#102A5C"
+                                  : "#EAF2FF",
+                              color: notification.is_read
+                                ? darkMode
+                                  ? "#94A3B8"
+                                  : "#64748B"
+                                : darkMode
+                                  ? "#93C5FD"
+                                  : "#1D4ED8",
+                            }}
+                          >
+                            {notification.is_read ? "Read" : "New update"}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </>,
+          document.body,
+        )}
+      {/* End business updates portal */}
+
+
       {/* Command Palette */}
       <CommandPalette
         open={commandOpen}
@@ -591,4 +746,3 @@ export default function App() {
     </div>
   );
 }
-

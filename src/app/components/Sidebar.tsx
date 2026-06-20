@@ -35,7 +35,7 @@ type FloorItem = {
 
 const floors: FloorItem[] = [
   { id: "dashboard", icon: LayoutDashboard, label: "Overview", floor: "F01" },
-  { id: "crm", icon: Users2, label: "Leads", floor: "F02", badge: "3" },
+  { id: "crm", icon: Users2, label: "Leads", floor: "F02" },
   { id: "properties", icon: Building2, label: "Properties", floor: "F03" },
   { id: "media", icon: Image, label: "Media Library", floor: "F04" },
   {
