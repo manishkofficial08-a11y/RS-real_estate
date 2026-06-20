@@ -291,7 +291,7 @@ export function CRM({ darkMode }: CRMProps) {
       }
 
       if (!payload.email && !payload.phone) {
-        setFormError("Email ya phone me se ek required hai.");
+        setFormError("Email or phone number is required.");
         return;
       }
 
@@ -332,7 +332,7 @@ export function CRM({ darkMode }: CRMProps) {
     if (!editingLeadId) return;
 
     const confirmed = window.confirm(
-      "Archive this lead? It will be removed from active CRM.",
+      "Archive this lead? It will move out of your active follow-up list.",
     );
     if (!confirmed) return;
 
@@ -432,10 +432,10 @@ export function CRM({ darkMode }: CRMProps) {
               style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
             >
               {loadingLeads
-                ? "Loading real leads..."
+                ? "Loading client enquiries..."
                 : leadError
-                  ? `Backend error · ${leadError}`
-                  : `${leads.length} leads · Real backend data`}
+                  ? `Lead data unavailable · ${leadError}`
+                  : `${leads.length} leads · Active business data`}
             </p>
           </div>
 
@@ -543,7 +543,7 @@ export function CRM({ darkMode }: CRMProps) {
                   className="text-xs mt-0.5"
                   style={{ color: stageColors[typedStage] }}
                 >
-                  Live
+                  Active
                 </div>
               </button>
             );
@@ -582,7 +582,7 @@ export function CRM({ darkMode }: CRMProps) {
                 color: darkMode ? "#94a3b8" : "#64748b",
               }}
             >
-              No leads found. Add a lead from the button above.
+              No leads found yet. Add your first client enquiry to start tracking follow-ups.
             </div>
           )}
 
@@ -824,7 +824,7 @@ export function CRM({ darkMode }: CRMProps) {
               className="h-full flex items-center justify-center text-sm"
               style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
             >
-              Select a lead to view details.
+              Select a lead to view contact details, notes, and recommended follow-up.
             </div>
           )}
         </div>
@@ -860,8 +860,8 @@ export function CRM({ darkMode }: CRMProps) {
                   style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}
                 >
                   {editingLeadId
-                    ? "Update this lead directly in backend CRM."
-                    : "This lead will be saved directly in backend CRM."}
+                    ? "Update this client enquiry and keep your follow-up details current."
+                    : "Add a new client enquiry with contact details, source, budget notes, and follow-up status."}
                 </p>
               </div>
 

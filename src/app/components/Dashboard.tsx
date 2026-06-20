@@ -52,10 +52,10 @@ const demoPlatformData = [
 ];
 
 const upcomingPosts = [
-  { time: "Today 3:00 PM", platform: "Instagram", content: "5 AI trends reshaping B2B marketing in 2025", status: "scheduled" },
+  { time: "Today 3:00 PM", platform: "Instagram", content: "New premium residential listing campaign for Riddhi Sidhi Real Estate", status: "scheduled" },
   { time: "Today 6:00 PM", platform: "LinkedIn", content: "How we 10x'd our lead gen using AI automation", status: "scheduled" },
-  { time: "Tomorrow 9:00 AM", platform: "Twitter", content: "Thread: The future of content creation is here", status: "draft" },
-  { time: "Tomorrow 2:00 PM", platform: "YouTube", content: "Full tutorial: RS Real Estate walkthrough", status: "processing" },
+  { time: "Tomorrow 9:00 AM", platform: "Twitter", content: "Property buying checklist for serious home buyers", status: "draft" },
+  { time: "Tomorrow 2:00 PM", platform: "YouTube", content: "Riddhi Sidhi Real Estate portal walkthrough for property teams", status: "processing" },
 ];
 
 interface DashboardProps {
@@ -158,10 +158,6 @@ function MetricCard({
 
             <span className="text-xs" style={{ color: positive ? "#10b981" : "#ef4444" }}>
               {change}
-            </span>
-
-            <span className="text-xs" style={{ color: darkMode ? "#2d3748" : "#cbd5e0" }}>
-              live
             </span>
           </div>
         </div>
@@ -284,7 +280,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
         text:
           stats.hotLeads > 0
             ? `${stats.hotLeads} hot leads have high intent. Call them before they cool down.`
-            : "No hot leads yet. Improve lead qualification and add fresh prospects.",
+            : "No priority leads yet. Add fresh enquiries to start lead qualification.",
         action: "View CRM",
         screen: "crm",
         color: "#06b6d4",
@@ -294,7 +290,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
         text:
           stats.avgScore > 0
             ? `Average lead score is ${stats.avgScore}/100. Focus on leads above 70 first.`
-            : "Lead score data is empty. Start capturing source, budget and requirement details.",
+            : "Lead score data will appear after enquiries include source, budget and requirement details.",
         action: "Open CRM",
         screen: "crm",
         color: "#2563EB",
@@ -334,15 +330,15 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
               className="tracking-tight"
               style={{ color: darkMode ? "#e2e8f0" : "#0f172a", fontSize: "1.5rem", fontWeight: 600 }}
             >
-              WELCOME BACK, 👨
+              Business Overview
             </h1>
 
             <p className="text-sm mt-1" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
               {loadingLeads
-                ? "Loading your real dashboard data..."
+                ? "Loading your business dashboard..."
                 : leadError
-                  ? `Backend data unavailable Â· ${leadError}`
-                  : `Your AI health score is ${stats.healthScore}/100 & ${stats.activeLeads} active leads need attention.`}
+                  ? `Business data unavailable · ${leadError}`
+                  : `Your business health score is ${stats.healthScore}/100 with ${stats.activeLeads} active leads requiring follow-up.`}
             </p>
           </div>
 
@@ -494,7 +490,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
           <MetricCard
             label="Total Leads"
             value={loadingLeads ? "..." : formatNumber(stats.totalLeads)}
-            change={stats.totalLeads > 0 ? "Live" : "0"}
+            change={stats.totalLeads > 0 ? "Active" : "No leads"}
             positive={stats.totalLeads > 0}
             darkMode={darkMode}
             icon={Users}
@@ -504,7 +500,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
           <MetricCard
             label="Hot Leads"
             value={loadingLeads ? "..." : formatNumber(stats.hotLeads)}
-            change={stats.hotLeads > 0 ? "Priority" : "None"}
+            change={stats.hotLeads > 0 ? "Priority" : "No priority leads"}
             positive={stats.hotLeads > 0}
             darkMode={darkMode}
             icon={Target}
@@ -524,7 +520,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
           <MetricCard
             label="Active Pipeline"
             value={loadingLeads ? "..." : formatNumber(stats.activeLeads)}
-            change={stats.activeLeads > 0 ? "Follow-up" : "Empty"}
+            change={stats.activeLeads > 0 ? "Follow-up" : "No active deals"}
             positive={stats.activeLeads > 0}
             darkMode={darkMode}
             icon={Zap}
@@ -632,7 +628,7 @@ export function Dashboard({ darkMode, onNavigate }: DashboardProps) {
               Lead Source Share
             </h3>
             <p className="text-xs mb-4" style={{ color: darkMode ? "#94A3B8" : "#94a3b8" }}>
-              Backend source distribution
+              Lead source distribution
             </p>
 
             <div className="flex justify-center mb-4">
