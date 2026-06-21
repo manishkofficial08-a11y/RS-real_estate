@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import {
   Building2,
   CheckCircle2,
@@ -11,57 +11,64 @@ import {
   ShieldCheck,
   UserPlus,
 } from 'lucide-react';
+import {
+  createAdminClientOnboardingWorkspace,
+  type AdminClientOnboardingResponse,
+} from '../lib/adminApi';
 
 const stats = [
-  { label: 'Total Clients', value: '0', sub: 'Ready for first onboarding', icon: Building2, color: '#6B8AFF' },
-  { label: 'Active Workspaces', value: '0', sub: 'Client portals live', icon: ShieldCheck, color: '#4ADE80' },
-  { label: 'Pending Setup', value: '0', sub: 'Awaiting backend connection', icon: ClipboardCheck, color: '#FF8A5C' },
-  { label: 'Subscription Ready', value: '0', sub: 'Plan selected and prepared', icon: Rocket, color: '#A78BFA' },
+  { label: 'Total Clients', value: '0', sub: 'Use Companies page for live tenant count', icon: Building2, color: '#6B8AFF' },
+  { label: 'Active Workspaces', value: 'Live', sub: 'Creates tenant + owner account', icon: ShieldCheck, color: '#4ADE80' },
+  { label: 'Pending Setup', value: 'Secure', sub: 'Temporary password generated once', icon: ClipboardCheck, color: '#FF8A5C' },
+  { label: 'Subscription Ready', value: 'Manual', sub: 'Plan assigned during onboarding', icon: Rocket, color: '#A78BFA' },
 ];
 
 const checklist = [
   'Create client company',
   'Add owner details',
   'Assign plan',
-  'Prepare password setup link',
+  'Generate temporary password',
   'Handover portal access',
 ];
 
 const recentClients = [
   {
-    client: 'ABC Realty',
-    owner: 'Amit Sharma',
-    email: 'amit@abcrealty.demo',
-    plan: 'Growth',
-    status: 'Draft workspace',
-    updated: 'Local demo',
-  },
-  {
-    client: 'Skyline Estates',
-    owner: 'Priya Mehta',
-    email: 'priya@skyline.demo',
-    plan: 'Premium',
-    status: 'Pending setup link',
-    updated: 'Local demo',
-  },
-  {
-    client: 'Metro Homes',
-    owner: 'Rohan Verma',
-    email: 'rohan@metrohomes.demo',
-    plan: 'Base',
-    status: 'Ready for handover',
-    updated: 'Local demo',
+    client: 'Ridhi Sidhi Real Estate',
+    owner: 'Ram Kumar Sahu',
+    email: 'ridhisidhi5471@gmail.com',
+    plan: 'Pro',
+    status: 'Live workspace',
+    updated: 'Production verified',
   },
 ];
 
+type BusinessTypeOption = 'real_estate' | 'retail' | 'healthcare' | 'other';
+type PlanOption = 'free' | 'pro' | 'enterprise';
+
+const businessTypeLabels: Record<BusinessTypeOption, string> = {
+  real_estate: 'Real Estate',
+  retail: 'Retail',
+  healthcare: 'Healthcare',
+  other: 'Other',
+};
+
+const planLabels: Record<PlanOption, string> = {
+  free: 'Free',
+  pro: 'Pro',
+  enterprise: 'Enterprise',
+};
+
 export default function ClientOnboarding() {
-  const [message, setMessage] = useState('No backend action has been triggered yet.');
+  const [message, setMessage] = useState('Ready to create an invite-only client workspace.');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [onboardingResult, setOnboardingResult] = useState<AdminClientOnboardingResponse | null>(null);
   const [form, setForm] = useState({
     businessName: '',
     ownerName: '',
     ownerEmail: '',
-    businessType: 'Real Estate',
-    plan: 'Base',
+    businessType: 'real_estate' as BusinessTypeOption,
+    plan: 'pro' as PlanOption,
     notes: '',
   });
 
@@ -69,19 +76,62 @@ export default function ClientOnboarding() {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
-  const prepareWorkspace = () => {
-    if (!form.businessName || !form.ownerName || !form.ownerEmail) {
-      setMessage('Local demo: business name, owner name, and owner email are required before preparing a workspace.');
+  const prepareWorkspace = async () => {
+    setError(null);
+    setOnboardingResult(null);
+
+    const businessName = form.businessName.trim();
+    const ownerName = form.ownerName.trim();
+    const ownerEmail = form.ownerEmail.trim();
+
+    if (!businessName || !ownerName || !ownerEmail) {
+      setError('Business name, owner name, and owner email are required.');
       return;
     }
 
-    // TODO: Connect this to founder-only backend onboarding API later.
-    setMessage(`Local demo: workspace prepared for ${form.businessName} on the ${form.plan} plan. Backend connection pending.`);
+    if (!ownerEmail.includes('@')) {
+      setError('Please enter a valid owner email.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setMessage('Creating client workspace...');
+
+      const result = await createAdminClientOnboardingWorkspace({
+        business_name: businessName,
+        owner_name: ownerName,
+        owner_email: ownerEmail,
+        business_type: form.businessType,
+        plan: form.plan,
+        notes: form.notes.trim() || null,
+      });
+
+      setOnboardingResult(result);
+      setMessage(result.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create client workspace.');
+      setMessage('Workspace creation failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyTemporaryPassword = async () => {
+    if (!onboardingResult?.temporary_password) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(onboardingResult.temporary_password);
+      setMessage('Temporary password copied. Share it securely and ask the client to change it after first login.');
+    } catch {
+      setError('Could not copy temporary password. Copy it manually from the result card.');
+    }
   };
 
   const handleLocalAction = (action: string, client: string) => {
-    // TODO: Replace local action state with backend-backed onboarding actions later.
-    setMessage(`Local demo: "${action}" selected for ${client}. Backend connection pending.`);
+    setMessage(`"${action}" selected for ${client}. Use Companies and Users pages for live workspace details.`);
   };
 
   return (
@@ -95,13 +145,13 @@ export default function ClientOnboarding() {
             Client Onboarding Center
           </h1>
           <p className="text-sm mt-2 max-w-3xl" style={{ color: '#8A8A93' }}>
-            Create and prepare invite-only client workspaces for MMe AI managed clients.
+            Create invite-only client workspaces with tenant, owner account, subscription plan, and temporary password.
           </p>
         </div>
 
         <div className="rounded-2xl px-4 py-3" style={{ background: 'rgba(107, 138, 255, 0.08)', border: '1px solid rgba(107, 138, 255, 0.16)' }}>
           <p className="text-xs font-mono" style={{ color: '#8A8A93' }}>Access model</p>
-          <p className="text-sm font-medium mt-1" style={{ color: '#F0EDE6' }}>Invite-only client setup</p>
+          <p className="text-sm font-medium mt-1" style={{ color: '#F0EDE6' }}>Founder-only client setup</p>
         </div>
       </div>
 
@@ -153,7 +203,7 @@ export default function ClientOnboarding() {
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#F0EDE6' }}>{step}</p>
                   <p className="text-xs mt-1" style={{ color: '#55555C' }}>
-                    {index === 3 ? 'Password setup will connect after backend integration.' : 'Prepare this step before portal access is handed over.'}
+                    {index === 3 ? 'Temporary password is generated after successful backend onboarding.' : 'Prepare this step before portal access is handed over.'}
                   </p>
                 </div>
               </div>
@@ -167,8 +217,8 @@ export default function ClientOnboarding() {
               <UserPlus size={18} />
             </div>
             <div>
-              <h2 className="font-display text-xl font-medium" style={{ color: '#F0EDE6' }}>Prepare client workspace</h2>
-              <p className="text-sm" style={{ color: '#8A8A93' }}>UI-only form. Backend connection will be added later.</p>
+              <h2 className="font-display text-xl font-medium" style={{ color: '#F0EDE6' }}>Create client workspace</h2>
+              <p className="text-sm" style={{ color: '#8A8A93' }}>Creates tenant, owner user, subscription, and temporary password.</p>
             </div>
           </div>
 
@@ -176,16 +226,15 @@ export default function ClientOnboarding() {
             <input className="rounded-xl px-4 py-3 text-sm outline-none" style={{ background: 'rgba(255,255,255,0.04)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }} placeholder="Business Name" value={form.businessName} onChange={(event) => updateField('businessName', event.target.value)} />
             <input className="rounded-xl px-4 py-3 text-sm outline-none" style={{ background: 'rgba(255,255,255,0.04)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }} placeholder="Owner Name" value={form.ownerName} onChange={(event) => updateField('ownerName', event.target.value)} />
             <input className="rounded-xl px-4 py-3 text-sm outline-none" style={{ background: 'rgba(255,255,255,0.04)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }} placeholder="Owner Email" value={form.ownerEmail} onChange={(event) => updateField('ownerEmail', event.target.value)} />
-            <select className="rounded-xl px-4 py-3 text-sm outline-none" style={{ background: 'rgba(255,255,255,0.04)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }} value={form.businessType} onChange={(event) => updateField('businessType', event.target.value)}>
-              <option>Real Estate</option>
-              <option>Property Consulting</option>
-              <option>Brokerage</option>
-              <option>Builder / Developer</option>
+            <select className="rounded-xl px-4 py-3 text-sm outline-none" style={{ background: 'rgba(255,255,255,0.04)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }} value={form.businessType} onChange={(event) => updateField('businessType', event.target.value as BusinessTypeOption)}>
+              {Object.entries(businessTypeLabels).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
             </select>
-            <select className="rounded-xl px-4 py-3 text-sm outline-none" style={{ background: 'rgba(255,255,255,0.04)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }} value={form.plan} onChange={(event) => updateField('plan', event.target.value)}>
-              <option>Base</option>
-              <option>Growth</option>
-              <option>Premium</option>
+            <select className="rounded-xl px-4 py-3 text-sm outline-none" style={{ background: 'rgba(255,255,255,0.04)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }} value={form.plan} onChange={(event) => updateField('plan', event.target.value as PlanOption)}>
+              {Object.entries(planLabels).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
             </select>
             <input className="rounded-xl px-4 py-3 text-sm outline-none" style={{ background: 'rgba(255,255,255,0.04)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }} placeholder="Notes" value={form.notes} onChange={(event) => updateField('notes', event.target.value)} />
           </div>
@@ -193,22 +242,56 @@ export default function ClientOnboarding() {
           <button
             type="button"
             onClick={prepareWorkspace}
-            className="mt-5 rounded-xl px-5 py-3 text-sm font-medium transition-opacity hover:opacity-90"
+            disabled={loading}
+            className="mt-5 rounded-xl px-5 py-3 text-sm font-medium transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             style={{ background: '#6B8AFF', color: '#050510' }}
           >
-            Prepare Client Workspace
+            {loading ? 'Creating Workspace...' : 'Create Client Workspace'}
           </button>
+
+          {error && (
+            <p className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(248, 113, 113, 0.1)', color: '#FCA5A5', border: '1px solid rgba(248, 113, 113, 0.18)' }}>
+              {error}
+            </p>
+          )}
 
           <p className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(255,255,255,0.03)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.06)' }}>
             {message}
           </p>
+
+          {onboardingResult && (
+            <div className="mt-4 rounded-xl p-4" style={{ background: 'rgba(74, 222, 128, 0.08)', border: '1px solid rgba(74, 222, 128, 0.18)' }}>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="text-xs font-mono uppercase tracking-[0.18em]" style={{ color: '#4ADE80' }}>Workspace Created</p>
+                  <h3 className="mt-1 text-base font-medium" style={{ color: '#F0EDE6' }}>{onboardingResult.business_name}</h3>
+                  <p className="mt-1 text-sm" style={{ color: '#8A8A93' }}>{onboardingResult.owner_name} · {onboardingResult.owner_email}</p>
+                  <p className="mt-1 text-sm" style={{ color: '#8A8A93' }}>Plan: {onboardingResult.plan} · Role: {onboardingResult.role}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyTemporaryPassword}
+                  className="rounded-lg px-3 py-2 text-xs"
+                  style={{ background: 'rgba(255,255,255,0.06)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.1)' }}
+                >
+                  <Copy size={13} className="inline mr-1" /> Copy Temporary Password
+                </button>
+              </div>
+              <p className="mt-3 rounded-lg px-3 py-2 font-mono text-sm" style={{ background: 'rgba(0,0,0,0.24)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }}>
+                {onboardingResult.temporary_password}
+              </p>
+              <p className="mt-2 text-xs" style={{ color: '#8A8A93' }}>
+                Share this password securely. Ask the client owner to change it immediately from Settings after first login.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="surface-card overflow-hidden">
         <div className="p-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <h2 className="font-display text-xl font-medium" style={{ color: '#F0EDE6' }}>Recent onboarding</h2>
-          <p className="text-sm mt-1" style={{ color: '#8A8A93' }}>Local placeholder records for future backend integration.</p>
+          <p className="text-sm mt-1" style={{ color: '#8A8A93' }}>Latest verified onboarding records and handover reminders.</p>
         </div>
 
         <div className="overflow-x-auto">
@@ -234,26 +317,35 @@ export default function ClientOnboarding() {
                       <button type="button" onClick={() => handleLocalAction('View Workspace', client.client)} className="rounded-lg px-3 py-2 text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }}>
                         <Eye size={13} className="inline mr-1" /> View
                       </button>
-                      <button type="button" onClick={() => handleLocalAction('Copy Setup Link', client.client)} className="rounded-lg px-3 py-2 text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }}>
-                        <Copy size={13} className="inline mr-1" /> Copy Link
+                      <button type="button" onClick={() => handleLocalAction('Send Handover Reminder', client.client)} className="rounded-lg px-3 py-2 text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <Mail size={13} className="inline mr-1" /> Reminder
                       </button>
                       <button type="button" onClick={() => handleLocalAction('Mark Ready', client.client)} className="rounded-lg px-3 py-2 text-xs" style={{ background: 'rgba(107,138,255,0.12)', color: '#6B8AFF', border: '1px solid rgba(107,138,255,0.2)' }}>
-                        <Mail size={13} className="inline mr-1" /> Mark Ready
+                        <FileText size={13} className="inline mr-1" /> Notes
                       </button>
                     </div>
                   </td>
                 </tr>
               ))}
+
+              {onboardingResult && (
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <td className="px-5 py-4 text-sm font-medium" style={{ color: '#F0EDE6' }}>{onboardingResult.business_name}</td>
+                  <td className="px-5 py-4 text-sm" style={{ color: '#F0EDE6' }}>{onboardingResult.owner_name}</td>
+                  <td className="px-5 py-4 text-sm" style={{ color: '#8A8A93' }}>{onboardingResult.owner_email}</td>
+                  <td className="px-5 py-4 text-sm" style={{ color: '#F0EDE6' }}>{onboardingResult.plan}</td>
+                  <td className="px-5 py-4 text-sm" style={{ color: '#4ADE80' }}>Created now</td>
+                  <td className="px-5 py-4 text-sm" style={{ color: '#8A8A93' }}>Current session</td>
+                  <td className="px-5 py-4 text-sm" style={{ color: '#8A8A93' }}>Copy password above</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-      </div>
 
-      <div className="mt-6 rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="flex items-start gap-3">
-          <FileText size={18} style={{ color: '#8A8A93' }} />
-          <p className="text-sm leading-6" style={{ color: '#F0EDE6' }}>
-            TODO: Connect this page to founder-only backend APIs for tenant creation, owner invite preparation, plan assignment, and password setup handover.
+        <div className="p-5" style={{ background: 'rgba(255,255,255,0.02)' }}>
+          <p className="text-xs" style={{ color: '#55555C' }}>
+            This page now connects to founder-only backend APIs for tenant creation, owner account setup, plan assignment, and temporary password handover.
           </p>
         </div>
       </div>

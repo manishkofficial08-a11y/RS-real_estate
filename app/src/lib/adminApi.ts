@@ -421,3 +421,34 @@ export async function processAdminDuePublisherPosts(
   });
 }
 
+export type AdminClientOnboardingPayload = {
+  business_name: string;
+  owner_name: string;
+  owner_email: string;
+  business_type: "real_estate" | "retail" | "healthcare" | "other";
+  plan: "free" | "pro" | "enterprise";
+  notes?: string | null;
+};
+
+export type AdminClientOnboardingResponse = {
+  tenant_id: string;
+  business_name: string;
+  business_type: string;
+  plan: string;
+  owner_id: string;
+  owner_name: string;
+  owner_email: string;
+  role: string;
+  temporary_password: string;
+  message: string;
+};
+
+export async function createAdminClientOnboardingWorkspace(
+  payload: AdminClientOnboardingPayload,
+): Promise<AdminClientOnboardingResponse> {
+  return adminFetch<AdminClientOnboardingResponse>("/admin/client-onboarding", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
