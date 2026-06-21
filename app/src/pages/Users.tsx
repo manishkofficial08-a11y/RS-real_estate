@@ -22,6 +22,7 @@ const roleStyles: Record<string, { bg: string; color: string; border: string }> 
   super_admin: { bg: 'rgba(255, 138, 92, 0.1)', color: '#FF8A5C', border: 'rgba(255, 138, 92, 0.2)' },
   admin: { bg: 'rgba(107, 138, 255, 0.1)', color: '#6B8AFF', border: 'rgba(107, 138, 255, 0.2)' },
   client: { bg: 'rgba(74, 222, 128, 0.08)', color: '#4ADE80', border: 'rgba(74, 222, 128, 0.16)' },
+  owner: { bg: 'rgba(74, 222, 128, 0.08)', color: '#4ADE80', border: 'rgba(74, 222, 128, 0.16)' },
   staff: { bg: 'rgba(255, 255, 255, 0.06)', color: '#8A8A93', border: 'rgba(255, 255, 255, 0.1)' },
 };
 
@@ -85,10 +86,14 @@ export default function UsersPage() {
 
   const activeUsers = users.filter((user) => user.is_active).length;
   const inactiveUsers = users.length - activeUsers;
-  const adminUsers = users.filter((user) => user.role === 'admin' || user.role === 'superadmin' || user.role === 'super_admin').length;
-  const clientUsers = users.filter((user) => user.role === 'client').length;
-  const staffUsers = users.filter((user) => user.role === 'staff').length;
-  const founderUsers = users.filter((user) => !user.company).length;
+  const adminRoles = ['admin', 'superadmin', 'super_admin'];
+  const clientRoles = ['owner', 'client'];
+  const staffRoles = ['staff', 'marketer', 'sales', 'viewer'];
+
+  const adminUsers = users.filter((user) => adminRoles.includes(user.role)).length;
+  const clientUsers = users.filter((user) => clientRoles.includes(user.role)).length;
+  const staffUsers = users.filter((user) => staffRoles.includes(user.role)).length;
+  const founderUsers = users.filter((user) => !user.company && adminRoles.includes(user.role)).length;
 
   const summaryCards = [
     {
