@@ -1,4 +1,4 @@
-﻿import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Building2,
@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import CubeLogo from './CubeLogo';
+import FounderLogo from './FounderLogo';
+import { FOUNDER_BRANDING } from '../lib/founderBranding';
 
 type SidebarProps = {
   isOpen: boolean;
@@ -76,14 +77,14 @@ export default function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse
 
       <div className={`flex items-center gap-3 px-5 py-6 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
         <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
-          <CubeLogo />
+          <FounderLogo size={32} />
 
           {!isCollapsed && (
             <span
               className="font-display text-base font-medium tracking-[-0.02em]"
               style={{ color: '#F0EDE6' }}
             >
-              RS Real Estate
+              {FOUNDER_BRANDING.companyName}
             </span>
           )}
         </div>
@@ -170,11 +171,11 @@ export default function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse
 
         {!isCollapsed && (
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium" style={{ color: '#F0EDE6' }}>
+            <p className="truncate text-xs font-medium" style={{ color: '#F0EDE6' }}>
               Founder
             </p>
             <p className="truncate text-xs" style={{ color: '#55555C' }}>
-              founder@aigrowthos.com
+              MMe-AI Operator
             </p>
           </div>
         )}
