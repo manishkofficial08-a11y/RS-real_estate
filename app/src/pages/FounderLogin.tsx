@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Lock, Mail, Loader2 } from 'lucide-react';
-import CubeLogo from '@/components/CubeLogo';
+import FounderLogo from '@/components/FounderLogo';
+import { FOUNDER_BRANDING } from '@/lib/founderBranding';
 import { isFounderLoggedIn, loginFounder } from '@/lib/adminApi';
 
 export default function FounderLogin() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('founder@aigrowthos.com');
+  const [email, setEmail] = useState(FOUNDER_BRANDING.supportEmail);
   const [password, setPassword] = useState('Admin@12345');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +27,13 @@ export default function FounderLogin() {
 
       navigate('/admin/overview', { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      const message = err instanceof Error ? err.message : 'Login failed';
+      try {
+        const parsed = JSON.parse(message);
+        setError(parsed.detail || message);
+      } catch {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -50,14 +57,14 @@ export default function FounderLogin() {
         }}
       >
         <div className="mb-8 flex items-center gap-3">
-          <CubeLogo />
+          <FounderLogo size={42} />
 
           <div>
             <h1 className="font-display text-2xl font-medium tracking-[-0.03em]" style={{ color: '#F0EDE6' }}>
-              RS Real Estate
+              {FOUNDER_BRANDING.companyName}
             </h1>
             <p className="text-sm" style={{ color: '#8A8A93' }}>
-              Founder Control Center
+              {FOUNDER_BRANDING.appLabel}
             </p>
           </div>
         </div>
@@ -97,7 +104,7 @@ export default function FounderLogin() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 className="input-dark w-full py-3 pl-10 pr-4 text-sm"
-                placeholder="founder@aigrowthos.com"
+                placeholder={FOUNDER_BRANDING.supportEmail}
                 required
               />
             </div>
@@ -143,7 +150,7 @@ export default function FounderLogin() {
             border: '1px solid rgba(255, 255, 255, 0.06)',
           }}
         >
-          Dev credentials are prefilled for now. Later we will remove default password and add proper production auth.
+          Founder access is restricted to authorized MMe-AI operators only.
         </div>
       </div>
     </div>

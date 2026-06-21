@@ -1,0 +1,22 @@
+<svg width="320" height="320" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mmeGradient" x1="35" y1="72" x2="290" y2="252" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3057F4"/>
+      <stop offset="0.36" stop-color="#20C5E8"/>
+      <stop offset="0.68" stop-color="#D943E8"/>
+      <stop offset="1" stop-color="#2BE681"/>
+    </linearGradient>
+    <linearGradient id="textGradient" x1="50" y1="238" x2="275" y2="238" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1A4F"/>
+      <stop offset="1" stop-color="#0A2F74"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="320" rx="72" fill="#FFFFFF"/>
+  <path d="M54 178V92C54 81.5066 62.5066 73 73 73C83.4934 73 92 81.5066 92 92V132.5C92 143.822 105.822 149.372 113.687 141.223L143.8 110.024C153.713 99.7528 170.287 99.7527 180.2 110.024L210.313 141.223C218.178 149.372 232 143.822 232 132.5V115C232 91.804 250.804 73 274 73H282V111H274C271.791 111 270 112.791 270 115V178C270 188.493 261.493 197 251 197C240.507 197 232 188.493 232 178V176.5C232 165.178 218.178 159.628 210.313 167.777L180.2 198.976C170.287 209.247 153.713 209.247 143.8 198.976L113.687 167.777C105.822 159.628 92 165.178 92 176.5V178C92 188.493 83.4934 197 73 197C62.5066 197 54 188.493 54 178Z" fill="url(#mmeGradient)"/>
+  <circle cx="226" cy="94" r="7" fill="#3057F4"/>
+  <circle cx="249" cy="84" r="7" fill="#20C5E8"/>
+  <circle cx="266" cy="101" r="7" fill="#2BE681"/>
+  <path d="M226 94L249 84L266 101L251 126L223 130L210 109L226 94Z" stroke="#223B8F" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="160" y="242" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="54" font-weight="800" fill="url(#textGradient)">MMe-AI</text>
+  <text x="160" y="275" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="500" fill="#0B1A4F">AI-driven Intelligence</text>
+</svg>
