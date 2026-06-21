@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import FounderLogo from './FounderLogo';
 import { FOUNDER_BRANDING } from '../lib/founderBranding';
-import { logoutFounder } from '../lib/adminApi';
+import { clearFounderSession } from '../lib/adminApi';
 
 type SidebarProps = {
   isOpen: boolean;
@@ -45,6 +45,12 @@ export default function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse
   function handleNavigate(path: string) {
     navigate(path);
     onClose();
+  }
+
+  function handleLogout() {
+    clearFounderSession();
+    onClose();
+    navigate('/admin/login', { replace: true });
   }
 
   return (
@@ -184,7 +190,7 @@ export default function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse
 
             <button
               type="button"
-              onClick={logoutFounder}
+              onClick={handleLogout}
               className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
               style={{
                 background: 'rgba(255, 90, 90, 0.08)',
@@ -203,7 +209,7 @@ export default function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse
       {isCollapsed && (
         <button
           type="button"
-          onClick={logoutFounder}
+          onClick={handleLogout}
           className="mx-3 mb-4 flex h-10 items-center justify-center rounded-xl transition-colors"
           style={{
             background: 'rgba(255, 90, 90, 0.08)',
