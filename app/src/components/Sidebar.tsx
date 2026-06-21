@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Building2,
-  Rocket,
+  Activity,
   Users,
   BarChart3,
   Bot,
@@ -12,9 +12,11 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from 'lucide-react';
 import FounderLogo from './FounderLogo';
 import { FOUNDER_BRANDING } from '../lib/founderBranding';
+import { logoutFounder } from '../lib/adminApi';
 
 type SidebarProps = {
   isOpen: boolean;
@@ -27,7 +29,7 @@ const navItems = [
   { label: 'Overview', icon: LayoutDashboard, path: '/admin/overview' },
   { label: 'Companies', icon: Building2, path: '/admin/companies' },
   { label: 'Client Onboarding', icon: Users, path: '/admin/client-onboarding' },
-  { label: 'Leads', icon: Rocket, path: '/admin/leads' },
+  { label: 'Client Health', icon: Activity, path: '/admin/client-health' },
   { label: 'Users', icon: Users, path: '/admin/users' },
   { label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
   { label: 'AI Jobs', icon: Bot, path: '/admin/ai-jobs' },
@@ -170,16 +172,50 @@ export default function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse
         </div>
 
         {!isCollapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium" style={{ color: '#F0EDE6' }}>
-              Founder
-            </p>
-            <p className="truncate text-xs" style={{ color: '#55555C' }}>
-              MMe-AI Operator
-            </p>
-          </div>
+          <>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium" style={{ color: '#F0EDE6' }}>
+                Founder
+              </p>
+              <p className="truncate text-xs" style={{ color: '#55555C' }}>
+                MMe-AI Operator
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={logoutFounder}
+              className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+              style={{
+                background: 'rgba(255, 90, 90, 0.08)',
+                color: '#FF5A5A',
+                border: '1px solid rgba(255, 90, 90, 0.16)',
+              }}
+              title="Logout"
+              aria-label="Logout founder account"
+            >
+              <LogOut size={15} />
+            </button>
+          </>
         )}
       </div>
+
+      {isCollapsed && (
+        <button
+          type="button"
+          onClick={logoutFounder}
+          className="mx-3 mb-4 flex h-10 items-center justify-center rounded-xl transition-colors"
+          style={{
+            background: 'rgba(255, 90, 90, 0.08)',
+            color: '#FF5A5A',
+            border: '1px solid rgba(255, 90, 90, 0.16)',
+          }}
+          title="Logout"
+          aria-label="Logout founder account"
+        >
+          <LogOut size={16} />
+        </button>
+      )}
     </aside>
   );
 }

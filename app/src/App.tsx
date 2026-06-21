@@ -1,11 +1,11 @@
-﻿import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import Layout from '@/components/Layout';
 import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import FounderLogin from '@/pages/FounderLogin';
 import Overview from '@/pages/Overview';
 import Companies from '@/pages/Companies';
-import Leads from '@/pages/Leads';
+import ClientHealth from '@/pages/Leads';
 import UsersPage from '@/pages/Users';
 import Analytics from '@/pages/Analytics';
 import AIJobs from '@/pages/AIJobs';
@@ -30,7 +30,8 @@ export default function App() {
           <Route index element={<Navigate to="/admin/overview" replace />} />
           <Route path="overview" element={<Overview />} />
           <Route path="companies" element={<Companies />} />
-          <Route path="leads" element={<Leads />} />
+          <Route path="client-health" element={<ClientHealth />} />
+          <Route path="leads" element={<Navigate to="/admin/client-health" replace />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="ai-jobs" element={<AIJobs />} />

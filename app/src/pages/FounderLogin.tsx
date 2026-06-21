@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Lock, Mail, Loader2 } from 'lucide-react';
+import { Lock, Mail, Loader2, Eye, EyeOff, HelpCircle } from 'lucide-react';
 import FounderLogo from '@/components/FounderLogo';
 import { FOUNDER_BRANDING } from '@/lib/founderBranding';
 import { isFounderLoggedIn, loginFounder } from '@/lib/adminApi';
@@ -8,9 +8,11 @@ import { isFounderLoggedIn, loginFounder } from '@/lib/adminApi';
 export default function FounderLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState(FOUNDER_BRANDING.supportEmail);
-  const [password, setPassword] = useState('Admin@12345');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (isFounderLoggedIn()) {
     return <Navigate to="/admin/overview" replace />;
@@ -22,6 +24,7 @@ export default function FounderLogin() {
     try {
       setLoading(true);
       setError(null);
+      setNotice(null);
 
       await loginFounder(email, password);
 
@@ -91,6 +94,19 @@ export default function FounderLogin() {
           </div>
         )}
 
+        {notice && (
+          <div
+            className="mb-4 rounded-xl px-4 py-3 text-sm"
+            style={{
+              color: '#6B8AFF',
+              background: 'rgba(107, 138, 255, 0.08)',
+              border: '1px solid rgba(107, 138, 255, 0.18)',
+            }}
+          >
+            {notice}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-2 block text-xs font-mono" style={{ color: '#8A8A93' }}>
@@ -118,15 +134,39 @@ export default function FounderLogin() {
             <div className="relative">
               <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#55555C' }} />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="input-dark w-full py-3 pl-10 pr-4 text-sm"
+                className="input-dark w-full py-3 pl-10 pr-12 text-sm"
                 placeholder="Enter founder password"
                 required
               />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 transition-colors"
+                style={{ color: '#8A8A93' }}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setNotice('Founder password reset is intentionally restricted. Use the secure admin reset utility for now; SMTP-backed founder reset can be enabled as a separate backend task.');
+            }}
+            className="inline-flex items-center gap-2 text-xs transition-colors"
+            style={{ color: '#8A8A93' }}
+          >
+            <HelpCircle size={14} />
+            Forgot password?
+          </button>
 
           <button
             type="submit"
