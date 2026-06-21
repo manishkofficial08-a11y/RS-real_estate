@@ -276,6 +276,21 @@ export async function getClientProfile(): Promise<ClientProfile> {
   return clientFetch<ClientProfile>("/auth/me");
 }
 
+export type ChangeClientPasswordPayload = {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+};
+
+export async function changeClientPassword(
+  payload: ChangeClientPasswordPayload,
+): Promise<{ message: string }> {
+  return clientFetch<{ message: string }>("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export type ClientTeamRole =
   | "owner"
   | "admin"

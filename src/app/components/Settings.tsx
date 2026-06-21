@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CLIENT_BRANDING } from "../lib/clientBranding";
 import {
   Building2,
   CheckCircle2,
+  Lock,
   LogOut,
   Mail,
   RefreshCw,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import {
+  changeClientPassword,
   clearClientSession,
   getClientProfile,
   type ClientProfile,
@@ -94,6 +96,14 @@ export function Settings({ darkMode }: SettingsProps) {
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const cardBase = {
     background: darkMode ? "rgba(15,23,42,0.8)" : "#ffffff",
@@ -159,6 +169,37 @@ export function Settings({ darkMode }: SettingsProps) {
     ],
     [profile],
   );
+
+  async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordMessage(null);
+    setPasswordError(null);
+
+    if (passwordForm.new_password.length < 8) {
+      setPasswordError("New password must be at least 8 characters long.");
+      return;
+    }
+
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      setPasswordError("New password and confirmation do not match.");
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      const response = await changeClientPassword(passwordForm);
+      setPasswordMessage(response.message || "Password changed successfully.");
+      setPasswordForm({
+        current_password: "",
+        new_password: "",
+        confirm_password: "",
+      });
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Failed to change password");
+    } finally {
+      setPasswordLoading(false);
+    }
+  }
 
   function handleLogout() {
     clearClientSession();
@@ -342,6 +383,121 @@ export function Settings({ darkMode }: SettingsProps) {
             borderColor: cardBase.borderColor,
           }}
         >
+          <div className="flex items-start gap-3">
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+              style={{
+                background: darkMode ? "rgba(29,78,216,0.12)" : "rgba(29,78,216,0.08)",
+                color: "#1D4ED8",
+              }}
+            >
+              <Lock size={18} />
+            </div>
+
+            <div>
+              <h3
+                className="text-sm font-semibold"
+                style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}
+              >
+                Change Password
+              </h3>
+              <p
+                className="mt-1 text-sm"
+                style={{ color: darkMode ? "#94a3b8" : "#64748b" }}
+              >
+                Update your temporary password after first login to keep your workspace secure.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handlePasswordSubmit} className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <input
+              type="password"
+              value={passwordForm.current_password}
+              onChange={(event) =>
+                setPasswordForm((current) => ({
+                  ...current,
+                  current_password: event.target.value,
+                }))
+              }
+              placeholder="Current password"
+              className="rounded-xl border px-4 py-3 text-sm outline-none"
+              required
+              style={{
+                background: darkMode ? "rgba(15,23,42,0.55)" : "#ffffff",
+                borderColor: cardBase.borderColor,
+                color: darkMode ? "#e2e8f0" : "#0f172a",
+              }}
+            />
+
+            <input
+              type="password"
+              value={passwordForm.new_password}
+              onChange={(event) =>
+                setPasswordForm((current) => ({
+                  ...current,
+                  new_password: event.target.value,
+                }))
+              }
+              placeholder="New password"
+              className="rounded-xl border px-4 py-3 text-sm outline-none"
+              required
+              minLength={8}
+              style={{
+                background: darkMode ? "rgba(15,23,42,0.55)" : "#ffffff",
+                borderColor: cardBase.borderColor,
+                color: darkMode ? "#e2e8f0" : "#0f172a",
+              }}
+            />
+
+            <input
+              type="password"
+              value={passwordForm.confirm_password}
+              onChange={(event) =>
+                setPasswordForm((current) => ({
+                  ...current,
+                  confirm_password: event.target.value,
+                }))
+              }
+              placeholder="Confirm new password"
+              className="rounded-xl border px-4 py-3 text-sm outline-none"
+              required
+              minLength={8}
+              style={{
+                background: darkMode ? "rgba(15,23,42,0.55)" : "#ffffff",
+                borderColor: cardBase.borderColor,
+                color: darkMode ? "#e2e8f0" : "#0f172a",
+              }}
+            />
+
+            <div className="md:col-span-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="text-sm">
+                {passwordMessage && <span style={{ color: "#10b981" }}>{passwordMessage}</span>}
+                {passwordError && <span style={{ color: "#ef4444" }}>{passwordError}</span>}
+              </div>
+
+              <button
+                type="submit"
+                disabled={passwordLoading}
+                className="rounded-xl px-5 py-3 text-sm font-medium disabled:opacity-60"
+                style={{
+                  background: "#1D4ED8",
+                  color: "#ffffff",
+                }}
+              >
+                {passwordLoading ? "Updating..." : "Update Password"}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div
+          className="rounded-2xl border p-5"
+          style={{
+            background: cardBase.background,
+            borderColor: cardBase.borderColor,
+          }}
+        >
           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
               <h3
@@ -516,7 +672,7 @@ export function Settings({ darkMode }: SettingsProps) {
               "CRM leads are backend connected",
               "Properties are backend connected",
               "Analytics and reports use real data",
-              "Profile editing and password change are planned next",
+              "Password change is available from Settings",
             ].map((text) => (
               <div
                 key={text}
