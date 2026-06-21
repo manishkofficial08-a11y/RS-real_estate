@@ -1,27 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Building2,
   CheckCircle2,
   ClipboardCheck,
   Copy,
-  Eye,
   FileText,
-  Mail,
   Rocket,
   ShieldCheck,
   UserPlus,
 } from 'lucide-react';
 import {
   createAdminClientOnboardingWorkspace,
+  getAdminDashboardStats,
+  getAdminTenants,
   type AdminClientOnboardingResponse,
+  type AdminDashboardStats,
+  type AdminTenant,
 } from '../lib/adminApi';
-
-const stats = [
-  { label: 'Total Clients', value: '0', sub: 'Use Companies page for live tenant count', icon: Building2, color: '#6B8AFF' },
-  { label: 'Active Workspaces', value: 'Live', sub: 'Creates tenant + owner account', icon: ShieldCheck, color: '#4ADE80' },
-  { label: 'Pending Setup', value: 'Secure', sub: 'Temporary password generated once', icon: ClipboardCheck, color: '#FF8A5C' },
-  { label: 'Subscription Ready', value: 'Manual', sub: 'Plan assigned during onboarding', icon: Rocket, color: '#A78BFA' },
-];
 
 const checklist = [
   'Create client company',
@@ -29,17 +24,6 @@ const checklist = [
   'Assign plan',
   'Generate temporary password',
   'Handover portal access',
-];
-
-const recentClients = [
-  {
-    client: 'Ridhi Sidhi Real Estate',
-    owner: 'Ram Kumar Sahu',
-    email: 'ridhisidhi5471@gmail.com',
-    plan: 'Pro',
-    status: 'Live workspace',
-    updated: 'Production verified',
-  },
 ];
 
 type BusinessTypeOption = 'real_estate' | 'retail' | 'healthcare' | 'other';
@@ -58,10 +42,35 @@ const planLabels: Record<PlanOption, string> = {
   enterprise: 'Enterprise',
 };
 
+function formatBusinessType(value: string) {
+  return businessTypeLabels[value as BusinessTypeOption] || value.replace(/_/g, ' ');
+}
+
+function formatPlan(value: string) {
+  return planLabels[value as PlanOption] || value;
+}
+
+function getErrorMessage(err: unknown, fallback: string) {
+  if (!(err instanceof Error)) {
+    return fallback;
+  }
+
+  try {
+    const parsed = JSON.parse(err.message);
+    return parsed.detail || fallback;
+  } catch {
+    return err.message || fallback;
+  }
+}
+
 export default function ClientOnboarding() {
   const [message, setMessage] = useState('Ready to create an invite-only client workspace.');
   const [error, setError] = useState<string | null>(null);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats | null>(null);
+  const [tenants, setTenants] = useState<AdminTenant[]>([]);
   const [onboardingResult, setOnboardingResult] = useState<AdminClientOnboardingResponse | null>(null);
   const [form, setForm] = useState({
     businessName: '',
@@ -71,6 +80,69 @@ export default function ClientOnboarding() {
     plan: 'pro' as PlanOption,
     notes: '',
   });
+
+  const loadFounderData = async () => {
+    try {
+      setPageLoading(true);
+      setDashboardError(null);
+
+      const [statsResult, tenantsResult] = await Promise.all([
+        getAdminDashboardStats(),
+        getAdminTenants(),
+      ]);
+
+      setDashboardStats(statsResult);
+      setTenants(tenantsResult);
+    } catch (err) {
+      setDashboardError(getErrorMessage(err, 'Could not load live founder data.'));
+    } finally {
+      setPageLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadFounderData();
+  }, []);
+
+  const derivedStats = useMemo(() => {
+    const totalClients = dashboardStats?.total_tenants ?? tenants.length;
+    const activeWorkspaces = tenants.filter((tenant) => tenant.is_active).length;
+    const paidPlans = tenants.filter((tenant) => ['pro', 'enterprise'].includes(String(tenant.plan).toLowerCase())).length;
+    const pendingSetup = tenants.filter((tenant) => !tenant.is_active).length;
+
+    return [
+      {
+        label: 'Total Clients',
+        value: pageLoading ? '...' : String(totalClients),
+        sub: 'Live tenant count from backend',
+        icon: Building2,
+        color: '#6B8AFF',
+      },
+      {
+        label: 'Active Workspaces',
+        value: pageLoading ? '...' : String(activeWorkspaces),
+        sub: 'Currently enabled client portals',
+        icon: ShieldCheck,
+        color: '#4ADE80',
+      },
+      {
+        label: 'Paid Plans',
+        value: pageLoading ? '...' : String(paidPlans),
+        sub: 'Pro + Enterprise tenants',
+        icon: Rocket,
+        color: '#A78BFA',
+      },
+      {
+        label: 'Pending Setup',
+        value: pageLoading ? '...' : String(pendingSetup),
+        sub: pendingSetup > 0 ? 'Inactive tenants need follow-up' : 'No inactive tenants',
+        icon: ClipboardCheck,
+        color: '#FF8A5C',
+      },
+    ];
+  }, [dashboardStats, tenants, pageLoading]);
+
+  const recentTenants = useMemo(() => tenants.slice(0, 6), [tenants]);
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -109,8 +181,9 @@ export default function ClientOnboarding() {
 
       setOnboardingResult(result);
       setMessage(result.message);
+      await loadFounderData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create client workspace.');
+      setError(getErrorMessage(err, 'Failed to create client workspace.'));
       setMessage('Workspace creation failed.');
     } finally {
       setLoading(false);
@@ -130,8 +203,8 @@ export default function ClientOnboarding() {
     }
   };
 
-  const handleLocalAction = (action: string, client: string) => {
-    setMessage(`"${action}" selected for ${client}. Use Companies and Users pages for live workspace details.`);
+  const handleLocalAction = (client: string) => {
+    setMessage(`Open Companies page to review ${client} workspace details.`);
   };
 
   return (
@@ -155,8 +228,14 @@ export default function ClientOnboarding() {
         </div>
       </div>
 
+      {dashboardError && (
+        <p className="mb-5 rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(248, 113, 113, 0.1)', color: '#FCA5A5', border: '1px solid rgba(248, 113, 113, 0.18)' }}>
+          {dashboardError}
+        </p>
+      )}
+
       <div className="grid grid-cols-1 gap-5 mb-8 md:grid-cols-2 xl:grid-cols-4">
-        {stats.map((card) => {
+        {derivedStats.map((card) => {
           const Icon = card.icon;
 
           return (
@@ -290,40 +369,44 @@ export default function ClientOnboarding() {
 
       <div className="surface-card overflow-hidden">
         <div className="p-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <h2 className="font-display text-xl font-medium" style={{ color: '#F0EDE6' }}>Recent onboarding</h2>
-          <p className="text-sm mt-1" style={{ color: '#8A8A93' }}>Latest verified onboarding records and handover reminders.</p>
+          <h2 className="font-display text-xl font-medium" style={{ color: '#F0EDE6' }}>Live client workspaces</h2>
+          <p className="text-sm mt-1" style={{ color: '#8A8A93' }}>Backend-connected tenant records. No hardcoded demo onboarding rows.</p>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
+          <table className="w-full min-w-[760px]">
             <thead>
               <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-                {['Client', 'Owner', 'Email', 'Plan', 'Status', 'Last Updated', 'Actions'].map((heading) => (
+                {['Client', 'Business Type', 'Plan', 'Status', 'Actions'].map((heading) => (
                   <th key={heading} className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>{heading}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {recentClients.map((client) => (
-                <tr key={client.email} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                  <td className="px-5 py-4 text-sm font-medium" style={{ color: '#F0EDE6' }}>{client.client}</td>
-                  <td className="px-5 py-4 text-sm" style={{ color: '#F0EDE6' }}>{client.owner}</td>
-                  <td className="px-5 py-4 text-sm" style={{ color: '#8A8A93' }}>{client.email}</td>
-                  <td className="px-5 py-4 text-sm" style={{ color: '#F0EDE6' }}>{client.plan}</td>
-                  <td className="px-5 py-4 text-sm" style={{ color: '#4ADE80' }}>{client.status}</td>
-                  <td className="px-5 py-4 text-sm" style={{ color: '#8A8A93' }}>{client.updated}</td>
+              {pageLoading && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-6 text-sm" style={{ color: '#8A8A93' }}>Loading live client workspaces...</td>
+                </tr>
+              )}
+
+              {!pageLoading && recentTenants.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-6 text-sm" style={{ color: '#8A8A93' }}>No client workspaces found yet.</td>
+                </tr>
+              )}
+
+              {!pageLoading && recentTenants.map((tenant) => (
+                <tr key={tenant.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <td className="px-5 py-4 text-sm font-medium" style={{ color: '#F0EDE6' }}>{tenant.name}</td>
+                  <td className="px-5 py-4 text-sm" style={{ color: '#8A8A93' }}>{formatBusinessType(tenant.business_type)}</td>
+                  <td className="px-5 py-4 text-sm" style={{ color: '#F0EDE6' }}>{formatPlan(tenant.plan)}</td>
+                  <td className="px-5 py-4 text-sm" style={{ color: tenant.is_active ? '#4ADE80' : '#FCA5A5' }}>
+                    {tenant.is_active ? 'Active' : 'Inactive'}
+                  </td>
                   <td className="px-5 py-4">
-                    <div className="flex flex-wrap gap-2">
-                      <button type="button" onClick={() => handleLocalAction('View Workspace', client.client)} className="rounded-lg px-3 py-2 text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }}>
-                        <Eye size={13} className="inline mr-1" /> View
-                      </button>
-                      <button type="button" onClick={() => handleLocalAction('Send Handover Reminder', client.client)} className="rounded-lg px-3 py-2 text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }}>
-                        <Mail size={13} className="inline mr-1" /> Reminder
-                      </button>
-                      <button type="button" onClick={() => handleLocalAction('Mark Ready', client.client)} className="rounded-lg px-3 py-2 text-xs" style={{ background: 'rgba(107,138,255,0.12)', color: '#6B8AFF', border: '1px solid rgba(107,138,255,0.2)' }}>
-                        <FileText size={13} className="inline mr-1" /> Notes
-                      </button>
-                    </div>
+                    <button type="button" onClick={() => handleLocalAction(tenant.name)} className="rounded-lg px-3 py-2 text-xs" style={{ background: 'rgba(107,138,255,0.12)', color: '#6B8AFF', border: '1px solid rgba(107,138,255,0.2)' }}>
+                      <FileText size={13} className="inline mr-1" /> Review
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -331,11 +414,9 @@ export default function ClientOnboarding() {
               {onboardingResult && (
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                   <td className="px-5 py-4 text-sm font-medium" style={{ color: '#F0EDE6' }}>{onboardingResult.business_name}</td>
-                  <td className="px-5 py-4 text-sm" style={{ color: '#F0EDE6' }}>{onboardingResult.owner_name}</td>
-                  <td className="px-5 py-4 text-sm" style={{ color: '#8A8A93' }}>{onboardingResult.owner_email}</td>
-                  <td className="px-5 py-4 text-sm" style={{ color: '#F0EDE6' }}>{onboardingResult.plan}</td>
+                  <td className="px-5 py-4 text-sm" style={{ color: '#8A8A93' }}>{formatBusinessType(onboardingResult.business_type)}</td>
+                  <td className="px-5 py-4 text-sm" style={{ color: '#F0EDE6' }}>{formatPlan(onboardingResult.plan)}</td>
                   <td className="px-5 py-4 text-sm" style={{ color: '#4ADE80' }}>Created now</td>
-                  <td className="px-5 py-4 text-sm" style={{ color: '#8A8A93' }}>Current session</td>
                   <td className="px-5 py-4 text-sm" style={{ color: '#8A8A93' }}>Copy password above</td>
                 </tr>
               )}
@@ -345,7 +426,7 @@ export default function ClientOnboarding() {
 
         <div className="p-5" style={{ background: 'rgba(255,255,255,0.02)' }}>
           <p className="text-xs" style={{ color: '#55555C' }}>
-            This page now connects to founder-only backend APIs for tenant creation, owner account setup, plan assignment, and temporary password handover.
+            Client counts and workspace records are loaded from founder backend APIs. Test tenants should be cleaned from database, not hidden with fake UI values.
           </p>
         </div>
       </div>
