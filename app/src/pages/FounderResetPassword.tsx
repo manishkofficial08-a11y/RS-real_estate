@@ -1,13 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { Lock, Mail, Loader2, Eye, EyeOff, HelpCircle } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Eye, EyeOff, Loader2, Lock, ShieldCheck } from 'lucide-react';
 import FounderLogo from '@/components/FounderLogo';
 import { FOUNDER_BRANDING } from '@/lib/founderBranding';
-import {
-  isFounderLoggedIn,
-  loginFounder,
-  requestFounderPasswordReset,
-} from '@/lib/adminApi';
+import { resetFounderPassword } from '@/lib/adminApi';
 
 function getErrorMessage(err: unknown, fallback: string) {
   if (!(err instanceof Error)) return fallback;
@@ -20,19 +16,18 @@ function getErrorMessage(err: unknown, fallback: string) {
   }
 }
 
-export default function FounderLogin() {
+export default function FounderResetPassword() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState(FOUNDER_BRANDING.supportEmail);
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token') || '';
 
-  if (isFounderLoggedIn()) {
-    return <Navigate to="/admin/overview" replace />;
-  }
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(token ? null : 'Reset token is missing or invalid.');
+  const [success, setSuccess] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -40,36 +35,36 @@ export default function FounderLogin() {
     try {
       setLoading(true);
       setError(null);
-      setNotice(null);
+      setSuccess(null);
 
-      await loginFounder(email, password);
-
-      navigate('/admin/overview', { replace: true });
-    } catch (err) {
-      setError(getErrorMessage(err, 'Login failed'));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleForgotPassword() {
-    try {
-      setResetLoading(true);
-      setError(null);
-      setNotice(null);
-
-      if (!email.trim()) {
-        setError('Enter your founder email first.');
+      if (!token) {
+        setError('Reset token is missing or invalid.');
         return;
       }
 
-      const response = await requestFounderPasswordReset(email.trim());
+      if (password.length < 8) {
+        setError('Password must be at least 8 characters long.');
+        return;
+      }
 
-      setNotice(response.message || 'If this email exists, a reset link has been sent.');
+      if (password !== confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
+
+      const response = await resetFounderPassword(token, password);
+
+      setSuccess(response.message || 'Password reset successfully.');
+      setPassword('');
+      setConfirmPassword('');
+
+      window.setTimeout(() => {
+        navigate('/admin/login', { replace: true });
+      }, 1800);
     } catch (err) {
-      setError(getErrorMessage(err, 'Unable to request password reset'));
+      setError(getErrorMessage(err, 'Unable to reset password.'));
     } finally {
-      setResetLoading(false);
+      setLoading(false);
     }
   }
 
@@ -98,17 +93,25 @@ export default function FounderLogin() {
               {FOUNDER_BRANDING.companyName}
             </h1>
             <p className="text-sm" style={{ color: '#8A8A93' }}>
-              {FOUNDER_BRANDING.appLabel}
+              Founder password reset
             </p>
           </div>
         </div>
 
         <div className="mb-6">
+          <div
+            className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1"
+            style={{ background: 'rgba(107, 138, 255, 0.08)', border: '1px solid rgba(107, 138, 255, 0.16)' }}
+          >
+            <ShieldCheck size={14} style={{ color: '#6B8AFF' }} />
+            <span className="text-xs font-mono" style={{ color: '#6B8AFF' }}>Secure reset link</span>
+          </div>
+
           <h2 className="font-display text-3xl font-medium tracking-[-0.03em]" style={{ color: '#F0EDE6' }}>
-            Welcome back
+            Set new password
           </h2>
           <p className="mt-2 text-sm" style={{ color: '#8A8A93' }}>
-            Login to manage companies, users, client health and platform analytics.
+            Reset links expire after 30 minutes. Use a strong password for founder access.
           </p>
         </div>
 
@@ -125,41 +128,23 @@ export default function FounderLogin() {
           </div>
         )}
 
-        {notice && (
+        {success && (
           <div
             className="mb-4 rounded-xl px-4 py-3 text-sm"
             style={{
-              color: '#6B8AFF',
-              background: 'rgba(107, 138, 255, 0.08)',
-              border: '1px solid rgba(107, 138, 255, 0.18)',
+              color: '#4ADE80',
+              background: 'rgba(74, 222, 128, 0.08)',
+              border: '1px solid rgba(74, 222, 128, 0.18)',
             }}
           >
-            {notice}
+            {success}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-2 block text-xs font-mono" style={{ color: '#8A8A93' }}>
-              EMAIL
-            </label>
-
-            <div className="relative">
-              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#55555C' }} />
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="input-dark w-full py-3 pl-10 pr-4 text-sm"
-                placeholder={FOUNDER_BRANDING.supportEmail}
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-xs font-mono" style={{ color: '#8A8A93' }}>
-              PASSWORD
+              NEW PASSWORD
             </label>
 
             <div className="relative">
@@ -169,7 +154,7 @@ export default function FounderLogin() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 className="input-dark w-full py-3 pl-10 pr-12 text-sm"
-                placeholder="Enter founder password"
+                placeholder="Enter new founder password"
                 required
               />
 
@@ -179,27 +164,43 @@ export default function FounderLogin() {
                 className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 transition-colors"
                 style={{ color: '#8A8A93' }}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
-                title={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleForgotPassword}
-            disabled={resetLoading}
-            className="inline-flex items-center gap-2 text-xs transition-colors disabled:opacity-60"
-            style={{ color: '#8A8A93' }}
-          >
-            {resetLoading ? <Loader2 size={14} className="animate-spin" /> : <HelpCircle size={14} />}
-            {resetLoading ? 'Sending reset link...' : 'Forgot password?'}
-          </button>
+          <div>
+            <label className="mb-2 block text-xs font-mono" style={{ color: '#8A8A93' }}>
+              CONFIRM PASSWORD
+            </label>
+
+            <div className="relative">
+              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#55555C' }} />
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                className="input-dark w-full py-3 pl-10 pr-12 text-sm"
+                placeholder="Confirm new password"
+                required
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((current) => !current)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 transition-colors"
+                style={{ color: '#8A8A93' }}
+                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+              >
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !token}
             className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-all disabled:opacity-60"
             style={{
               background: 'linear-gradient(135deg, #6B8AFF, #4A6BFF)',
@@ -207,20 +208,17 @@ export default function FounderLogin() {
             }}
           >
             {loading && <Loader2 size={16} className="animate-spin" />}
-            {loading ? 'Signing in...' : 'Login to Founder Dashboard'}
+            {loading ? 'Resetting password...' : 'Reset Founder Password'}
           </button>
         </form>
 
-        <div
-          className="mt-6 rounded-xl px-4 py-3 text-xs leading-relaxed"
-          style={{
-            color: '#55555C',
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-          }}
+        <Link
+          to="/admin/login"
+          className="mt-5 block text-center text-sm transition-colors"
+          style={{ color: '#8A8A93' }}
         >
-          Founder access is restricted to authorized MMe-AI operators only.
-        </div>
+          Back to founder login
+        </Link>
       </div>
     </div>
   );

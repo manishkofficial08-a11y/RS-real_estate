@@ -3,6 +3,7 @@ import './App.css';
 import Layout from '@/components/Layout';
 import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import FounderLogin from '@/pages/FounderLogin';
+import FounderResetPassword from '@/pages/FounderResetPassword';
 import Overview from '@/pages/Overview';
 import Companies from '@/pages/Companies';
 import ClientHealth from '@/pages/Leads';
@@ -24,12 +25,15 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/admin/overview" replace />} />
       <Route path="/admin/login" element={<FounderLogin />} />
+      <Route path="/reset-password" element={<FounderResetPassword />} />
+      <Route path="/admin/reset-password" element={<FounderResetPassword />} />
 
       <Route element={<ProtectedAdminRoute />}>
         <Route path="/admin" element={<Layout />}>
           <Route index element={<Navigate to="/admin/overview" replace />} />
           <Route path="overview" element={<Overview />} />
           <Route path="companies" element={<Companies />} />
+          <Route path="client-onboarding" element={<ClientOnboarding />} />
           <Route path="client-health" element={<ClientHealth />} />
           <Route path="leads" element={<Navigate to="/admin/client-health" replace />} />
           <Route path="users" element={<UsersPage />} />
@@ -42,7 +46,7 @@ export default function App() {
           <Route path="whatsapp-automation" element={<WhatsAppAutomation />} />
           <Route path="email-automation" element={<EmailAutomation />} />
           <Route path="sales-dashboard" element={<SalesDashboard />} />
-          <Route path="custom-tools" element={<CustomInternalTools />} />`n          <Route path="client-onboarding" element={<ClientOnboarding />} />
+          <Route path="custom-tools" element={<CustomInternalTools />} />
         </Route>
       </Route>
 
