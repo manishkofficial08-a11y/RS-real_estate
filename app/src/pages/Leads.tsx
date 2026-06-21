@@ -4,7 +4,6 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
-  Building2,
   Database,
   Lock,
   RefreshCw,

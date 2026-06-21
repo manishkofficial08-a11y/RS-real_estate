@@ -126,10 +126,6 @@ export default function Analytics() {
   const completedAIJobs = aiJobs.filter((job) => job.status === 'completed').length;
   const aiSuccessRate = aiJobs.length > 0 ? Math.round((completedAIJobs / aiJobs.length) * 100) : 0;
 
-  const avgLeadScore = leads.length > 0
-    ? Math.round(leads.reduce((sum, lead) => sum + (Number(lead.score) || 0), 0) / leads.length)
-    : 0;
-
   const summaryCards = [
     {
       label: 'Active Companies',
