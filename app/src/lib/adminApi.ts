@@ -95,6 +95,44 @@ export function logoutFounder() {
   window.location.href = "/admin/login";
 }
 
+export type MessageResponse = {
+  message: string;
+};
+
+export async function requestFounderPasswordReset(email: string): Promise<MessageResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/request-password-reset`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Unable to request password reset");
+  }
+
+  return response.json();
+}
+
+export async function resetFounderPassword(token: string, password: string): Promise<MessageResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ token, password }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Unable to reset password");
+  }
+
+  return response.json();
+}
+
 export type AdminDashboardStats = {
   total_tenants: number;
   total_users: number;
