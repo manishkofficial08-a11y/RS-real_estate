@@ -31,6 +31,14 @@ from app.services.social_publisher import (
 router = APIRouter(prefix="/generated-posts", tags=["Generated Posts"])
 
 
+CAMPAIGN_PLATFORM_LABELS = {
+    "youtube": "YouTube Shorts",
+    "instagram": "Instagram Reels",
+    "facebook": "Facebook Video",
+    "linkedin": "LinkedIn",
+}
+
+
 class GeneratedPostCreate(BaseModel):
     title: str
     content: str
@@ -81,6 +89,13 @@ class CampaignPublishResult(BaseModel):
     external_post_url: Optional[str] = None
     warning: Optional[str] = None
     error: Optional[str] = None
+
+
+def _platform_not_connected_message(platform: str) -> str:
+    return (
+        f"{CAMPAIGN_PLATFORM_LABELS.get(platform, platform.title())} is not connected. "
+        "Connect this account before publishing."
+    )
 
 
 class CampaignPublishResponse(BaseModel):
@@ -457,6 +472,12 @@ async def publish_generated_post(
         selected_platform,
     )
 
+    if not social_credentials and not data.allow_mock_fallback:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=_platform_not_connected_message(selected_platform),
+        )
+
     try:
         publish_result = await publish_generated_post_to_platform(
             post,
@@ -554,6 +575,17 @@ async def campaign_publish_generated_post(
                 platform,
             )
 
+            if not social_credentials and not data.allow_mock_fallback:
+                results.append(
+                    CampaignPublishResult(
+                        platform=platform,
+                        status="not_connected",
+                        mode="not_connected",
+                        error=_platform_not_connected_message(platform),
+                    )
+                )
+                continue
+
             publish_result = await publish_generated_post_to_platform(
                 post,
                 platform=platform,
@@ -602,7 +634,7 @@ async def campaign_publish_generated_post(
     metadata["latest_campaign"] = campaign_record
     post.metadata_json = metadata
 
-    if any(result.status != "failed" for result in results):
+    if any(result.status in {"success", "mock_fallback"} for result in results):
         post.status = GeneratedPostStatus.published.value
         post.published_at = published_at
     else:

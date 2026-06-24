@@ -759,6 +759,7 @@ export type ClientGeneratedPostStatus =
   | "archived";
 
 export type ClientGeneratedPostPlatform =
+  | "youtube"
   | "instagram"
   | "facebook"
   | "linkedin"
@@ -826,8 +827,8 @@ export type CampaignPublishGeneratedPostPayload = {
 
 export type ClientCampaignPublishResult = {
   platform: ClientCampaignPublishPlatform | string;
-  status: "success" | "failed" | "mock_fallback" | string;
-  mode: "real" | "mock" | "failed" | string;
+  status: "success" | "failed" | "mock_fallback" | "not_connected" | string;
+  mode: "real" | "mock" | "failed" | "not_connected" | string;
   external_post_id?: string | null;
   external_post_url?: string | null;
   warning?: string | null;
@@ -938,12 +939,14 @@ export async function deleteGeneratedPost(postId: string): Promise<void> {
 
 export type ClientScheduledPostStatus =
   | "scheduled"
+  | "not_connected"
   | "publishing"
   | "published"
   | "failed"
   | "cancelled";
 
 export type ClientScheduledPostPlatform =
+  | "youtube"
   | "instagram"
   | "facebook"
   | "linkedin"

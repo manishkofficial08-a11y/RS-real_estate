@@ -34,6 +34,7 @@ import {
 
 interface MediaLibraryProps {
   darkMode: boolean;
+  onNavigate?: (screen: string) => void;
   defaultFilter?: ClientContentAssetType | "all";
   title?: string;
   subtitle?: string;
@@ -56,6 +57,8 @@ type AssetFormState = {
 const apiOrigin = (
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/v1"
 ).replace(/\/api\/v1\/?$/, "");
+
+const campaignHandoffStorageKey = "rs_campaign_studio_source_asset";
 
 const emptyForm: AssetFormState = {
   title: "",
@@ -85,6 +88,7 @@ const socialPlatformOptions: Array<{
   value: ClientGeneratedPostPlatform;
   label: string;
 }> = [
+  { value: "youtube", label: "YouTube Shorts" },
   { value: "instagram", label: "Instagram" },
   { value: "facebook", label: "Facebook" },
   { value: "linkedin", label: "LinkedIn" },
@@ -242,6 +246,7 @@ let cachedContentAssets: ClientContentAsset[] = [];
 
 export function MediaLibrary({
   darkMode,
+  onNavigate,
   defaultFilter = "all",
   title = "Media Library",
   subtitle = "Store listing media, content drafts, PDFs, videos, and campaign links.",
@@ -702,56 +707,43 @@ export function MediaLibrary({
   }
 
 
-  async function handleCreateMultiPlatformVideoCampaign(asset: ClientContentAsset) {
-    if (asset.asset_type !== "video") {
-      setMessage("Multi-platform campaigns are available for video assets only.");
-      return;
-    }
-
+  function handleStartMultiPlatformCampaign(asset: ClientContentAsset) {
     try {
-      setSaving(true);
       setMessage(null);
 
-      const assetTags = getTags(asset)
-        .map((tag) => tag.trim().replace(/^#/, ""))
-        .filter(Boolean);
+      const payload = {
+        id: asset.id,
+        title: asset.title,
+        description: asset.description || null,
+        asset_type: asset.asset_type,
+        file_url: asset.file_url || null,
+        file_name: asset.file_name || null,
+        mime_type: asset.mime_type || null,
+        file_size: asset.file_size || null,
+        property_id: asset.property_id || null,
+        property_title: asset.property_title || null,
+        tags: getTags(asset),
+      };
 
-      const createdPosts = await Promise.all(
-        multiPlatformVideoDrafts.map((config) =>
-          createGeneratedPost({
-            title: `${config.titlePrefix}: ${asset.title}`,
-            content: buildMultiPlatformVideoContent(asset, config),
-            platform: config.generatedPlatform,
-            status: "draft",
-            property_id: asset.property_id || null,
-            hashtags: Array.from(new Set([...assetTags, ...config.hashtags])),
-            media_asset_ids: getMediaAssetIdsForGeneratedPost(asset),
-            metadata_json: {
-              source: "media_library_multi_platform_campaign",
-              source_asset_id: asset.id,
-              source_asset_type: asset.asset_type,
-              source_file_url: asset.file_url || null,
-              source_file_name: asset.file_name || null,
-              target_platform: config.targetPlatform,
-              platform_label: config.label,
-              campaign_type: "multi_platform_video",
-              requires_platform_credentials: true,
-            },
-          }),
-        ),
+      window.sessionStorage.setItem(
+        campaignHandoffStorageKey,
+        JSON.stringify(payload),
       );
 
       setMessage(
-        `Multi-platform campaign created: ${createdPosts.length} video drafts for Instagram, YouTube Shorts, Facebook, and LinkedIn. Open AI Studio > Generated Posts to review and schedule.`,
+        `"${asset.title}" is ready in AI Campaign Studio. Choose platforms, goal, and tone to generate editable drafts.`,
       );
+
+      window.dispatchEvent(
+        new CustomEvent("rs-campaign-asset-selected", { detail: payload }),
+      );
+      onNavigate?.("ai-studio");
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "Failed to create multi-platform video campaign",
+          : "Failed to open AI Campaign Studio for this asset.",
       );
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -1319,7 +1311,7 @@ export function MediaLibrary({
                 </div>
 
 
-                {selectedAsset.asset_type === "video" && (
+                {selectedAsset && (
                   <div
                     className="rounded-xl border p-4"
                     style={{
@@ -1346,12 +1338,14 @@ export function MediaLibrary({
                           className="text-sm font-semibold"
                           style={{ color: textPrimary }}
                         >
-                          Multi-platform video campaign
+                          Create multi-platform campaign
                         </h3>
                         <p className="mt-1 text-xs leading-relaxed" style={{ color: textMuted }}>
-                          Create platform-specific drafts for Instagram Reels,
-                          YouTube Shorts, Facebook Video, and LinkedIn from this
-                          one uploaded video.
+                          Send this asset into AI Campaign Studio to choose a
+                          goal, tone, and target platforms before drafts are saved.
+                          {selectedAsset.asset_type !== "video"
+                            ? " YouTube Shorts and video placements will require a video asset before live publishing."
+                            : " Video-ready drafts can be prepared for Reels, Shorts, Facebook Video, and LinkedIn."}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           {multiPlatformVideoDrafts.map((item) => (
@@ -1379,7 +1373,7 @@ export function MediaLibrary({
 
                     <button
                       type="button"
-                      onClick={() => handleCreateMultiPlatformVideoCampaign(selectedAsset)}
+                      onClick={() => handleStartMultiPlatformCampaign(selectedAsset)}
                       disabled={saving}
                       className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-60"
                       style={{
@@ -1396,9 +1390,8 @@ export function MediaLibrary({
                     </button>
 
                     <p className="mt-2 text-xs" style={{ color: textSoft }}>
-                      Real publishing will use connected platform accounts later.
-                      These drafts are safe to review, schedule, and publish after
-                      credentials are configured.
+                      Publishing stays honest: disconnected platforms will show
+                      Not Connected until account tokens/OAuth are configured.
                     </p>
                   </div>
                 )}

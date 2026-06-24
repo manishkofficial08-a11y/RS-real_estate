@@ -24,6 +24,7 @@ import {
   Zap,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { CampaignStudio } from "./CampaignStudio";
 import {
   campaignPublishGeneratedPost,
   createClientAIJob,
@@ -184,7 +185,7 @@ const templates = [
   },
 ];
 
-type GeneratedPostStatus = "draft" | "scheduled" | "published";
+type GeneratedPostStatus = "draft" | "scheduled" | "published" | "failed";
 type GeneratedPostFilter = "all" | GeneratedPostStatus;
 type GeneratedPostPlatform = string;
 
@@ -232,12 +233,14 @@ const generatedPostFilters: Array<{ label: string; value: GeneratedPostFilter }>
   { label: "Draft", value: "draft" },
   { label: "Scheduled", value: "scheduled" },
   { label: "Published", value: "published" },
+  { label: "Failed", value: "failed" },
 ];
 
 const generatedPostPlatformOptions: Array<{
   label: string;
   value: ClientScheduledPostPlatform;
 }> = [
+  { label: "YouTube Shorts", value: "youtube" },
   { label: "Instagram", value: "instagram" },
   { label: "LinkedIn", value: "linkedin" },
   { label: "Facebook", value: "facebook" },
@@ -280,6 +283,15 @@ const getGeneratedPostStatusConfig = (status: GeneratedPostStatus) => {
     };
   }
 
+  if (status === "failed") {
+    return {
+      label: "Failed",
+      color: "#ef4444",
+      bg: "rgba(239, 68, 68, 0.10)",
+      border: "rgba(239, 68, 68, 0.18)",
+    };
+  }
+
   return {
     label: "Draft",
     color: "#f59e0b",
@@ -289,6 +301,7 @@ const getGeneratedPostStatusConfig = (status: GeneratedPostStatus) => {
 };
 interface AIStudioProps {
   darkMode: boolean;
+  onNavigate?: (screen: string) => void;
 }
 
 const formatDateTime = (value?: string | null) => {
@@ -316,6 +329,7 @@ const normalizeGeneratedPostPlatform = (
 
   const allowedPlatforms = new Set<ClientGeneratedPostPlatform>([
     "instagram",
+    "youtube",
     "facebook",
     "linkedin",
     "twitter",
@@ -342,7 +356,7 @@ const formatGeneratedPostPlatform = (platform: string) => {
 const normalizeGeneratedPostStatus = (
   status: ClientGeneratedPost["status"],
 ): GeneratedPostStatus => {
-  if (status === "scheduled" || status === "published") {
+  if (status === "scheduled" || status === "published" || status === "failed") {
     return status;
   }
 
@@ -446,7 +460,7 @@ const getToolById = (toolId: string) =>
 const getToolByJob = (job: ClientAIJob) =>
   tools.find((tool) => tool.jobType === job.job_type) || tools[0];
 
-export function AIStudio({ darkMode }: AIStudioProps) {
+export function AIStudio({ darkMode, onNavigate }: AIStudioProps) {
   const [activeTool, setActiveTool] = useState("caption");
   const [selectedTone, setSelectedTone] = useState("Professional");
   const [selectedPlatform, setSelectedPlatform] = useState("LinkedIn");
@@ -732,13 +746,25 @@ export function AIStudio({ darkMode }: AIStudioProps) {
 
   const handlePublishGeneratedPost = async (post: GeneratedPost) => {
     const actionKey = `${post.id}:publish`;
+    const campaignPlatform = post.apiPlatform as ClientCampaignPublishPlatform;
+
+    if (
+      campaignPlatform in campaignPlatformLabels &&
+      !connectedCampaignPlatformSet.has(campaignPlatform)
+    ) {
+      showGeneratedPostActionMessage(
+        `${campaignPlatformLabels[campaignPlatform]} is not connected. Connect this account before publishing.`,
+        "error",
+      );
+      return;
+    }
 
     try {
       setGeneratedPostActionKey(actionKey);
 
       const published = await publishGeneratedPost(post.id, {
         platform: post.apiPlatform,
-        allow_mock_fallback: true,
+        allow_mock_fallback: false,
       });
 
       await loadGeneratedPosts();
@@ -747,7 +773,7 @@ export function AIStudio({ darkMode }: AIStudioProps) {
         : null;
       showGeneratedPostActionMessage(
         publisherMode === "mock"
-          ? "Post published in mock mode. Configure real platform tokens for live publishing."
+          ? "Post returned mock mode. Configure real platform tokens for live publishing."
           : "Post published successfully.",
       );
     } catch (err) {
@@ -1162,6 +1188,15 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-4"
                 >
+                  <CampaignStudio
+                    darkMode={darkMode}
+                    socialAccounts={socialAccounts}
+                    loadingSocialAccounts={loadingSocialAccounts}
+                    onRefreshSocialAccounts={() => void loadSocialAccounts()}
+                    onDraftsChanged={loadGeneratedPosts}
+                    onNavigate={onNavigate}
+                  />
+
                   <div
                     className="hidden"
                     style={{ background: cardStyle.background, borderColor: cardStyle.borderColor }}
@@ -2478,10 +2513,11 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                           (platform) => platform.value === result.platform,
                         )?.label || result.platform;
                       const isFailed = result.status === "failed";
+                      const isNotConnected = result.status === "not_connected";
                       const isMock = result.status === "mock_fallback";
                       const resultColor = isFailed
                         ? "#ef4444"
-                        : isMock
+                        : isMock || isNotConnected
                           ? "#f59e0b"
                           : "#10b981";
 
@@ -2512,9 +2548,11 @@ export function AIStudio({ darkMode }: AIStudioProps) {
                             >
                               {isFailed
                                 ? "Failed"
-                                : isMock
-                                  ? "Mock fallback"
-                                  : "Success"}
+                                : isNotConnected
+                                  ? "Not connected"
+                                  : isMock
+                                    ? "Mock fallback"
+                                    : "Success"}
                             </span>
                             <span className="text-xs" style={{ color: textSoft }}>
                               {result.mode}

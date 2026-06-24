@@ -42,8 +42,12 @@ const screenComponents: Record<
   dashboard: ({ darkMode, onNavigate }) => (
     <Dashboard darkMode={darkMode} onNavigate={onNavigate!} />
   ),
-  "ai-studio": ({ darkMode }) => <AIStudio darkMode={darkMode} />,
-  media: ({ darkMode }) => <MediaLibrary darkMode={darkMode} />,
+  "ai-studio": ({ darkMode, onNavigate }) => (
+    <AIStudio darkMode={darkMode} onNavigate={onNavigate} />
+  ),
+  media: ({ darkMode, onNavigate }) => (
+    <MediaLibrary darkMode={darkMode} onNavigate={onNavigate} />
+  ),
   analytics: ({ darkMode }) => <Analytics darkMode={darkMode} />,
   crm: ({ darkMode }) => <CRM darkMode={darkMode} />,
   properties: ({ darkMode }) => <Properties darkMode={darkMode} />,

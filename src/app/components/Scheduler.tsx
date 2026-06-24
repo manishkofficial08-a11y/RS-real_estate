@@ -83,6 +83,7 @@ const monthNames = [
 ];
 
 const platformOptions: ClientScheduledPostPlatform[] = [
+  "youtube",
   "instagram",
   "facebook",
   "linkedin",
@@ -95,6 +96,7 @@ const platformMeta: Record<
   string,
   { label: string; color: string; icon: LucideIcon }
 > = {
+  youtube: { label: "YouTube Shorts", color: "#ff0033", icon: Youtube },
   instagram: { label: "Instagram", color: "#e1306c", icon: Instagram },
   facebook: { label: "Facebook", color: "#1877f2", icon: Facebook },
   linkedin: { label: "LinkedIn", color: "#0077b5", icon: Linkedin },
@@ -111,6 +113,11 @@ const statusMeta: Record<
     label: "Scheduled",
     color: "#10b981",
     bg: "rgba(16,185,129,0.10)",
+  },
+  not_connected: {
+    label: "Not Connected",
+    color: "#f59e0b",
+    bg: "rgba(245,158,11,0.12)",
   },
   publishing: {
     label: "Publishing",
