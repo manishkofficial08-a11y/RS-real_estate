@@ -14,8 +14,12 @@ from app.database.base import AsyncSessionLocal
 from app.models.content_asset import ContentAsset
 from app.models.generated_post import GeneratedPost, GeneratedPostStatus
 from app.models.scheduled_post import ScheduledPost, ScheduledPostStatus
+from app.services.social_account_credentials import (
+    get_connected_social_account_credentials,
+)
 from app.services.social_publisher import (
     PublisherError,
+    PublisherConfigError,
     get_publisher_mode,
     publish_generated_post_to_platform,
 )
@@ -87,6 +91,13 @@ async def process_one_scheduled_post(
 ) -> Dict[str, Any]:
     started_at = _now()
     publisher_mode = get_publisher_mode()
+    schedule_metadata = schedule.metadata_json or {}
+    metadata_allow_mock_fallback = schedule_metadata.get("allow_mock_fallback")
+    effective_allow_mock_fallback = (
+        metadata_allow_mock_fallback
+        if isinstance(metadata_allow_mock_fallback, bool)
+        else allow_mock_fallback
+    )
 
     post_result = await db.execute(
         select(GeneratedPost).where(
@@ -120,6 +131,7 @@ async def process_one_scheduled_post(
             "event": "publishing_started",
             "started_at": started_at.isoformat(),
             "mode": publisher_mode,
+            "allow_mock_fallback": effective_allow_mock_fallback,
         },
     )
     await db.commit()
@@ -128,11 +140,23 @@ async def process_one_scheduled_post(
     media_asset = await get_linked_media_asset(db, schedule.tenant_id, post)
 
     try:
+        social_credentials = await get_connected_social_account_credentials(
+            db,
+            schedule.tenant_id,
+            schedule.platform,
+        )
+
+        if not social_credentials and not effective_allow_mock_fallback:
+            raise PublisherConfigError(
+                f"{schedule.platform} is not connected. Connect this account before publishing."
+            )
+
         publish_result = await publish_generated_post_to_platform(
             post,
             platform=schedule.platform,
             media_asset=media_asset,
-            allow_mock_fallback=allow_mock_fallback,
+            allow_mock_fallback=effective_allow_mock_fallback,
+            credentials=social_credentials,
         )
 
         completed_at = _now()

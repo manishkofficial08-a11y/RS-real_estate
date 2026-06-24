@@ -16,6 +16,7 @@ class GeneratedPostStatus(str, enum.Enum):
 
 
 class GeneratedPostPlatform(str, enum.Enum):
+    youtube = "youtube"
     instagram = "instagram"
     facebook = "facebook"
     linkedin = "linkedin"

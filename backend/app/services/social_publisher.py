@@ -98,7 +98,23 @@ def _normalize_platform(platform: Optional[str]) -> str:
     value = (platform or "other").strip().lower()
     if value == "twitter/x":
         return "twitter"
+    if value in {"youtube shorts", "youtube_short", "youtube_shorts"}:
+        return "youtube"
+    if value in {"instagram reels", "reels", "ig"}:
+        return "instagram"
+    if value in {"facebook video", "fb"}:
+        return "facebook"
     return value
+
+
+def _platform_label(platform: str) -> str:
+    labels = {
+        "youtube": "YouTube Shorts",
+        "instagram": "Instagram Reels",
+        "facebook": "Facebook Video",
+        "linkedin": "LinkedIn",
+    }
+    return labels.get(platform, platform.title())
 
 
 def _build_caption(post: GeneratedPost) -> str:
@@ -703,6 +719,11 @@ async def publish_generated_post_to_platform(
     normalized_platform = _normalize_platform(platform or post.platform)
 
     if mode == "mock":
+        if not allow_mock_fallback:
+            raise PublisherConfigError(
+                f"{_platform_label(normalized_platform)} publisher is running in mock mode. "
+                "Connect real credentials and set PUBLISHER_MODE=real or hybrid before live publishing."
+            )
         return _mock_publish(post, normalized_platform)
 
     try:

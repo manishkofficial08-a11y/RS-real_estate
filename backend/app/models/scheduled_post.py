@@ -9,6 +9,7 @@ from app.database.base import Base
 
 class ScheduledPostStatus(str, enum.Enum):
     scheduled = "scheduled"
+    not_connected = "not_connected"
     publishing = "publishing"
     published = "published"
     failed = "failed"
@@ -16,6 +17,7 @@ class ScheduledPostStatus(str, enum.Enum):
 
 
 class ScheduledPostPlatform(str, enum.Enum):
+    youtube = "youtube"
     instagram = "instagram"
     facebook = "facebook"
     linkedin = "linkedin"
