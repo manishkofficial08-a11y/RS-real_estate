@@ -15,6 +15,14 @@ def test_known_industry_uses_bounded_category_rule():
     assert "around:5000,21.251400,81.629600" in query
 
 
+def test_mme_ai_local_business_niche_uses_broad_indexed_rules():
+    assert normalize_category("Local Businesses") == "local_businesses"
+    query = build_overpass_query("Local Businesses", 21.2514, 81.6296, 3000)
+    assert '["shop"]' in query
+    assert '["office"]' in query
+    assert '["amenity"]' in query
+
+
 def test_free_provider_has_failover_instances(monkeypatch):
     monkeypatch.delenv("LEAD_AGENT_OVERPASS_URLS", raising=False)
     monkeypatch.delenv("LEAD_AGENT_OVERPASS_URL", raising=False)
@@ -83,3 +91,7 @@ def test_admin_lead_generation_routes_are_registered(monkeypatch, tmp_path):
     paths = {route.path for route in app.routes}
     assert "/api/v1/admin/lead-generation/search" in paths
     assert "/api/v1/admin/lead-generation/import" in paths
+    assert "/api/v1/support/tickets/{ticket_id}/messages" in paths
+    assert "/api/v1/support/admin/tickets/{ticket_id}/messages" in paths
+    assert "/api/v1/billing/admin/subscriptions" in paths
+    assert "/api/v1/billing/admin/subscriptions/{tenant_id}" in paths

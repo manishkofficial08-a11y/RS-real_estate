@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
-  AlertCircle,
   CheckCircle2,
   Eye,
   Filter,
@@ -9,6 +8,7 @@ import {
   Send,
 } from 'lucide-react';
 import {
+  addAdminSupportMessage,
   getSupportTickets,
   updateSupportTicket,
   type AdminSupportTicket,
@@ -111,7 +111,7 @@ export default function Support() {
       return;
     }
 
-    setReply(selectedTicket.admin_reply || '');
+    setReply('');
     setSelectedStatus((selectedTicket.status as AdminSupportTicketStatus) || 'in_progress');
     setSelectedPriority((selectedTicket.priority as AdminSupportTicketPriority) || 'medium');
   }, [selectedTicket]);
@@ -150,15 +150,22 @@ export default function Support() {
     try {
       setSaving(true);
       setError(null);
-      const updated = await updateSupportTicket(selectedTicket.id, {
+      let updated = await updateSupportTicket(selectedTicket.id, {
         status: selectedStatus,
         priority: selectedPriority,
-        admin_reply: reply.trim() || null,
       });
+
+      if (reply.trim()) {
+        updated = await addAdminSupportMessage(selectedTicket.id, {
+          message: reply.trim(),
+          status: selectedStatus,
+        });
+      }
 
       setTickets((prev) =>
         prev.map((ticket) => (ticket.id === updated.id ? updated : ticket)),
       );
+      setReply('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update ticket');
     } finally {
@@ -439,22 +446,24 @@ export default function Support() {
                 </p>
               </div>
 
-              <div
-                className="rounded-xl p-4"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertCircle size={14} style={{ color: '#FF8A5C' }} />
-                  <span className="text-sm font-medium" style={{ color: '#F0EDE6' }}>
-                    Client Message
-                  </span>
-                </div>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#8A8A93' }}>
-                  {selectedTicket.message}
-                </p>
+              <div className="max-h-72 space-y-3 overflow-y-auto rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                {(selectedTicket.messages?.length
+                  ? selectedTicket.messages
+                  : [{ id: 'legacy', author_type: 'client', message: selectedTicket.message, created_at: selectedTicket.created_at }]
+                ).map((item) => {
+                  const fromAdmin = item.author_type === 'admin';
+                  return (
+                    <div key={item.id} className={`flex ${fromAdmin ? 'justify-end' : 'justify-start'}`}>
+                      <div className="max-w-[88%] rounded-2xl px-3.5 py-2.5" style={{ background: fromAdmin ? 'rgba(107,138,255,0.14)' : 'rgba(255,255,255,0.05)', border: `1px solid ${fromAdmin ? 'rgba(107,138,255,0.22)' : 'rgba(255,255,255,0.07)'}` }}>
+                        <p className="text-[10px] font-medium" style={{ color: fromAdmin ? '#8EA4FF' : '#FFAA85' }}>
+                          {fromAdmin ? item.author_name || 'Founder Support' : item.author_name || selectedTicket.created_by_name || 'Client'}
+                        </p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm leading-5" style={{ color: '#D7D4CC' }}>{item.message}</p>
+                        <p className="mt-1 text-[10px]" style={{ color: '#66666F' }}>{formatDate(item.created_at)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -524,7 +533,7 @@ export default function Support() {
                 }}
               >
                 <Send size={14} />
-                {saving ? 'Saving...' : 'Save Reply and Status'}
+                {saving ? 'Saving...' : reply.trim() ? 'Send reply' : 'Update ticket'}
               </button>
             </div>
           ) : (

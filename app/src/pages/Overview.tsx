@@ -1,589 +1,144 @@
-import { useEffect, useState } from 'react';
-import TopographyHero from '@/components/TopographyHero';
-import { getAdminDashboardStats, type AdminDashboardStats } from '@/lib/adminApi';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
+  ArrowRight,
+  Bot,
   Building2,
-  CheckCircle2,
-  CreditCard,
-  Database,
-  HardDrive,
-  Layers,
-  Mail,
-  Server,
-  Ticket,
-  UserPlus,
+  CircleDollarSign,
+  Headphones,
+  LoaderCircle,
+  RefreshCw,
+  Search,
+  Sparkles,
   Users,
-  Zap,
 } from 'lucide-react';
+import {
+  getAdminDashboardStats,
+  getAdminLeads,
+  getAdminSubscriptions,
+  getAdminTenants,
+  getAIJobs,
+  getSupportTickets,
+  type AdminAIJob,
+  type AdminDashboardStats,
+  type AdminLead,
+  type AdminSubscriptionRow,
+  type AdminSupportTicket,
+  type AdminTenant,
+} from '@/lib/adminApi';
 
-function Sparkline({
-  color,
-  variant,
-}: {
-  color: string;
-  variant: 'up' | 'down' | 'mixed';
-}) {
-  const points =
-    variant === 'up'
-      ? '0,20 10,16 20,18 30,12 40,14 50,8 60,10'
-      : variant === 'down'
-        ? '0,8 10,12 20,10 30,14 40,16 50,18 60,20'
-        : '0,15 10,10 20,14 30,8 40,12 50,16 60,10';
+type DashboardData = {
+  stats: AdminDashboardStats;
+  tenants: AdminTenant[];
+  leads: AdminLead[];
+  tickets: AdminSupportTicket[];
+  subscriptions: AdminSubscriptionRow[];
+  jobs: AdminAIJob[];
+};
 
-  return (
-    <svg width="60" height="24" viewBox="0 0 60 24" fill="none">
-      <path
-        d={`M${points}`}
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+const emptyStats: AdminDashboardStats = { total_tenants: 0, total_users: 0, total_properties: 0, total_leads: 0 };
+
+function label(value: string) {
+  return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-const platformHealth = [
-  {
-    label: 'Backend API',
-    status: 'Operational',
-    note: 'Core admin and client APIs are available from the live backend.',
-    icon: Server,
-    color: '#4ADE80',
-  },
-  {
-    label: 'Database',
-    status: 'Connected',
-    note: 'Tenant, user, CRM, property, and content data are backed by Postgres.',
-    icon: Database,
-    color: '#4ADE80',
-  },
-  {
-    label: 'AI jobs queue',
-    status: 'Monitoring',
-    note: 'AI Jobs page tracks queued, running, completed, and failed jobs.',
-    icon: Layers,
-    color: '#6B8AFF',
-  },
-  {
-    label: 'Publisher worker',
-    status: 'Setup pending',
-    note: 'Publishing workers are being prepared for campaign deployment.',
-    icon: Zap,
-    color: '#FF8A5C',
-  },
-  {
-    label: 'Email/SMTP',
-    status: 'Operational',
-    note: 'Password reset and account email flow are ready for client access.',
-    icon: Mail,
-    color: '#4ADE80',
-  },
-];
-
-const founderActivities = [
-  {
-    label: 'New company onboarded',
-    detail: 'Preview: tenant workspace created and ready for client setup.',
-    time: 'Today',
-    icon: Building2,
-    color: '#6B8AFF',
-  },
-  {
-    label: 'User created',
-    detail: 'Preview: client user access added to a company workspace.',
-    time: 'Today',
-    icon: UserPlus,
-    color: '#4ADE80',
-  },
-  {
-    label: 'Support ticket opened',
-    detail: 'Preview: client request waiting for founder/admin review.',
-    time: '1h ago',
-    icon: Ticket,
-    color: '#FF8A5C',
-  },
-  {
-    label: 'AI job completed',
-    detail: 'Preview: generated content job completed from AI Studio.',
-    time: '2h ago',
-    icon: CheckCircle2,
-    color: '#4ADE80',
-  },
-  {
-    label: 'Publisher worker ran',
-    detail: 'Preview: publishing readiness check completed; credentials still pending.',
-    time: '3h ago',
-    icon: Zap,
-    color: '#6B8AFF',
-  },
-];
-
-const quickActions = [
-  { label: 'Review Companies', icon: Building2, hint: 'Audit tenant accounts' },
-  { label: 'Review Users', icon: Users, hint: 'Check user access' },
-  { label: 'Open Support', icon: Ticket, hint: 'Review client tickets' },
-  { label: 'Check AI Jobs', icon: Zap, hint: 'Monitor automation queue' },
-  { label: 'View Subscriptions', icon: CreditCard, hint: 'Review plan status' },
-];
-
-const launchReadiness = [
-  { label: 'Auth working', status: 'Ready', ready: true },
-  { label: 'Media Library ready', status: 'Ready', ready: true },
-  { label: 'Generated Posts ready', status: 'Ready', ready: true },
-  { label: 'Scheduler ready', status: 'Ready', ready: true },
-  { label: 'Publisher setup pending', status: 'Pending', ready: false },
-  { label: 'Social tokens pending', status: 'Pending', ready: false },
-];
-
-function getStatusBadgeStyle(status: string, color: string) {
-  const isPending = status.toLowerCase().includes('pending');
-
-  return {
-    background: isPending ? 'rgba(255, 138, 92, 0.12)' : `${color}18`,
-    color: isPending ? '#FF8A5C' : color,
-    border: `1px solid ${
-      isPending ? 'rgba(255, 138, 92, 0.24)' : `${color}30`
-    }`,
-  };
+function relativeDate(value?: string | null) {
+  if (!value) return 'Recently';
+  const minutes = Math.max(1, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
-
 
 export default function Overview() {
-  const [stats, setStats] = useState<AdminDashboardStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [data, setData] = useState<DashboardData>({ stats: emptyStats, tenants: [], leads: [], tickets: [], subscriptions: [], jobs: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    getAdminDashboardStats()
-      .then((data) => {
-        setStats(data);
-        setFetchError(null);
-      })
-      .catch((error) => {
-        setFetchError(
-          error instanceof Error
-            ? error.message
-            : 'Failed to load dashboard stats'
-        );
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, []);
+  async function load() {
+    try {
+      setLoading(true);
+      setError('');
+      const [stats, tenants, leads, tickets, subscriptions, jobs] = await Promise.all([
+        getAdminDashboardStats(),
+        getAdminTenants(),
+        getAdminLeads(),
+        getSupportTickets(),
+        getAdminSubscriptions(),
+        getAIJobs(),
+      ]);
+      setData({ stats, tenants, leads, tickets, subscriptions, jobs });
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Dashboard data unavailable.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  const kpis = [
-    {
-      label: 'Total Companies',
-      value: isLoading ? '...' : String(stats?.total_tenants ?? 0),
-      trend: '+12%',
-      trendUp: true,
-      color: '#6B8AFF',
-      sparkline: 'mixed' as const,
-    },
-    {
-      label: 'Total Users',
-      value: isLoading ? '...' : String(stats?.total_users ?? 0),
-      trend: '+8%',
-      trendUp: true,
-      color: '#4ADE80',
-      sparkline: 'up' as const,
-    },
-    {
-      label: 'Total Properties',
-      value: isLoading ? '...' : String(stats?.total_properties ?? 0),
-      trend: '+23%',
-      trendUp: true,
-      color: '#FF8A5C',
-      sparkline: 'up' as const,
-    },
-    {
-      label: 'Total Leads',
-      value: isLoading ? '...' : String(stats?.total_leads ?? 0),
-      trend: '+156',
-      trendUp: true,
-      color: '#6B8AFF',
-      sparkline: 'up' as const,
-    },
+  useEffect(() => { void load(); }, []);
+
+  const insight = useMemo(() => {
+    const openTickets = data.tickets.filter((ticket) => !['resolved', 'closed'].includes(ticket.status));
+    const urgentTickets = openTickets.filter((ticket) => ['urgent', 'high'].includes(ticket.priority));
+    const activeRevenue = data.subscriptions.filter((item) => item.subscription.status === 'active').reduce((sum, item) => sum + item.monthly_value, 0);
+    const runningJobs = data.jobs.filter((job) => ['queued', 'running'].includes(job.status));
+    const qualityLeads = data.leads.filter((lead) => lead.score >= 70);
+    return { openTickets, urgentTickets, activeRevenue, runningJobs, qualityLeads };
+  }, [data]);
+
+  const actions = [
+    { label: 'Generate leads', detail: 'Discover a fresh prospect list', icon: Search, path: '/admin/lead-generation', tone: '#8EA4FF' },
+    { label: 'Support inbox', detail: `${insight.openTickets.length} conversations need review`, icon: Headphones, path: '/admin/support', tone: '#FF9B78' },
+    { label: 'Subscriptions', detail: 'Review access and renewals', icon: CircleDollarSign, path: '/admin/subscriptions', tone: '#63E494' },
   ];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8" style={{ maxWidth: '100%' }}>
-      <TopographyHero />
-
-      {fetchError && (
-        <div className="surface-card p-4 mt-4" style={{ color: '#FF8A5C' }}>
-          {fetchError}
+    <div className="space-y-7 p-4 md:p-8">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[.18em]" style={{ color: '#7F96F4' }}><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Founder workspace</div>
+          <h1 className="text-3xl font-semibold tracking-[-.04em] md:text-4xl" style={{ color: '#F1EEE7' }}>Good evening, Manish.</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: '#85858E' }}>A live operating view of MMe-AI clients, revenue, support and automation—not a demo dashboard.</p>
         </div>
-      )}
-
-      <div
-        className="relative overflow-hidden mt-0 mx-0 rounded-[24px]"
-        style={{ padding: '48px 0', marginTop: '-24px' }}
-      >
-        <div
-          className="absolute inset-0 z-0 overflow-hidden rounded-[24px]"
-          style={{ background: '#0A0A0F' }}
-        >
-          <div
-            className="absolute rounded-full animate-orbFloat"
-            style={{
-              width: 400,
-              height: 400,
-              background: 'radial-gradient(circle, #6B8AFF 0%, transparent 70%)',
-              top: -100,
-              left: -100,
-              filter: 'blur(80px)',
-              opacity: 0.4,
-              animationDelay: '0s',
-            }}
-          />
-
-          <div
-            className="absolute rounded-full animate-orbFloat-slow"
-            style={{
-              width: 500,
-              height: 500,
-              background: 'radial-gradient(circle, #FF8A5C 0%, transparent 70%)',
-              bottom: -150,
-              right: -100,
-              filter: 'blur(80px)',
-              opacity: 0.4,
-              animationDelay: '-7s',
-            }}
-          />
-
-          <div
-            className="absolute rounded-full animate-orbFloat-medium"
-            style={{
-              width: 350,
-              height: 350,
-              background: 'radial-gradient(circle, #4ADE80 0%, transparent 70%)',
-              top: '50%',
-              left: '50%',
-              filter: 'blur(80px)',
-              opacity: 0.4,
-              animationDelay: '-14s',
-            }}
-          />
+        <div className="flex items-center gap-3">
+          <span className="rounded-full px-3 py-2 text-xs" style={{ background: 'rgba(74,222,128,.08)', color: '#63E494', border: '1px solid rgba(74,222,128,.16)' }}>Live backend</span>
+          <button onClick={() => void load()} disabled={loading} className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'rgba(255,255,255,.035)', color: '#9999A3', border: '1px solid rgba(255,255,255,.08)' }} title="Refresh dashboard"><RefreshCw size={15} className={loading ? 'animate-spin' : ''} /></button>
         </div>
+      </header>
 
-        <div className="relative z-[1] grid grid-cols-1 gap-5 px-0 sm:grid-cols-2 xl:grid-cols-4">
-          {kpis.map((kpi) => (
-            <div
-              key={kpi.label}
-              className="surface-card surface-card-hover p-6"
-              style={{ backdropFilter: 'blur(24px)' }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="font-mono text-xs" style={{ color: '#8A8A93' }}>
-                  {kpi.label}
-                </span>
+      {error && <div className="rounded-xl border px-4 py-3 text-sm" style={{ background: 'rgba(255,138,92,.08)', borderColor: 'rgba(255,138,92,.2)', color: '#FF9B78' }}>{error}</div>}
 
-                <span
-                  className="text-xs font-mono px-2 py-0.5 rounded-full"
-                  style={{
-                    background: kpi.trendUp
-                      ? 'rgba(74, 222, 128, 0.15)'
-                      : 'rgba(255, 90, 90, 0.15)',
-                    color: kpi.trendUp ? '#4ADE80' : '#FF5A5A',
-                  }}
-                >
-                  {kpi.trend}
-                </span>
-              </div>
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: 'Client workspaces', value: data.stats.total_tenants, note: `${data.tenants.filter((item) => item.is_active).length} active`, icon: Building2, color: '#8EA4FF' },
+          { label: 'Team members', value: data.stats.total_users, note: 'Across all clients', icon: Users, color: '#C7A8FF' },
+          { label: 'Qualified leads', value: insight.qualityLeads.length, note: `${data.stats.total_leads} total in CRM`, icon: Sparkles, color: '#D7B46A' },
+          { label: 'Monthly run rate', value: `$${Math.round(insight.activeRevenue).toLocaleString('en-IN')}`, note: `${data.subscriptions.filter((item) => item.subscription.status === 'active').length} paying/active`, icon: CircleDollarSign, color: '#63E494' },
+        ].map((item) => <article key={item.label} className="surface-card p-5"><div className="flex items-start justify-between"><div><p className="text-xs" style={{ color: '#72727C' }}>{item.label}</p><p className="mt-2 text-3xl font-semibold tracking-[-.04em]" style={{ color: '#F1EEE7' }}>{loading ? '—' : item.value}</p><p className="mt-2 text-xs" style={{ color: '#606069' }}>{item.note}</p></div><span className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ color: item.color, background: `${item.color}12` }}><item.icon size={17} /></span></div></article>)}
+      </section>
 
-              <div
-                className="font-mono text-data font-medium mb-2"
-                style={{ color: '#F0EDE6' }}
-              >
-                {kpi.value}
-              </div>
-
-              <Sparkline color={kpi.color} variant={kpi.sparkline} />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <section className="surface-card mt-8 p-6">
-        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p
-              className="mb-2 text-xs font-mono uppercase tracking-[0.2em]"
-              style={{ color: '#6B8AFF' }}
-            >
-              Operations Snapshot
-            </p>
-            <h2
-              className="font-display text-section font-medium tracking-[-0.03em]"
-              style={{ color: '#F0EDE6' }}
-            >
-              Platform Health
-            </h2>
-            <p className="mt-1 max-w-2xl text-sm" style={{ color: '#8A8A93' }}>
-              Founder readiness view for core SaaS systems. Values are a clean
-              operations snapshot and avoid storing secrets or touching backend services.
-            </p>
+      <section className="grid gap-5 xl:grid-cols-[1.25fr_.75fr]">
+        <div className="surface-card overflow-hidden">
+          <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: 'rgba(255,255,255,.06)' }}><div><h2 className="text-base font-semibold" style={{ color: '#E9E6DF' }}>Operations queue</h2><p className="mt-1 text-xs" style={{ color: '#71717A' }}>What needs founder attention right now</p></div><span className="rounded-full px-2.5 py-1 text-xs" style={{ color: insight.urgentTickets.length ? '#FF9B78' : '#63E494', background: insight.urgentTickets.length ? 'rgba(255,138,92,.1)' : 'rgba(74,222,128,.08)' }}>{insight.urgentTickets.length ? `${insight.urgentTickets.length} urgent` : 'Clear'}</span></div>
+          <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,.05)' }}>
+            {insight.openTickets.slice(0, 5).map((ticket) => <button key={ticket.id} onClick={() => navigate('/admin/support')} className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-white/[.025]"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: ['urgent', 'high'].includes(ticket.priority) ? 'rgba(255,138,92,.1)' : 'rgba(107,138,255,.1)', color: ['urgent', 'high'].includes(ticket.priority) ? '#FF9B78' : '#8EA4FF' }}><Headphones size={16} /></span><span className="min-w-0 flex-1"><span className="flex items-center gap-2"><span className="truncate text-sm font-medium" style={{ color: '#DCD9D2' }}>{ticket.subject}</span><span className="rounded-full px-2 py-0.5 text-[10px]" style={{ color: '#85858E', background: 'rgba(255,255,255,.05)' }}>{label(ticket.priority)}</span></span><span className="mt-1 block truncate text-xs" style={{ color: '#6F6F78' }}>{ticket.business_name} · {ticket.created_by_name}</span></span><span className="text-xs" style={{ color: '#5F5F68' }}>{relativeDate(ticket.updated_at || ticket.created_at)}</span><ArrowRight size={14} style={{ color: '#606069' }} /></button>)}
+            {!loading && !insight.openTickets.length && <div className="px-5 py-14 text-center"><Headphones className="mx-auto" size={22} style={{ color: '#4B4B53' }} /><p className="mt-3 text-sm" style={{ color: '#81818A' }}>Support queue is clear.</p></div>}
+            {loading && <div className="py-14"><LoaderCircle className="mx-auto animate-spin" size={20} style={{ color: '#8EA4FF' }} /></div>}
           </div>
-          <span
-            className="rounded-full px-3 py-1 text-xs font-mono"
-            style={{
-              background: 'rgba(107, 138, 255, 0.10)',
-              color: '#6B8AFF',
-              border: '1px solid rgba(107, 138, 255, 0.18)',
-            }}
-          >
-            Founder preview
-          </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-          {platformHealth.map((item) => {
-            const Icon = item.icon;
-            const badgeStyle = getStatusBadgeStyle(item.status, item.color);
-
-            return (
-              <div
-                key={item.label}
-                className="rounded-2xl p-4"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                }}
-              >
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div
-                    className="rounded-xl p-2.5"
-                    style={{
-                      background: `${item.color}14`,
-                      color: item.color,
-                      border: `1px solid ${item.color}26`,
-                    }}
-                  >
-                    <Icon size={18} />
-                  </div>
-                  <span
-                    className="rounded-full px-2.5 py-1 text-xs font-mono"
-                    style={badgeStyle}
-                  >
-                    {item.status}
-                  </span>
-                </div>
-                <h3 className="text-sm font-medium" style={{ color: '#F0EDE6' }}>
-                  {item.label}
-                </h3>
-                <p className="mt-2 text-xs leading-5" style={{ color: '#8A8A93' }}>
-                  {item.note}
-                </p>
-              </div>
-            );
-          })}
+        <div className="space-y-3">
+          {actions.map((action) => <button key={action.path} onClick={() => navigate(action.path)} className="surface-card group flex w-full items-center gap-4 p-4 text-left transition-transform hover:-translate-y-0.5"><span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `${action.tone}12`, color: action.tone }}><action.icon size={17} /></span><span className="min-w-0 flex-1"><span className="block text-sm font-medium" style={{ color: '#DEDBD4' }}>{action.label}</span><span className="mt-1 block truncate text-xs" style={{ color: '#6E6E77' }}>{action.detail}</span></span><ArrowRight size={15} style={{ color: '#606069' }} className="transition-transform group-hover:translate-x-1" /></button>)}
+          <div className="surface-card p-5"><div className="flex items-center gap-2"><Bot size={15} style={{ color: '#8EA4FF' }} /><p className="text-sm font-medium" style={{ color: '#DEDBD4' }}>Automation pulse</p></div><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,.025)' }}><p className="text-2xl font-semibold" style={{ color: '#F1EEE7' }}>{insight.runningJobs.length}</p><p className="mt-1 text-xs" style={{ color: '#696972' }}>Queued / running</p></div><div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,.025)' }}><p className="text-2xl font-semibold" style={{ color: '#F1EEE7' }}>{data.jobs.filter((job) => job.status === 'failed').length}</p><p className="mt-1 text-xs" style={{ color: '#696972' }}>Failed jobs</p></div></div></div>
         </div>
       </section>
 
-      <div className="grid grid-cols-1 gap-6 mt-8 xl:grid-cols-[1.3fr_1fr]">
-        <section className="surface-card p-6">
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <h2
-                className="font-display text-section font-medium tracking-[-0.03em]"
-                style={{ color: '#F0EDE6' }}
-              >
-                Recent Founder Activity
-              </h2>
-              <p className="mt-1 text-xs" style={{ color: '#8A8A93' }}>
-                Preview of platform actions founders should monitor.
-              </p>
-            </div>
-
-            <span
-              className="rounded-full px-3 py-1 text-xs font-mono"
-              style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                color: '#8A8A93',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
-              }}
-            >
-              Demo activity
-            </span>
-          </div>
-
-          <div className="space-y-0">
-            {founderActivities.map((activity, idx) => {
-              const Icon = activity.icon;
-
-              return (
-                <div
-                  key={activity.label}
-                  className="flex items-start gap-4 rounded-lg px-2 py-4 transition-colors duration-200 -mx-2"
-                  style={{
-                    borderBottom:
-                      idx < founderActivities.length - 1
-                        ? '1px solid rgba(255, 255, 255, 0.04)'
-                        : 'none',
-                  }}
-                >
-                  <div
-                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl"
-                    style={{
-                      background: `${activity.color}18`,
-                      color: activity.color,
-                      border: `1px solid ${activity.color}26`,
-                    }}
-                  >
-                    <Icon size={16} />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-medium" style={{ color: '#F0EDE6' }}>
-                        {activity.label}
-                      </p>
-                      <span className="text-xs font-mono" style={{ color: '#55555C' }}>
-                        {activity.time}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs leading-5" style={{ color: '#8A8A93' }}>
-                      {activity.detail}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="surface-card p-6">
-          <h2
-            className="font-display text-section font-medium tracking-[-0.03em] mb-2"
-            style={{ color: '#F0EDE6' }}
-          >
-            Founder Quick Actions
-          </h2>
-          <p className="mb-5 text-xs" style={{ color: '#8A8A93' }}>
-            Shortcuts for daily SaaS operations review.
-          </p>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-
-              return (
-                <button
-                  key={action.label}
-                  className="flex items-start gap-3 rounded-xl p-4 text-left transition-all duration-200"
-                  style={{
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                  }}
-                  onMouseEnter={(event) => {
-                    event.currentTarget.style.borderColor = '#6B8AFF';
-                    event.currentTarget.style.background = 'rgba(107, 138, 255, 0.05)';
-                  }}
-                  onMouseLeave={(event) => {
-                    event.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                    event.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-                  }}
-                >
-                  <Icon size={18} style={{ color: '#6B8AFF' }} />
-                  <span>
-                    <span className="block text-sm font-medium" style={{ color: '#F0EDE6' }}>
-                      {action.label}
-                    </span>
-                    <span className="mt-1 block text-xs" style={{ color: '#55555C' }}>
-                      {action.hint}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      </div>
-
-      <section className="surface-card mt-8 p-6">
-        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h2
-              className="font-display text-section font-medium tracking-[-0.03em]"
-              style={{ color: '#F0EDE6' }}
-            >
-              Client Launch Readiness
-            </h2>
-            <p className="mt-1 text-sm" style={{ color: '#8A8A93' }}>
-              Founder checklist for moving client workspaces from setup to live launch.
-            </p>
-          </div>
-          <span
-            className="rounded-full px-3 py-1 text-xs font-mono"
-            style={{
-              background: 'rgba(74, 222, 128, 0.10)',
-              color: '#4ADE80',
-              border: '1px solid rgba(74, 222, 128, 0.18)',
-            }}
-          >
-            4 / 6 ready
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {launchReadiness.map((item) => (
-            <div
-              key={item.label}
-              className="flex items-center justify-between gap-4 rounded-xl p-4"
-              style={{
-                background: item.ready
-                  ? 'rgba(74, 222, 128, 0.05)'
-                  : 'rgba(255, 138, 92, 0.06)',
-                border: item.ready
-                  ? '1px solid rgba(74, 222, 128, 0.12)'
-                  : '1px solid rgba(255, 138, 92, 0.14)',
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <span
-                  className="flex h-8 w-8 items-center justify-center rounded-full"
-                  style={{
-                    background: item.ready
-                      ? 'rgba(74, 222, 128, 0.12)'
-                      : 'rgba(255, 138, 92, 0.12)',
-                    color: item.ready ? '#4ADE80' : '#FF8A5C',
-                  }}
-                >
-                  {item.ready ? <CheckCircle2 size={15} /> : <HardDrive size={15} />}
-                </span>
-                <span className="text-sm font-medium" style={{ color: '#F0EDE6' }}>
-                  {item.label}
-                </span>
-              </div>
-              <span
-                className="rounded-full px-2.5 py-1 text-xs font-mono"
-                style={{
-                  background: item.ready
-                    ? 'rgba(74, 222, 128, 0.12)'
-                    : 'rgba(255, 138, 92, 0.12)',
-                  color: item.ready ? '#4ADE80' : '#FF8A5C',
-                }}
-              >
-                {item.status}
-              </span>
-            </div>
-          ))}
-        </div>
+      <section className="surface-card overflow-hidden">
+        <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: 'rgba(255,255,255,.06)' }}><div><h2 className="text-base font-semibold" style={{ color: '#E9E6DF' }}>Client portfolio</h2><p className="mt-1 text-xs" style={{ color: '#71717A' }}>Plan and account health across every workspace</p></div><button onClick={() => navigate('/admin/subscriptions')} className="flex items-center gap-1.5 text-xs" style={{ color: '#8EA4FF' }}>Manage all <ArrowRight size={12} /></button></div>
+        <div className="grid gap-px bg-white/[.05] md:grid-cols-2 xl:grid-cols-3">{data.subscriptions.slice(0, 6).map((item) => <button key={item.tenant_id} onClick={() => navigate('/admin/subscriptions')} className="bg-[#111117] p-5 text-left transition-colors hover:bg-[#15151c]"><div className="flex items-start justify-between"><span><span className="block text-sm font-medium" style={{ color: '#DEDBD4' }}>{item.company}</span><span className="mt-1 block text-xs" style={{ color: '#666670' }}>{label(item.business_type)}</span></span><span className="rounded-full px-2.5 py-1 text-[10px]" style={{ color: item.subscription.status === 'active' ? '#63E494' : '#FF9B78', background: item.subscription.status === 'active' ? 'rgba(74,222,128,.08)' : 'rgba(255,138,92,.09)' }}>{label(item.subscription.status)}</span></div><div className="mt-5 flex items-end justify-between"><span><span className="block text-xl font-semibold" style={{ color: '#F1EEE7' }}>${Math.round(item.monthly_value)}</span><span className="text-[10px] uppercase tracking-wider" style={{ color: '#5F5F68' }}>monthly value</span></span><span className="text-xs" style={{ color: '#777780' }}>{item.plan.name}</span></div></button>)}</div>
       </section>
-
-      <div
-        className="flex items-center justify-between mt-8 pt-4"
-        style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}
-      >
-        <span className="text-xs" style={{ color: '#55555C' }}>
-          RS Real Estate v2.0
-        </span>
-        <span className="text-xs font-mono" style={{ color: '#55555C' }}>
-          Last synced: live backend
-        </span>
-      </div>
     </div>
   );
 }

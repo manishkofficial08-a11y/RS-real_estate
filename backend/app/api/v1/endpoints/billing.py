@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
+    get_current_admin,
     get_current_tenant_manager,
     get_current_user,
     get_tenant_id,
@@ -98,6 +99,25 @@ class BillingSummaryResponse(BaseModel):
     usage: dict[str, BillingUsageItem]
     billing_mode: str
     message: str
+
+
+class AdminSubscriptionRow(BaseModel):
+    tenant_id: str
+    company: str
+    business_type: str
+    is_active: bool
+    subscription: SubscriptionResponse
+    plan: BillingPlanResponse
+    monthly_value: float
+    invoice_count: int
+    outstanding_amount: float
+
+
+class AdminSubscriptionUpdate(BaseModel):
+    plan: SubscriptionPlan | None = None
+    status: SubscriptionStatus | None = None
+    billing_cycle: BillingCycle | None = None
+    cancel_at_period_end: bool | None = None
 
 
 def _serialize_plan(plan_id: str) -> BillingPlanResponse:
@@ -230,6 +250,48 @@ async def _usage_for_tenant(
     }
 
 
+async def _admin_subscription_row(
+    db: AsyncSession,
+    tenant: Tenant,
+    subscription: Subscription,
+) -> AdminSubscriptionRow:
+    invoice_stats = await db.execute(
+        select(
+            func.count(Invoice.id),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            Invoice.status == InvoiceStatus.pending.value,
+                            Invoice.amount,
+                        ),
+                        else_=0.0,
+                    )
+                ),
+                0,
+            ),
+        ).where(Invoice.tenant_id == tenant.id)
+    )
+    invoice_count, outstanding_amount = invoice_stats.one()
+    plan = get_plan_metadata(subscription.plan)
+    if subscription.billing_cycle == BillingCycle.yearly.value:
+        monthly_value = (plan["yearly_price"] or 0) / 12
+    else:
+        monthly_value = plan["monthly_price"] or 0
+
+    return AdminSubscriptionRow(
+        tenant_id=tenant.id,
+        company=tenant.name,
+        business_type=tenant.business_type,
+        is_active=tenant.is_active,
+        subscription=_serialize_subscription(subscription),
+        plan=_serialize_plan(subscription.plan),
+        monthly_value=round(monthly_value, 2),
+        invoice_count=invoice_count or 0,
+        outstanding_amount=round(float(outstanding_amount or 0), 2),
+    )
+
+
 @router.get("/plans", response_model=list[BillingPlanResponse])
 async def get_billing_plans(
     current_user: User = Depends(get_current_user),
@@ -358,3 +420,71 @@ async def get_billing_invoices(
         .order_by(Invoice.issued_at.desc())
     )
     return [_serialize_invoice(invoice) for invoice in result.scalars().all()]
+
+
+@router.get("/admin/subscriptions", response_model=list[AdminSubscriptionRow])
+async def get_admin_subscriptions(
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_current_admin),
+):
+    tenants_result = await db.execute(select(Tenant).order_by(Tenant.created_at.desc()))
+    tenants = list(tenants_result.scalars().all())
+    rows = []
+    for tenant in tenants:
+        subscription = await _get_or_create_subscription(db, tenant.id)
+        rows.append(await _admin_subscription_row(db, tenant, subscription))
+    await db.commit()
+    return rows
+
+
+@router.patch(
+    "/admin/subscriptions/{tenant_id}",
+    response_model=AdminSubscriptionRow,
+)
+async def update_admin_subscription(
+    tenant_id: str,
+    data: AdminSubscriptionUpdate,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_current_admin),
+):
+    tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = tenant_result.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client company not found",
+        )
+
+    subscription = await _get_or_create_subscription(db, tenant.id)
+    period_changed = False
+    if data.plan is not None and data.plan.value != subscription.plan:
+        subscription.plan = data.plan.value
+        tenant.plan = data.plan.value
+        period_changed = True
+    if (
+        data.billing_cycle is not None
+        and data.billing_cycle.value != subscription.billing_cycle
+    ):
+        subscription.billing_cycle = data.billing_cycle.value
+        period_changed = True
+    if data.status is not None:
+        subscription.status = data.status.value
+    if data.cancel_at_period_end is not None:
+        subscription.cancel_at_period_end = data.cancel_at_period_end
+
+    if period_changed:
+        now = utc_now()
+        subscription.current_period_start = now
+        subscription.current_period_end = calculate_period_end(
+            now,
+            subscription.billing_cycle,
+        )
+
+    metadata = dict(subscription.metadata_json or {})
+    metadata["last_updated_by"] = admin_user.id
+    metadata["last_updated_source"] = "founder_dashboard"
+    subscription.metadata_json = metadata
+
+    await db.commit()
+    await db.refresh(subscription)
+    return await _admin_subscription_row(db, tenant, subscription)

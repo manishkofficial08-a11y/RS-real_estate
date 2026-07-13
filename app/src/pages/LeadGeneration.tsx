@@ -24,16 +24,17 @@ import {
 
 
 const industrySuggestions = [
-  'Real Estate Agents',
-  'Restaurants',
-  'Healthcare',
-  'Gyms',
-  'Education',
-  'Retail Shops',
-  'Hotels',
-  'Salons',
-  'Automotive',
-  'Professional Services',
+  { label: 'Real Estate — agents, builders & property firms', value: 'Real Estate Agents' },
+  { label: 'Healthcare — clinics, doctors & pharmacies', value: 'Healthcare' },
+  { label: 'Education — schools, colleges & training', value: 'Education' },
+  { label: 'Retail — stores & local shops', value: 'Retail Shops' },
+  { label: 'Local Businesses — broad discovery', value: 'Local Businesses' },
+  { label: 'Restaurants & Cafes', value: 'Restaurants' },
+  { label: 'Fitness Centres & Gyms', value: 'Gyms' },
+  { label: 'Hotels & Guest Houses', value: 'Hotels' },
+  { label: 'Salons & Beauty', value: 'Salons' },
+  { label: 'Automotive', value: 'Automotive' },
+  { label: 'Professional Services', value: 'Professional Services' },
 ];
 
 
@@ -82,6 +83,8 @@ export default function LeadGeneration() {
   const [location, setLocation] = useState('');
   const [radiusKm, setRadiusKm] = useState(5);
   const [limit, setLimit] = useState(25);
+  const [minimumScore, setMinimumScore] = useState(0);
+  const [contactOnly, setContactOnly] = useState(false);
   const [result, setResult] = useState<FreeLeadSearchResponse | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loadingTenants, setLoadingTenants] = useState(true);
@@ -106,6 +109,14 @@ export default function LeadGeneration() {
     [result, selectedIds],
   );
 
+  const visibleCandidates = useMemo(
+    () => (result?.candidates || []).filter((candidate) =>
+      candidate.score >= minimumScore
+      && (!contactOnly || Boolean(candidate.phone || candidate.email)),
+    ),
+    [contactOnly, minimumScore, result],
+  );
+
   async function handleSearch(event: React.FormEvent) {
     event.preventDefault();
     setError('');
@@ -119,7 +130,7 @@ export default function LeadGeneration() {
         limit,
       });
       setResult(data);
-      setSelectedIds(new Set(data.candidates.map((candidate) => candidate.id)));
+      setSelectedIds(new Set(data.candidates.filter((candidate) => candidate.score >= 60).map((candidate) => candidate.id)));
     } catch (searchError) {
       setResult(null);
       setSelectedIds(new Set());
@@ -141,9 +152,9 @@ export default function LeadGeneration() {
   function toggleAll() {
     if (!result) return;
     setSelectedIds((current) =>
-      current.size === result.candidates.length
+      visibleCandidates.every((candidate) => current.has(candidate.id))
         ? new Set()
-        : new Set(result.candidates.map((candidate) => candidate.id)),
+        : new Set(visibleCandidates.map((candidate) => candidate.id)),
     );
   }
 
@@ -195,20 +206,15 @@ export default function LeadGeneration() {
       <form onSubmit={handleSearch} className="surface-card grid gap-4 p-5 lg:grid-cols-12">
         <label className="space-y-2 lg:col-span-3">
           <span className="text-xs font-medium" style={{ color: '#8A8A93' }}>Industry / niche</span>
-          <input
-            list="lead-industries"
+          <select
             value={industry}
             onChange={(event) => setIndustry(event.target.value)}
-            minLength={2}
-            maxLength={80}
             required
             className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#F0EDE6' }}
-            placeholder="e.g. Real Estate Agents"
-          />
-          <datalist id="lead-industries">
-            {industrySuggestions.map((item) => <option value={item} key={item} />)}
-          </datalist>
+            style={{ background: '#121218', border: '1px solid rgba(255,255,255,0.08)', color: '#F0EDE6' }}
+          >
+            {industrySuggestions.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}
+          </select>
         </label>
 
         <label className="space-y-2 lg:col-span-3">
@@ -272,7 +278,7 @@ export default function LeadGeneration() {
                   <option value="">Select client CRM</option>
                   {tenants.map((tenant) => <option value={tenant.id} key={tenant.id}>{tenant.name}</option>)}
                 </select>
-                <button type="button" onClick={() => downloadCsv(selectedCandidates.length ? selectedCandidates : result.candidates)} className="flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }}><Download size={15} /> CSV</button>
+                <button type="button" onClick={() => downloadCsv(selectedCandidates.length ? selectedCandidates : visibleCandidates)} className="flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }}><Download size={15} /> CSV</button>
                 <button type="button" onClick={handleImport} disabled={importing || !selectedCandidates.length} className="flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50" style={{ background: '#4ADE80', color: '#0A0A0F' }}>
                   {importing ? <LoaderCircle className="animate-spin" size={15} /> : <Upload size={15} />}
                   Import {selectedCandidates.length || ''} to CRM
@@ -280,14 +286,27 @@ export default function LeadGeneration() {
               </div>
             </div>
 
+            <div className="flex flex-wrap items-center gap-3 border-b px-5 py-3" style={{ borderColor: 'rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.015)' }}>
+              <span className="text-xs" style={{ color: '#6C6C75' }}>Quality filter</span>
+              {[0, 60, 70, 85].map((score) => (
+                <button key={score} type="button" onClick={() => setMinimumScore(score)} className="rounded-full px-3 py-1.5 text-xs" style={{ background: minimumScore === score ? 'rgba(107,138,255,.16)' : 'rgba(255,255,255,.04)', color: minimumScore === score ? '#9BAEFF' : '#8A8A93', border: `1px solid ${minimumScore === score ? 'rgba(107,138,255,.28)' : 'rgba(255,255,255,.06)'}` }}>
+                  {score ? `${score}+ score` : 'All'}
+                </button>
+              ))}
+              <label className="ml-auto flex cursor-pointer items-center gap-2 text-xs" style={{ color: '#8A8A93' }}>
+                <input type="checkbox" checked={contactOnly} onChange={(event) => setContactOnly(event.target.checked)} /> Contactable only
+              </label>
+              <span className="text-xs font-mono" style={{ color: '#6B8AFF' }}>{visibleCandidates.length} visible</span>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full min-w-[980px]">
                 <thead><tr style={{ background: 'rgba(255,255,255,0.02)' }}>
-                  <th className="px-5 py-3 text-left"><button type="button" onClick={toggleAll} className="flex h-5 w-5 items-center justify-center rounded" style={{ background: selectedIds.size === result.candidates.length && result.candidates.length ? '#6B8AFF' : 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}>{selectedIds.size === result.candidates.length && result.candidates.length ? <Check size={13} color="white" /> : null}</button></th>
+                  <th className="px-5 py-3 text-left"><button type="button" onClick={toggleAll} className="flex h-5 w-5 items-center justify-center rounded" style={{ background: visibleCandidates.length && visibleCandidates.every((candidate) => selectedIds.has(candidate.id)) ? '#6B8AFF' : 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}>{visibleCandidates.length && visibleCandidates.every((candidate) => selectedIds.has(candidate.id)) ? <Check size={13} color="white" /> : null}</button></th>
                   {['Business', 'Score', 'Contact', 'Website', 'Address', 'Source'].map((heading) => <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: '#8A8A93' }} key={heading}>{heading}</th>)}
                 </tr></thead>
                 <tbody>
-                  {result.candidates.map((lead) => (
+                  {visibleCandidates.map((lead) => (
                     <tr key={lead.id} className="border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                       <td className="px-5 py-4"><button type="button" onClick={() => toggleCandidate(lead.id)} className="flex h-5 w-5 items-center justify-center rounded" style={{ background: selectedIds.has(lead.id) ? '#6B8AFF' : 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}>{selectedIds.has(lead.id) ? <Check size={13} color="white" /> : null}</button></td>
                       <td className="px-4 py-4"><p className="text-sm font-medium" style={{ color: '#F0EDE6' }}>{lead.name}</p><p className="mt-1 text-xs" style={{ color: '#8A8A93' }}>{lead.category}</p></td>
@@ -304,7 +323,7 @@ export default function LeadGeneration() {
               </table>
             </div>
 
-            {!result.candidates.length && <div className="px-5 py-14 text-center text-sm" style={{ color: '#8A8A93' }}>Is niche/location ke liye public listings nahi mili. Radius ya query change karke retry karo.</div>}
+            {!visibleCandidates.length && <div className="px-5 py-14 text-center text-sm" style={{ color: '#8A8A93' }}>Current quality filters ke andar leads nahi mili. Filters relax karo, radius badhao ya location change karo.</div>}
             <div className="border-t px-5 py-3 text-xs" style={{ borderColor: 'rgba(255,255,255,0.05)', color: '#55555C' }}>
               Data: {result.provider}. Usage must follow local outreach laws and platform attribution requirements. <a href={result.attribution_url} target="_blank" rel="noreferrer" style={{ color: '#6B8AFF' }}>© OpenStreetMap contributors</a>
             </div>

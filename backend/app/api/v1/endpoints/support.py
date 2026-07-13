@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,8 @@ from app.core.dependencies import get_current_user, get_current_admin, get_tenan
 from app.models.user import User
 from app.models.tenant import Tenant
 from app.models.support_ticket import (
+    SupportMessage,
+    SupportMessageAuthorType,
     SupportTicket,
     SupportTicketStatus,
     SupportTicketPriority,
@@ -37,6 +39,20 @@ class SupportTicketUpdate(BaseModel):
     assigned_admin_id: Optional[str] = None
 
 
+class SupportMessageCreate(BaseModel):
+    message: str
+    status: Optional[str] = None
+
+
+class SupportMessageResponse(BaseModel):
+    id: str
+    author_type: str
+    author_user_id: Optional[str] = None
+    author_name: Optional[str] = None
+    message: str
+    created_at: Optional[datetime] = None
+
+
 class SupportTicketResponse(BaseModel):
     id: str
     tenant_id: str
@@ -55,6 +71,7 @@ class SupportTicketResponse(BaseModel):
     business_name: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    messages: List[SupportMessageResponse] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
@@ -74,6 +91,20 @@ async def enrich_ticket(
     )
     tenant = tenant_result.scalar_one_or_none()
 
+    messages_result = await db.execute(
+        select(SupportMessage)
+        .where(SupportMessage.ticket_id == ticket.id)
+        .order_by(SupportMessage.created_at.asc())
+    )
+    ticket_messages = list(messages_result.scalars().all())
+    author_ids = {
+        item.author_user_id for item in ticket_messages if item.author_user_id
+    }
+    authors = {}
+    if author_ids:
+        authors_result = await db.execute(select(User).where(User.id.in_(author_ids)))
+        authors = {item.id: item for item in authors_result.scalars().all()}
+
     return SupportTicketResponse(
         id=ticket.id,
         tenant_id=ticket.tenant_id,
@@ -90,6 +121,21 @@ async def enrich_ticket(
         business_name=tenant.name if tenant else None,
         created_at=ticket.created_at,
         updated_at=ticket.updated_at,
+        messages=[
+            SupportMessageResponse(
+                id=item.id,
+                author_type=item.author_type,
+                author_user_id=item.author_user_id,
+                author_name=(
+                    authors[item.author_user_id].full_name
+                    if item.author_user_id in authors
+                    else ("Founder Support" if item.author_type == "admin" else None)
+                ),
+                message=item.message,
+                created_at=item.created_at,
+            )
+            for item in ticket_messages
+        ],
     )
 
 
@@ -161,6 +207,16 @@ async def create_support_ticket(
 
     db.add(ticket)
     await db.flush()
+    db.add(
+        SupportMessage(
+            id=str(uuid.uuid4()),
+            ticket_id=ticket.id,
+            tenant_id=tenant_id,
+            author_user_id=current_user.id,
+            author_type=SupportMessageAuthorType.client.value,
+            message=ticket.message,
+        )
+    )
 
     tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
     tenant = tenant_result.scalar_one_or_none()
@@ -192,7 +248,6 @@ async def get_my_support_tickets(
         select(SupportTicket)
         .where(
             SupportTicket.tenant_id == tenant_id,
-            SupportTicket.created_by_user_id == current_user.id,
         )
         .order_by(desc(SupportTicket.created_at))
     )
@@ -200,6 +255,66 @@ async def get_my_support_tickets(
     tickets = result.scalars().all()
 
     return [await enrich_ticket(ticket, db) for ticket in tickets]
+
+
+@router.post("/tickets/{ticket_id}/messages", response_model=SupportTicketResponse)
+async def add_client_support_message(
+    ticket_id: str,
+    data: SupportMessageCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+):
+    message = data.message.strip()
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Message is required",
+        )
+
+    result = await db.execute(
+        select(SupportTicket).where(
+            SupportTicket.id == ticket_id,
+            SupportTicket.tenant_id == tenant_id,
+        )
+    )
+    ticket = result.scalar_one_or_none()
+    if not ticket:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Support ticket not found",
+        )
+
+    db.add(
+        SupportMessage(
+            id=str(uuid.uuid4()),
+            ticket_id=ticket.id,
+            tenant_id=ticket.tenant_id,
+            author_user_id=current_user.id,
+            author_type=SupportMessageAuthorType.client.value,
+            message=message,
+        )
+    )
+    if ticket.status in {
+        SupportTicketStatus.resolved.value,
+        SupportTicketStatus.closed.value,
+    }:
+        ticket.status = SupportTicketStatus.open.value
+
+    await create_notification(
+        db,
+        audience=NotificationAudience.admin.value,
+        notification_type=NotificationType.support_ticket_created.value,
+        title="Client replied to a support ticket",
+        message=f"New client message on: {ticket.subject}",
+        tenant_id=ticket.tenant_id,
+        related_entity_type="support_ticket",
+        related_entity_id=ticket.id,
+        link="/support",
+    )
+    await db.commit()
+    await db.refresh(ticket)
+    return await enrich_ticket(ticket, db)
 
 
 @router.get("/admin/tickets", response_model=List[SupportTicketResponse])
@@ -263,7 +378,17 @@ async def update_support_ticket(
     )
     status_changed = data.status is not None and data.status != previous_status
 
-    if reply_changed:
+    if reply_changed and data.admin_reply and data.admin_reply.strip():
+        db.add(
+            SupportMessage(
+                id=str(uuid.uuid4()),
+                ticket_id=ticket.id,
+                tenant_id=ticket.tenant_id,
+                author_user_id=admin_user.id,
+                author_type=SupportMessageAuthorType.admin.value,
+                message=data.admin_reply.strip(),
+            )
+        )
         await create_notification(
             db,
             audience=NotificationAudience.client.value,
@@ -293,4 +418,66 @@ async def update_support_ticket(
     await db.commit()
     await db.refresh(ticket)
 
+    return await enrich_ticket(ticket, db)
+
+
+@router.post("/admin/tickets/{ticket_id}/messages", response_model=SupportTicketResponse)
+async def add_admin_support_message(
+    ticket_id: str,
+    data: SupportMessageCreate,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_current_admin),
+):
+    message = data.message.strip()
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Message is required",
+        )
+    if data.status:
+        allowed_statuses = [item.value for item in SupportTicketStatus]
+        if data.status not in allowed_statuses:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid status. Allowed: {allowed_statuses}",
+            )
+
+    result = await db.execute(
+        select(SupportTicket).where(SupportTicket.id == ticket_id)
+    )
+    ticket = result.scalar_one_or_none()
+    if not ticket:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Support ticket not found",
+        )
+
+    db.add(
+        SupportMessage(
+            id=str(uuid.uuid4()),
+            ticket_id=ticket.id,
+            tenant_id=ticket.tenant_id,
+            author_user_id=admin_user.id,
+            author_type=SupportMessageAuthorType.admin.value,
+            message=message,
+        )
+    )
+    ticket.admin_reply = message
+    ticket.assigned_admin_id = admin_user.id
+    ticket.status = data.status or SupportTicketStatus.in_progress.value
+
+    await create_notification(
+        db,
+        audience=NotificationAudience.client.value,
+        notification_type=NotificationType.support_ticket_replied.value,
+        title="Founder support replied",
+        message=f"Your support ticket '{ticket.subject}' has a new reply.",
+        tenant_id=ticket.tenant_id,
+        recipient_user_id=ticket.created_by_user_id,
+        related_entity_type="support_ticket",
+        related_entity_id=ticket.id,
+        link="/support",
+    )
+    await db.commit()
+    await db.refresh(ticket)
     return await enrich_ticket(ticket, db)
