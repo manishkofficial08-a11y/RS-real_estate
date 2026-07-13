@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bot,
   Check,
@@ -16,6 +17,7 @@ import {
 import {
   getAdminTenants,
   importFreeBusinessLeads,
+  importRekhaProspects,
   searchFreeBusinessLeads,
   type AdminTenant,
   type FreeLeadCandidate,
@@ -77,6 +79,7 @@ function downloadCsv(candidates: FreeLeadCandidate[]) {
 
 
 export default function LeadGeneration() {
+  const navigate = useNavigate();
   const [tenants, setTenants] = useState<AdminTenant[]>([]);
   const [tenantId, setTenantId] = useState('');
   const [industry, setIndustry] = useState('Real Estate Agents');
@@ -90,6 +93,7 @@ export default function LeadGeneration() {
   const [loadingTenants, setLoadingTenants] = useState(true);
   const [searching, setSearching] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [preparingRekha, setPreparingRekha] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -186,6 +190,25 @@ export default function LeadGeneration() {
     }
   }
 
+  async function handlePrepareRekha() {
+    if (!result || !selectedCandidates.length) {
+      setError('Rekha ke liye kam se kam ek lead select karo.');
+      return;
+    }
+    setError('');
+    setSuccess('');
+    setPreparingRekha(true);
+    try {
+      const prepared = await importRekhaProspects(selectedCandidates, result.resolved_location);
+      setSuccess(prepared.message);
+      navigate('/admin/rekha');
+    } catch (prepareError) {
+      setError(readError(prepareError));
+    } finally {
+      setPreparingRekha(false);
+    }
+  }
+
   return (
     <div className="space-y-6 p-4 md:p-8">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -279,6 +302,10 @@ export default function LeadGeneration() {
                   {tenants.map((tenant) => <option value={tenant.id} key={tenant.id}>{tenant.name}</option>)}
                 </select>
                 <button type="button" onClick={() => downloadCsv(selectedCandidates.length ? selectedCandidates : visibleCandidates)} className="flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#F0EDE6', border: '1px solid rgba(255,255,255,0.08)' }}><Download size={15} /> CSV</button>
+                <button type="button" onClick={handlePrepareRekha} disabled={preparingRekha || !selectedCandidates.length} className="flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50" style={{ background: 'rgba(167,139,250,.12)', color: '#C4B5FD', border: '1px solid rgba(167,139,250,.2)' }}>
+                  {preparingRekha ? <LoaderCircle className="animate-spin" size={15} /> : <Bot size={15} />}
+                  Prepare with Rekha
+                </button>
                 <button type="button" onClick={handleImport} disabled={importing || !selectedCandidates.length} className="flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50" style={{ background: '#4ADE80', color: '#0A0A0F' }}>
                   {importing ? <LoaderCircle className="animate-spin" size={15} /> : <Upload size={15} />}
                   Import {selectedCandidates.length || ''} to CRM

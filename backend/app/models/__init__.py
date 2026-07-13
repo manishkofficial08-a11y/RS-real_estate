@@ -27,3 +27,9 @@ from app.models.billing import (
 )
 
 from app.models.social_account import SocialAccount, SocialAccountStatus, SocialPlatform
+from app.models.rekha_outreach import (
+    RekhaMessageStatus,
+    RekhaOutreachMessage,
+    RekhaProspect,
+    RekhaProspectStatus,
+)
