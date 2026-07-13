@@ -23,8 +23,8 @@ we discuss a paid production setup.
 Would it be useful if I sent 2-3 questions and suggested the highest-impact
 workflow to demo? No commitment required.
 
-Regards,  
-Rekha  
+Regards,
+Rekha
 AI assistant to Manish
 
 ### WhatsApp
