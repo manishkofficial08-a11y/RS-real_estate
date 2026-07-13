@@ -31,6 +31,12 @@ class SupportTicketCategory(str, enum.Enum):
     other = "other"
 
 
+class SupportMessageAuthorType(str, enum.Enum):
+    client = "client"
+    admin = "admin"
+    system = "system"
+
+
 class SupportTicket(Base):
     __tablename__ = "support_tickets"
 
@@ -54,3 +60,35 @@ class SupportTicket(Base):
     tenant = relationship("Tenant")
     created_by_user = relationship("User", foreign_keys=[created_by_user_id])
     assigned_admin = relationship("User", foreign_keys=[assigned_admin_id])
+    messages = relationship(
+        "SupportMessage",
+        back_populates="ticket",
+        cascade="all, delete-orphan",
+        order_by="SupportMessage.created_at",
+    )
+
+
+class SupportMessage(Base):
+    __tablename__ = "support_messages"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    ticket_id = Column(
+        String,
+        ForeignKey("support_tickets.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    author_user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
+    author_type = Column(
+        String,
+        default=SupportMessageAuthorType.client.value,
+        nullable=False,
+        index=True,
+    )
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    ticket = relationship("SupportTicket", back_populates="messages")
+    author = relationship("User")
+    tenant = relationship("Tenant")

@@ -203,6 +203,15 @@ export type AdminSupportTicketStatus =
 
 export type AdminSupportTicketPriority = "low" | "medium" | "high" | "urgent";
 
+export type AdminSupportMessage = {
+  id: string;
+  author_type: "client" | "admin" | "system" | string;
+  author_user_id?: string | null;
+  author_name?: string | null;
+  message: string;
+  created_at?: string | null;
+};
+
 export type AdminSupportTicket = {
   id: string;
   tenant_id: string;
@@ -219,6 +228,7 @@ export type AdminSupportTicket = {
   business_name?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  messages: AdminSupportMessage[];
 };
 
 export type UpdateSupportTicketPayload = {
@@ -257,6 +267,76 @@ export async function updateSupportTicket(
     method: "PUT",
     body: JSON.stringify(payload),
   });
+}
+
+export async function addAdminSupportMessage(
+  ticketId: string,
+  payload: { message: string; status?: AdminSupportTicketStatus },
+): Promise<AdminSupportTicket> {
+  return adminFetch<AdminSupportTicket>(
+    `/support/admin/tickets/${ticketId}/messages`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export type AdminBillingPlan = "free" | "pro" | "enterprise";
+export type AdminBillingStatus =
+  | "active"
+  | "trialing"
+  | "past_due"
+  | "cancelled"
+  | "inactive";
+export type AdminBillingCycle = "monthly" | "yearly";
+
+export type AdminSubscriptionRow = {
+  tenant_id: string;
+  company: string;
+  business_type: string;
+  is_active: boolean;
+  subscription: {
+    id: string;
+    tenant_id: string;
+    plan: AdminBillingPlan;
+    status: AdminBillingStatus;
+    billing_cycle: AdminBillingCycle;
+    current_period_start: string;
+    current_period_end: string;
+    cancel_at_period_end: boolean;
+    provider: string;
+  };
+  plan: {
+    id: string;
+    name: string;
+    currency: string;
+    monthly_price?: number | null;
+    yearly_price?: number | null;
+    features: string[];
+  };
+  monthly_value: number;
+  invoice_count: number;
+  outstanding_amount: number;
+};
+
+export async function getAdminSubscriptions(): Promise<AdminSubscriptionRow[]> {
+  return adminFetch<AdminSubscriptionRow[]>("/billing/admin/subscriptions");
+}
+
+export async function updateAdminSubscription(
+  tenantId: string,
+  payload: {
+    plan?: AdminBillingPlan;
+    status?: AdminBillingStatus;
+    billing_cycle?: AdminBillingCycle;
+    cancel_at_period_end?: boolean;
+  },
+): Promise<AdminSubscriptionRow> {
+  return adminFetch<AdminSubscriptionRow>(
+    `/billing/admin/subscriptions/${tenantId}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
 }
 export type AdminNotification = {
   id: string;

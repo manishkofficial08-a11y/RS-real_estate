@@ -481,6 +481,15 @@ export type SupportTicketCategory =
   | "ai_agents"
   | "other";
 
+export type SupportMessage = {
+  id: string;
+  author_type: "client" | "admin" | "system" | string;
+  author_user_id?: string | null;
+  author_name?: string | null;
+  message: string;
+  created_at?: string | null;
+};
+
 export type SupportTicket = {
   id: string;
   tenant_id: string;
@@ -497,6 +506,7 @@ export type SupportTicket = {
   business_name?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  messages: SupportMessage[];
 };
 
 export type CreateSupportTicketPayload = {
@@ -517,6 +527,16 @@ export async function createSupportTicket(
 
 export async function getMySupportTickets(): Promise<SupportTicket[]> {
   return clientFetch<SupportTicket[]>("/support/tickets/my");
+}
+
+export async function addClientSupportMessage(
+  ticketId: string,
+  message: string,
+): Promise<SupportTicket> {
+  return clientFetch<SupportTicket>(`/support/tickets/${ticketId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
 }
 export type ClientNotification = {
   id: string;

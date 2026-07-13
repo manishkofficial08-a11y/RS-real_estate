@@ -1,285 +1,172 @@
-import { useState } from 'react';
-import { subscriptions } from '@/data/mock';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowDownCircle,
-  ArrowUpCircle,
-  Building2,
-  CalendarClock,
+  AlertTriangle,
+  CalendarDays,
+  CheckCircle2,
   CreditCard,
-  Download,
-  FileText,
-  MoreHorizontal,
-  ReceiptText,
+  LoaderCircle,
+  RefreshCw,
   Search,
-  ShieldCheck,
-  TrendingUp,
+  SlidersHorizontal,
+  WalletCards,
 } from 'lucide-react';
+import {
+  getAdminSubscriptions,
+  updateAdminSubscription,
+  type AdminBillingCycle,
+  type AdminBillingPlan,
+  type AdminBillingStatus,
+  type AdminSubscriptionRow,
+} from '@/lib/adminApi';
 
-const planColors: Record<string, { bg: string; color: string; border: string }> = {
-  Starter: { bg: 'rgba(255, 255, 255, 0.06)', color: '#8A8A93', border: 'rgba(255, 255, 255, 0.1)' },
-  Pro: { bg: 'rgba(107, 138, 255, 0.1)', color: '#6B8AFF', border: 'rgba(107, 138, 255, 0.2)' },
-  Enterprise: { bg: 'rgba(255, 138, 92, 0.1)', color: '#FF8A5C', border: 'rgba(255, 138, 92, 0.2)' },
-};
+const plans: AdminBillingPlan[] = ['free', 'pro', 'enterprise'];
+const statuses: AdminBillingStatus[] = ['active', 'trialing', 'past_due', 'cancelled', 'inactive'];
+const cycles: AdminBillingCycle[] = ['monthly', 'yearly'];
 
-const summaryCards = [
-  {
-    label: 'Monthly Revenue',
-    value: '$12,960',
-    sub: '+8% from last month',
-    icon: TrendingUp,
-    color: '#6B8AFF',
-  },
-  {
-    label: 'Annual Run Rate',
-    value: '$155,520',
-    sub: 'Projected from active plans',
-    icon: CreditCard,
-    color: '#4ADE80',
-  },
-  {
-    label: 'Active Plans',
-    value: '9',
-    sub: '2 Enterprise · 4 Pro · 3 Starter',
-    icon: ShieldCheck,
-    color: '#FF8A5C',
-  },
-  {
-    label: 'Trial Users',
-    value: '1',
-    sub: '1 account needs conversion',
-    icon: CalendarClock,
-    color: '#8A8A93',
-  },
-];
+function label(value: string) {
+  return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
 
-const planMix = [
-  { plan: 'Enterprise', count: 2, revenue: '$7,000', width: '72%' },
-  { plan: 'Pro', count: 4, revenue: '$4,760', width: '54%' },
-  { plan: 'Starter', count: 3, revenue: '$1,200', width: '28%' },
-];
+function money(value: number) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function date(value: string) {
+  return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value));
+}
+
+function statusTone(status: AdminBillingStatus) {
+  if (status === 'active') return { color: '#4ADE80', background: 'rgba(74,222,128,.10)' };
+  if (status === 'trialing') return { color: '#8EA4FF', background: 'rgba(107,138,255,.12)' };
+  if (status === 'past_due') return { color: '#FF8A5C', background: 'rgba(255,138,92,.12)' };
+  return { color: '#9B9BA4', background: 'rgba(255,255,255,.06)' };
+}
 
 export default function SubscriptionsPage() {
-  const [showInvoice, setShowInvoice] = useState<string | null>(null);
+  const [rows, setRows] = useState<AdminSubscriptionRow[]>([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | AdminBillingStatus>('all');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  async function load() {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await getAdminSubscriptions();
+      setRows(data);
+      setSelectedId((current) => current || data[0]?.tenant_id || '');
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Subscriptions load nahi hui.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { void load(); }, []);
+
+  const filtered = useMemo(() => rows.filter((row) => {
+    const matchesQuery = `${row.company} ${row.business_type} ${row.subscription.plan}`.toLowerCase().includes(query.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || row.subscription.status === statusFilter;
+    return matchesQuery && matchesStatus;
+  }), [query, rows, statusFilter]);
+
+  const selected = rows.find((row) => row.tenant_id === selectedId) || null;
+  const metrics = useMemo(() => ({
+    mrr: rows.reduce((sum, row) => sum + (row.subscription.status === 'active' ? row.monthly_value : 0), 0),
+    active: rows.filter((row) => row.subscription.status === 'active').length,
+    attention: rows.filter((row) => ['past_due', 'cancelled'].includes(row.subscription.status)).length,
+    outstanding: rows.reduce((sum, row) => sum + row.outstanding_amount, 0),
+  }), [rows]);
+
+  async function update(payload: Parameters<typeof updateAdminSubscription>[1]) {
+    if (!selected) return;
+    try {
+      setSaving(true);
+      setError('');
+      setNotice('');
+      const updated = await updateAdminSubscription(selected.tenant_id, payload);
+      setRows((current) => current.map((row) => row.tenant_id === updated.tenant_id ? updated : row));
+      setNotice(`${updated.company} subscription updated.`);
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Subscription update failed.');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="space-y-6 p-4 md:p-8">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1" style={{ background: 'rgba(107, 138, 255, 0.08)', border: '1px solid rgba(107, 138, 255, 0.16)' }}>
-            <ReceiptText size={14} style={{ color: '#6B8AFF' }} />
-            <span className="text-xs font-mono" style={{ color: '#6B8AFF' }}>Billing Control Center</span>
-          </div>
-          <h1 className="font-display text-hero font-medium tracking-[-0.03em]" style={{ color: '#F0EDE6' }}>
-            Subscriptions
-          </h1>
-          <p className="text-sm mt-1 max-w-2xl" style={{ color: '#8A8A93' }}>
-            Monitor plan health, renewals, invoices, and subscription actions across all real estate clients.
-          </p>
+          <p className="mb-2 text-xs font-medium uppercase tracking-[.18em]" style={{ color: '#7F96F4' }}>Revenue operations</p>
+          <h1 className="text-3xl font-semibold tracking-[-.035em]" style={{ color: '#F2F0EA' }}>Client subscriptions</h1>
+          <p className="mt-2 max-w-2xl text-sm" style={{ color: '#8E8E98' }}>Every current and future client workspace appears here automatically. Manage access, renewal state and plan visibility from one place.</p>
         </div>
+        <button onClick={() => void load()} disabled={loading} className="inline-flex w-fit items-center gap-2 rounded-xl px-4 py-2.5 text-sm" style={{ color: '#D8D6CF', border: '1px solid rgba(255,255,255,.09)', background: 'rgba(255,255,255,.035)' }}>
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+        </button>
+      </header>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm transition-colors"
-            style={{ background: 'rgba(255, 255, 255, 0.04)', color: '#F0EDE6', border: '1px solid rgba(255, 255, 255, 0.08)' }}
-          >
-            <Download size={15} />
-            Export
-          </button>
-          <button
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm transition-colors"
-            style={{ background: '#6B8AFF', color: '#FFFFFF' }}
-          >
-            <CreditCard size={15} />
-            New Plan
-          </button>
-        </div>
-      </div>
+      {(error || notice) && <div className="rounded-xl border px-4 py-3 text-sm" style={{ color: error ? '#FF9B78' : '#63E494', background: error ? 'rgba(255,138,92,.08)' : 'rgba(74,222,128,.07)', borderColor: error ? 'rgba(255,138,92,.2)' : 'rgba(74,222,128,.18)' }}>{error || notice}</div>}
 
-      <div className="grid grid-cols-1 gap-5 mb-8 sm:grid-cols-2 xl:grid-cols-4">
-        {summaryCards.map((card) => {
-          const Icon = card.icon;
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: 'Monthly run rate', value: money(metrics.mrr), icon: WalletCards, color: '#8EA4FF' },
+          { label: 'Active workspaces', value: metrics.active, icon: CheckCircle2, color: '#4ADE80' },
+          { label: 'Needs attention', value: metrics.attention, icon: AlertTriangle, color: '#FF8A5C' },
+          { label: 'Outstanding', value: money(metrics.outstanding), icon: CreditCard, color: '#D7B46A' },
+        ].map((item) => <div key={item.label} className="surface-card flex items-center justify-between p-5"><div><p className="text-xs" style={{ color: '#777780' }}>{item.label}</p><p className="mt-2 text-2xl font-semibold tracking-tight" style={{ color: '#F2F0EA' }}>{loading ? '—' : item.value}</p></div><span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ color: item.color, background: `${item.color}14` }}><item.icon size={18} /></span></div>)}
+      </section>
 
-          return (
-            <div key={card.label} className="surface-card p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-mono mb-2" style={{ color: '#8A8A93' }}>{card.label}</p>
-                  <p className="font-mono text-data font-medium" style={{ color: '#F0EDE6' }}>{card.value}</p>
-                  <p className="text-xs mt-2" style={{ color: '#55555C' }}>{card.sub}</p>
-                </div>
-                <div className="rounded-xl p-2.5" style={{ background: `${card.color}14`, color: card.color, border: `1px solid ${card.color}26` }}>
-                  <Icon size={18} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 mb-8 xl:grid-cols-[1.7fr_1fr]">
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="surface-card overflow-hidden">
-          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-            <div>
-              <h2 className="text-base font-medium" style={{ color: '#F0EDE6' }}>Client Billing Overview</h2>
-              <p className="text-xs mt-1" style={{ color: '#8A8A93' }}>Mock data for founder dashboard review</p>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-              <Search size={14} style={{ color: '#8A8A93' }} />
-              <span className="text-xs" style={{ color: '#55555C' }}>Search billing records</span>
-            </div>
+          <div className="flex flex-col gap-3 border-b p-4 sm:flex-row" style={{ borderColor: 'rgba(255,255,255,.06)' }}>
+            <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3" style={{ background: 'rgba(255,255,255,.035)', border: '1px solid rgba(255,255,255,.07)' }}>
+              <Search size={14} style={{ color: '#707079' }} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search company or industry" className="w-full bg-transparent py-2.5 text-sm outline-none" style={{ color: '#E6E3DC' }} />
+            </label>
+            <label className="flex items-center gap-2"><SlidersHorizontal size={14} style={{ color: '#707079' }} /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="input-dark rounded-xl px-3 py-2.5 text-sm"><option value="all">All status</option>{statuses.map((item) => <option key={item} value={item}>{label(item)}</option>)}</select></label>
           </div>
-
-          {subscriptions.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[920px]">
-                <thead>
-                  <tr style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
-                    <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Company</th>
-                    <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Plan</th>
-                    <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Renewal</th>
-                    <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Amount</th>
-                    <th className="text-left px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Status</th>
-                    <th className="text-right px-5 py-3 text-xs font-mono font-normal" style={{ color: '#8A8A93' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {subscriptions.map((sub, idx) => (
-                    <tr
-                      key={sub.id}
-                      className="transition-colors duration-200"
-                      style={{ borderBottom: idx < subscriptions.length - 1 ? '1px solid rgba(255, 255, 255, 0.04)' : 'none' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                            <Building2 size={16} style={{ color: '#8A8A93' }} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium" style={{ color: '#F0EDE6' }}>{sub.company}</p>
-                            <p className="text-xs font-mono mt-0.5" style={{ color: '#55555C' }}>ID: SUB-{sub.id.padStart(4, '0')}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span
-                          className="text-xs px-2.5 py-1 rounded-full"
-                          style={{
-                            background: planColors[sub.plan].bg,
-                            color: planColors[sub.plan].color,
-                            border: `1px solid ${planColors[sub.plan].border}`,
-                          }}
-                        >
-                          {sub.plan}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="text-sm font-mono" style={{ color: '#8A8A93' }}>{sub.renewalDate}</span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="text-sm font-mono font-medium" style={{ color: '#F0EDE6' }}>{sub.amount}</span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className={`text-xs px-2.5 py-1 rounded-full ${sub.status === 'Active' ? 'badge-green' : sub.status === 'Past Due' ? 'badge-red' : 'badge-neutral'}`}>
-                          {sub.status}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button className="p-1.5 rounded-md transition-colors" style={{ color: '#8A8A93' }} title="Upgrade">
-                            <ArrowUpCircle size={15} />
-                          </button>
-                          <button className="p-1.5 rounded-md transition-colors" style={{ color: '#8A8A93' }} title="Downgrade">
-                            <ArrowDownCircle size={15} />
-                          </button>
-                          <button
-                            className="p-1.5 rounded-md transition-colors"
-                            style={{ color: showInvoice === sub.id ? '#6B8AFF' : '#8A8A93', background: showInvoice === sub.id ? 'rgba(107, 138, 255, 0.08)' : 'transparent' }}
-                            title="View Invoice"
-                            onClick={() => setShowInvoice(showInvoice === sub.id ? null : sub.id)}
-                          >
-                            <FileText size={15} />
-                          </button>
-                          <button className="p-1.5 rounded-md transition-colors" style={{ color: '#8A8A93' }} title="More actions">
-                            <MoreHorizontal size={15} />
-                          </button>
-                        </div>
-                        {showInvoice === sub.id && (
-                          <div
-                            className="mt-3 ml-auto max-w-xs rounded-xl p-4 text-xs"
-                            style={{ background: 'rgba(107, 138, 255, 0.06)', border: '1px solid rgba(107, 138, 255, 0.14)' }}
-                          >
-                            <div className="mb-3 flex items-center justify-between gap-3">
-                              <p className="font-medium" style={{ color: '#F0EDE6' }}>Invoice Preview</p>
-                              <span className="badge-green text-[10px]">Paid</span>
-                            </div>
-                            <div className="space-y-1.5" style={{ color: '#8A8A93' }}>
-                              <p>Invoice #: INV-2026-{sub.id.padStart(4, '0')}</p>
-                              <p>Billing date: Jun 01, 2026</p>
-                              <p>Amount: {sub.amount}</p>
-                              <p>Payment method: Card ending 4242</p>
-                            </div>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-              <div className="mb-4 rounded-2xl p-4" style={{ background: 'rgba(255, 255, 255, 0.04)' }}>
-                <ReceiptText size={28} style={{ color: '#8A8A93' }} />
-              </div>
-              <h3 className="text-base font-medium" style={{ color: '#F0EDE6' }}>No subscriptions yet</h3>
-              <p className="mt-2 max-w-md text-sm" style={{ color: '#8A8A93' }}>
-                New client plans and billing records will appear here once companies start subscribing.
-              </p>
-            </div>
-          )}
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[820px]">
+              <thead><tr>{['Company', 'Plan', 'Status', 'Renews', 'MRR', 'Invoices'].map((item) => <th key={item} className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-[.12em]" style={{ color: '#666670' }}>{item}</th>)}</tr></thead>
+              <tbody>{loading ? <tr><td colSpan={6} className="px-5 py-14 text-center"><LoaderCircle className="mx-auto animate-spin" size={20} style={{ color: '#8EA4FF' }} /></td></tr> : filtered.map((row) => {
+                const active = row.tenant_id === selectedId;
+                return <tr key={row.tenant_id} onClick={() => setSelectedId(row.tenant_id)} className="cursor-pointer border-t transition-colors" style={{ borderColor: 'rgba(255,255,255,.05)', background: active ? 'rgba(107,138,255,.075)' : 'transparent' }}>
+                  <td className="px-5 py-4"><p className="text-sm font-medium" style={{ color: '#EAE7E0' }}>{row.company}</p><p className="mt-1 text-xs" style={{ color: '#666670' }}>{label(row.business_type)}</p></td>
+                  <td className="px-5 py-4 text-sm" style={{ color: '#B5B2AB' }}>{row.plan.name}</td>
+                  <td className="px-5 py-4"><span className="rounded-full px-2.5 py-1 text-xs" style={statusTone(row.subscription.status)}>{label(row.subscription.status)}</span></td>
+                  <td className="px-5 py-4 text-xs" style={{ color: '#85858E' }}>{date(row.subscription.current_period_end)}</td>
+                  <td className="px-5 py-4 text-sm font-medium" style={{ color: '#EAE7E0' }}>{money(row.monthly_value)}</td>
+                  <td className="px-5 py-4 text-xs" style={{ color: row.outstanding_amount ? '#FF9B78' : '#85858E' }}>{row.invoice_count} · {money(row.outstanding_amount)}</td>
+                </tr>;
+              })}</tbody>
+            </table>
+          </div>
+          {!loading && !filtered.length && <div className="px-6 py-14 text-center text-sm" style={{ color: '#777780' }}>No matching client subscriptions.</div>}
         </div>
 
-        <div className="surface-card p-5">
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-medium" style={{ color: '#F0EDE6' }}>Plan Mix</h2>
-              <p className="text-xs mt-1" style={{ color: '#8A8A93' }}>Revenue distribution by plan</p>
+        <aside className="surface-card h-fit p-5 xl:sticky xl:top-6">
+          {selected ? <div className="space-y-5">
+            <div><p className="text-xs uppercase tracking-[.14em]" style={{ color: '#73737D' }}>Workspace controls</p><h2 className="mt-2 text-xl font-semibold" style={{ color: '#F2F0EA' }}>{selected.company}</h2><p className="mt-1 text-xs" style={{ color: '#777780' }}>{label(selected.business_type)} · {selected.subscription.provider} billing</p></div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="space-y-2"><span className="text-xs" style={{ color: '#85858E' }}>Plan</span><select value={selected.subscription.plan} onChange={(event) => void update({ plan: event.target.value as AdminBillingPlan })} disabled={saving} className="input-dark w-full rounded-xl px-3 py-2.5 text-sm">{plans.map((item) => <option key={item} value={item}>{label(item)}</option>)}</select></label>
+              <label className="space-y-2"><span className="text-xs" style={{ color: '#85858E' }}>Cycle</span><select value={selected.subscription.billing_cycle} onChange={(event) => void update({ billing_cycle: event.target.value as AdminBillingCycle })} disabled={saving} className="input-dark w-full rounded-xl px-3 py-2.5 text-sm">{cycles.map((item) => <option key={item} value={item}>{label(item)}</option>)}</select></label>
             </div>
-            <span className="text-xs font-mono" style={{ color: '#55555C' }}>MRR</span>
-          </div>
-
-          <div className="space-y-5">
-            {planMix.map((item) => (
-              <div key={item.plan}>
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium" style={{ color: '#F0EDE6' }}>{item.plan}</p>
-                    <p className="text-xs" style={{ color: '#55555C' }}>{item.count} clients</p>
-                  </div>
-                  <span className="text-sm font-mono" style={{ color: '#8A8A93' }}>{item.revenue}</span>
-                </div>
-                <div className="h-2 rounded-full" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
-                  <div className="h-2 rounded-full" style={{ width: item.width, background: planColors[item.plan].color }} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 rounded-xl p-4" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-            <p className="text-xs font-mono mb-2" style={{ color: '#8A8A93' }}>Founder note</p>
-            <p className="text-sm leading-6" style={{ color: '#F0EDE6' }}>
-              Billing actions are visual-only for now. Keep this page mock/static until backend subscription APIs are assigned.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mt-8 pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
-        <span className="text-xs" style={{ color: '#55555C' }}>RS Real Estate v2.0</span>
-        <span className="text-xs font-mono" style={{ color: '#55555C' }}>Last synced: 2 min ago</span>
-      </div>
+            <label className="block space-y-2"><span className="text-xs" style={{ color: '#85858E' }}>Account status</span><select value={selected.subscription.status} onChange={(event) => void update({ status: event.target.value as AdminBillingStatus })} disabled={saving} className="input-dark w-full rounded-xl px-3 py-2.5 text-sm">{statuses.map((item) => <option key={item} value={item}>{label(item)}</option>)}</select></label>
+            <button type="button" onClick={() => void update({ cancel_at_period_end: !selected.subscription.cancel_at_period_end })} disabled={saving} className="flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-sm disabled:opacity-50" style={{ borderColor: selected.subscription.cancel_at_period_end ? 'rgba(255,138,92,.25)' : 'rgba(255,255,255,.08)', background: selected.subscription.cancel_at_period_end ? 'rgba(255,138,92,.07)' : 'rgba(255,255,255,.025)', color: '#C8C5BE' }}><span><span className="block font-medium">Cancel at period end</span><span className="mt-1 block text-xs" style={{ color: '#73737D' }}>{selected.subscription.cancel_at_period_end ? 'Cancellation scheduled' : 'Renewal remains active'}</span></span><span className="h-5 w-9 rounded-full p-0.5" style={{ background: selected.subscription.cancel_at_period_end ? '#FF8A5C' : '#3B3B43' }}><span className="block h-4 w-4 rounded-full bg-white transition-transform" style={{ transform: selected.subscription.cancel_at_period_end ? 'translateX(16px)' : 'none' }} /></span></button>
+            <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)' }}><div className="flex items-center gap-2 text-xs" style={{ color: '#85858E' }}><CalendarDays size={13} /> Current period</div><p className="mt-2 text-sm" style={{ color: '#D7D4CC' }}>{date(selected.subscription.current_period_start)} → {date(selected.subscription.current_period_end)}</p></div>
+            {saving && <p className="flex items-center gap-2 text-xs" style={{ color: '#8EA4FF' }}><LoaderCircle size={13} className="animate-spin" /> Syncing with client dashboard…</p>}
+          </div> : <p className="py-12 text-center text-sm" style={{ color: '#777780' }}>Select a client to manage its subscription.</p>}
+        </aside>
+      </section>
     </div>
   );
 }

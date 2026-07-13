@@ -10,6 +10,7 @@ import {
   Send,
 } from "lucide-react";
 import {
+  addClientSupportMessage,
   createSupportTicket,
   getMySupportTickets,
   type CreateSupportTicketPayload,
@@ -83,6 +84,8 @@ export function Support({ darkMode }: SupportProps) {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [reply, setReply] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
 
   const cardBase = {
     background: darkMode ? "rgba(15,23,42,0.8)" : "#ffffff",
@@ -149,6 +152,26 @@ export function Support({ darkMode }: SupportProps) {
       setMessage(err instanceof Error ? err.message : "Failed to create ticket");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleReply(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedTicket || !reply.trim()) return;
+
+    try {
+      setSendingReply(true);
+      setMessage(null);
+      const updated = await addClientSupportMessage(selectedTicket.id, reply.trim());
+      setTickets((current) =>
+        current.map((ticket) => (ticket.id === updated.id ? updated : ticket)),
+      );
+      setReply("");
+      setMessage("Reply sent successfully.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to send reply");
+    } finally {
+      setSendingReply(false);
     }
   }
 
@@ -486,32 +509,70 @@ export function Support({ darkMode }: SupportProps) {
                       </div>
                     </div>
 
-                    <div className="rounded-xl border p-4" style={{ borderColor: cardBase.borderColor }}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <AlertCircle size={14} style={{ color: "#f59e0b" }} />
-                        <span className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                          Issue
+                    <div className="rounded-xl border overflow-hidden" style={{ borderColor: cardBase.borderColor }}>
+                      <div className="flex items-center justify-between gap-3 border-b px-4 py-3" style={{ borderColor: cardBase.borderColor }}>
+                        <div className="flex items-center gap-2">
+                          <MessageSquare size={14} style={{ color: "#1D4ED8" }} />
+                          <span className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
+                            Conversation
+                          </span>
+                        </div>
+                        <span className="text-xs" style={{ color: "#64748b" }}>
+                          {formatLabel(selectedTicket.category)}
                         </span>
                       </div>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: darkMode ? "#94a3b8" : "#475569" }}>
-                        {selectedTicket.message}
-                      </p>
-                      <p className="text-xs mt-3" style={{ color: "#64748b" }}>
-                        Category: {formatLabel(selectedTicket.category)}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border p-4" style={{ borderColor: cardBase.borderColor }}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <MessageSquare size={14} style={{ color: "#10b981" }} />
-                        <span className="text-sm font-medium" style={{ color: darkMode ? "#e2e8f0" : "#0f172a" }}>
-                          Founder Reply
-                        </span>
+                      <div className="max-h-[360px] space-y-3 overflow-y-auto p-4">
+                        {(selectedTicket.messages?.length
+                          ? selectedTicket.messages
+                          : [{ id: "legacy", author_type: "client", message: selectedTicket.message, created_at: selectedTicket.created_at }]
+                        ).map((item) => {
+                          const fromFounder = item.author_type === "admin";
+                          return (
+                            <div key={item.id} className={`flex ${fromFounder ? "justify-start" : "justify-end"}`}>
+                              <div
+                                className="max-w-[86%] rounded-2xl px-4 py-3"
+                                style={{
+                                  background: fromFounder
+                                    ? darkMode ? "rgba(16,185,129,0.10)" : "rgba(16,185,129,0.08)"
+                                    : "rgba(29,78,216,0.12)",
+                                  border: `1px solid ${fromFounder ? "rgba(16,185,129,0.20)" : "rgba(29,78,216,0.20)"}`,
+                                }}
+                              >
+                                <p className="mb-1 text-[11px] font-medium" style={{ color: fromFounder ? "#10b981" : "#1D4ED8" }}>
+                                  {fromFounder ? item.author_name || "Founder Support" : item.author_name || "Your team"}
+                                </p>
+                                <p className="whitespace-pre-wrap text-sm leading-6" style={{ color: darkMode ? "#cbd5e1" : "#334155" }}>
+                                  {item.message}
+                                </p>
+                                <p className="mt-1.5 text-[10px]" style={{ color: "#64748b" }}>
+                                  {formatDate(item.created_at)}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: darkMode ? "#94a3b8" : "#475569" }}>
-                        {selectedTicket.admin_reply ||
-                          "No reply yet. The founder support team will respond here."}
-                      </p>
+                      <form onSubmit={handleReply} className="flex gap-2 border-t p-3" style={{ borderColor: cardBase.borderColor }}>
+                        <input
+                          value={reply}
+                          onChange={(event) => setReply(event.target.value)}
+                          placeholder="Reply to founder support..."
+                          className="min-w-0 flex-1 rounded-xl border px-3 py-2 text-sm outline-none"
+                          style={{
+                            background: darkMode ? "rgba(2,6,23,0.35)" : "#f8fafc",
+                            borderColor: cardBase.borderColor,
+                            color: darkMode ? "#e2e8f0" : "#0f172a",
+                          }}
+                        />
+                        <button
+                          type="submit"
+                          disabled={sendingReply || !reply.trim()}
+                          className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                          style={{ background: "#1D4ED8" }}
+                        >
+                          <Send size={13} /> {sendingReply ? "Sending" : "Send"}
+                        </button>
+                      </form>
                     </div>
                   </div>
                 ) : (

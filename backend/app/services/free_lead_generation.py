@@ -64,6 +64,7 @@ CATEGORY_RULES: Dict[str, List[str]] = {
     "salons": ['["shop"~"^(hairdresser|beauty|massage)$"]'],
     "automotive": ['["shop"~"^(car|car_repair|tyres|motorcycle)$"]'],
     "professional_services": ['["office"~"^(lawyer|accountant|consulting|company)$"]'],
+    "local_businesses": ['["shop"]', '["office"]', '["amenity"]', '["tourism"]'],
 }
 
 CATEGORY_ALIASES = {
@@ -92,6 +93,8 @@ CATEGORY_ALIASES = {
     "lawyer": "professional_services",
     "accountant": "professional_services",
     "consultant": "professional_services",
+    "local business": "local_businesses",
+    "local businesses": "local_businesses",
 }
 
 
