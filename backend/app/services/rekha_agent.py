@@ -50,16 +50,29 @@ def founder_profile() -> dict[str, str]:
 
 def integration_status() -> dict[str, Any]:
     profile = founder_profile()
+    gmail_api_ready = _env("REKHA_GMAIL_API_ENABLED", "false").lower() in {"1", "true", "yes"} and all(
+        _env(key)
+        for key in (
+            "REKHA_GMAIL_CLIENT_ID",
+            "REKHA_GMAIL_CLIENT_SECRET",
+            "REKHA_GMAIL_REFRESH_TOKEN",
+            "REKHA_GMAIL_FROM_EMAIL",
+        )
+    )
+    smtp_ready = all(
+        _env(key)
+        for key in ("SMTP_HOST", "SMTP_PORT", "SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_FROM_EMAIL")
+    )
+    imap_ready = _env("REKHA_IMAP_ENABLED", "false").lower() in {"1", "true", "yes"} and bool(
+        _env("REKHA_IMAP_USERNAME", _env("SMTP_USERNAME"))
+    ) and bool(_env("REKHA_IMAP_PASSWORD", _env("SMTP_PASSWORD")))
     return {
         "agent_name": REKHA_NAME,
         "ai_ready": bool(_env("OPENAI_API_KEY")) and _env("AI_PROVIDER", "mock").lower() == "openai",
-        "email_ready": all(
-            _env(key)
-            for key in ("SMTP_HOST", "SMTP_PORT", "SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_FROM_EMAIL")
-        ),
-        "email_inbound_ready": _env("REKHA_IMAP_ENABLED", "false").lower() in {"1", "true", "yes"}
-        and bool(_env("REKHA_IMAP_USERNAME", _env("SMTP_USERNAME")))
-        and bool(_env("REKHA_IMAP_PASSWORD", _env("SMTP_PASSWORD"))),
+        "email_ready": gmail_api_ready or smtp_ready,
+        "email_inbound_ready": gmail_api_ready or imap_ready,
+        "email_provider": "gmail_api" if gmail_api_ready else ("smtp" if smtp_ready else "none"),
+        "scheduler_ready": bool(_env("REKHA_SCHEDULER_SECRET")),
         "whatsapp_ready": all(
             _env(key)
             for key in (
@@ -381,7 +394,7 @@ def draft_follow_up(prospect: RekhaProspect, stage: int) -> dict[str, str]:
 async def send_outreach(channel: str, recipient: str, subject: str, body: str) -> dict[str, Any]:
     if channel == "email":
         result = await send_email_message([recipient], subject, body)
-        return {**result, "provider": "smtp"}
+        return {**result, "provider": result.get("provider") or "smtp"}
 
     if channel != "whatsapp":
         return {"sent": False, "message": f"Unsupported channel: {channel}"}

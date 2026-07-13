@@ -689,6 +689,8 @@ export type RekhaOverview = {
     ai_ready: boolean;
     email_ready: boolean;
     email_inbound_ready: boolean;
+    email_provider?: "gmail_api" | "smtp" | "none";
+    scheduler_ready?: boolean;
     whatsapp_ready: boolean;
     booking_ready: boolean;
     compliance_ready: boolean;

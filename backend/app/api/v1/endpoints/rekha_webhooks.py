@@ -22,6 +22,11 @@ from app.models.rekha_outreach import (
     RekhaProspectStatus,
 )
 from app.services.rekha_agent import classify_reply, integration_status, send_outreach
+from app.services.rekha_automation import (
+    process_autonomous_rekha_cycle,
+    process_due_rekha_follow_ups,
+)
+from app.services.rekha_email_inbox import poll_rekha_email_replies
 
 
 router = APIRouter(prefix="/webhooks/rekha", tags=["Rekha Webhooks"])
@@ -32,6 +37,14 @@ class RekhaInboundPayload(BaseModel):
     sender: str = Field(min_length=3, max_length=320)
     body: str = Field(min_length=1, max_length=10000)
     provider_message_id: str | None = Field(default=None, max_length=500)
+
+
+def _verify_secret(value: str | None, env_key: str) -> None:
+    expected = os.getenv(env_key, "").strip()
+    if not expected:
+        raise HTTPException(status_code=503, detail="Rekha scheduler is not configured")
+    if not value or not hmac.compare_digest(value, expected):
+        raise HTTPException(status_code=401, detail="Invalid scheduler secret")
 
 
 def _digits(value: str | None) -> str:
@@ -183,6 +196,21 @@ async def receive_provider_neutral_reply(
     if not x_rekha_webhook_secret or not hmac.compare_digest(x_rekha_webhook_secret, expected):
         raise HTTPException(status_code=401, detail="Invalid webhook secret")
     return await _ingest(db, data.channel, data.sender, data.body, data.provider_message_id)
+
+
+@router.post("/scheduled-cycle")
+async def run_free_runtime_cycle(
+    x_rekha_scheduler_secret: str | None = Header(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    _verify_secret(x_rekha_scheduler_secret, "REKHA_SCHEDULER_SECRET")
+    inbox = await poll_rekha_email_replies(db)
+    cycle = await process_autonomous_rekha_cycle(db)
+    follow_ups = await process_due_rekha_follow_ups(
+        db,
+        limit=max(int(os.getenv("REKHA_WORKER_BATCH_SIZE", "25") or "25"), 1),
+    )
+    return {"ok": True, "inbox": inbox, "cycle": cycle, "follow_ups": follow_ups}
 
 
 @router.get("/whatsapp")
