@@ -57,6 +57,9 @@ def integration_status() -> dict[str, Any]:
             _env(key)
             for key in ("SMTP_HOST", "SMTP_PORT", "SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_FROM_EMAIL")
         ),
+        "email_inbound_ready": _env("REKHA_IMAP_ENABLED", "false").lower() in {"1", "true", "yes"}
+        and bool(_env("REKHA_IMAP_USERNAME", _env("SMTP_USERNAME")))
+        and bool(_env("REKHA_IMAP_PASSWORD", _env("SMTP_PASSWORD"))),
         "whatsapp_ready": all(
             _env(key)
             for key in (
@@ -66,6 +69,7 @@ def integration_status() -> dict[str, Any]:
             )
         ),
         "booking_ready": bool(profile["booking_url"]),
+        "compliance_ready": bool(_env("REKHA_POSTAL_ADDRESS")),
         "founder_handoff_ready": bool(
             profile["phone"] or profile["whatsapp_url"] or profile["contact_email"]
         ),
@@ -200,7 +204,8 @@ def _fallback_copy(prospect: RekhaProspect, channel: str) -> dict[str, str]:
     if channel == "whatsapp":
         body = (
             f"Hi, Rekha here — {profile['name']}'s AI assistant at {profile['company']}. "
-            f"{intro} {offer}\n\nWould it be okay if I ask 2 quick questions to identify the best demo?"
+            f"{intro} {offer}\n\nWould it be okay if I ask 2 quick questions to identify the best demo? "
+            "Reply STOP anytime and I will not contact you again."
         )
         return {"subject": "", "body": body}
 
@@ -210,12 +215,26 @@ def _fallback_copy(prospect: RekhaProspect, channel: str) -> dict[str, str]:
         f"{offer}\n\n"
         "Would it be useful if I sent 2–3 questions and suggested the highest-impact workflow to demo? "
         "No commitment required.\n\n"
-        "Regards,\nRekha\nAI assistant to " + profile["name"]
+        "Regards,\nRekha\nAI assistant to " + profile["name"] +
+        "\n\nBusiness outreach from MMe-AI. Reply STOP to opt out."
     )
+    postal_address = _env("REKHA_POSTAL_ADDRESS")
+    if postal_address:
+        body += f"\nMMe-AI, {postal_address}"
     return {
         "subject": f"A small workflow demo for {prospect.business_name}",
         "body": body,
     }
+
+
+def _ensure_compliance_copy(body: str, channel: str) -> str:
+    if "reply stop" not in body.lower():
+        body += "\n\nReply STOP and Rekha will not contact you again."
+    if channel == "email":
+        postal_address = _env("REKHA_POSTAL_ADDRESS")
+        if postal_address and postal_address.lower() not in body.lower():
+            body += f"\nMMe-AI, {postal_address}"
+    return body
 
 
 def _extract_output_text(data: dict[str, Any]) -> str:
@@ -255,6 +274,7 @@ Only if the demo is useful will a paid production setup be discussed.
 Rules:
 - Never invent a problem, employee name, result, relationship or website observation.
 - Explicitly say Rekha is an AI assistant. Do not pretend to be human.
+- Add a clear one-line opt-out. For email, also add the MMe-AI postal address when provided: {_env('REKHA_POSTAL_ADDRESS') or 'not configured'}.
 - Sound warm and conversational, not corporate or overexcited.
 - No pressure, fake urgency, exaggerated ROI or spam language.
 - Ask one low-friction permission question.
@@ -285,7 +305,7 @@ Rules:
         body = str(parsed.get("body") or fallback["body"]).strip()
         if not body:
             raise ValueError("Empty outreach body")
-        return {"subject": subject, "body": body, "provider": "openai"}
+        return {"subject": subject, "body": _ensure_compliance_copy(body, channel), "provider": "openai"}
     except (httpx.HTTPError, ValueError, TypeError, json.JSONDecodeError):
         return {**fallback, "provider": "rekha_template_fallback"}
 
@@ -294,7 +314,7 @@ async def classify_reply(reply: str) -> dict[str, Any]:
     clean = reply.strip()
     lowered = clean.lower()
     language = detect_language(clean)
-    if any(term in lowered for term in ("unsubscribe", "remove me", "stop messaging", "do not contact")):
+    if lowered in {"stop", "unsubscribe", "band karo"} or any(term in lowered for term in ("unsubscribe", "remove me", "stop messaging", "do not contact", "don't contact")):
         return {"intent": "opted_out", "suggested_reply": _localized_known_reply("opted_out", language), "confidence": 1.0, "requires_founder": False, "language": language, "reason": "Explicit opt-out"}
     if any(term in lowered for term in ("interested", "demo", "call me", "let's talk", "lets talk", "sounds good")):
         handoff = "\n".join(_handoff_lines())
@@ -355,7 +375,7 @@ def draft_follow_up(prospect: RekhaProspect, stage: int) -> dict[str, str]:
         subject = f"Closing the loop — {name}"
     if prospect.preferred_channel == "whatsapp":
         subject = ""
-    return {"subject": subject, "body": body, "provider": "rekha_follow_up_template"}
+    return {"subject": subject, "body": _ensure_compliance_copy(body, prospect.preferred_channel or "email"), "provider": "rekha_follow_up_template"}
 
 
 async def send_outreach(channel: str, recipient: str, subject: str, body: str) -> dict[str, Any]:

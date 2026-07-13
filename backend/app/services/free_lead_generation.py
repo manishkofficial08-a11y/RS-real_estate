@@ -128,6 +128,9 @@ def element_matches_industry(element: Dict[str, Any], industry: str) -> bool:
     category = normalize_category(industry)
     name = str(tags.get("name") or tags.get("brand") or "").lower()
 
+    if tags.get("tourism") == "information" or tags.get("information"):
+        return False
+
     if category == "real_estate":
         return tags.get("office") == "estate_agent" or any(
             keyword in name
@@ -202,6 +205,25 @@ def _safe_public_url(value: Optional[str]) -> Optional[str]:
     return candidate
 
 
+def valid_public_phone(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    cleaned = re.sub(r"[^0-9+]", "", value.split(";")[0].strip())
+    digits = re.sub(r"\D", "", cleaned)
+    if not 7 <= len(digits) <= 15 or len(set(digits)) == 1:
+        return None
+    return cleaned
+
+
+def valid_public_email(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    candidate = value.split(";")[0].strip().lower()
+    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]{2,}", candidate):
+        return None
+    return candidate
+
+
 def score_candidate(candidate: Dict[str, Any]) -> int:
     score = 10 if candidate.get("name") else 0
     score += 25 if candidate.get("phone") else 0
@@ -233,8 +255,8 @@ def element_to_candidate(element: Dict[str, Any], industry: str) -> Optional[Dic
         "name": name,
         "category": _category_label(tags, industry),
         "address": _address(tags),
-        "phone": _first(tags, "contact:phone", "phone", "contact:mobile", "mobile"),
-        "email": _first(tags, "contact:email", "email"),
+        "phone": valid_public_phone(_first(tags, "contact:phone", "phone", "contact:mobile", "mobile")),
+        "email": valid_public_email(_first(tags, "contact:email", "email")),
         "website": _safe_public_url(_first(tags, "contact:website", "website", "url")),
         "latitude": float(latitude) if latitude is not None else None,
         "longitude": float(longitude) if longitude is not None else None,
