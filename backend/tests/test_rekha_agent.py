@@ -49,6 +49,7 @@ async def test_rekha_template_is_transparent_and_low_pressure(monkeypatch):
 @pytest.mark.asyncio
 async def test_interested_reply_creates_founder_handoff(monkeypatch):
     monkeypatch.setenv("REKHA_FOUNDER_PHONE", "+91 99999 99999")
+    monkeypatch.setenv("REKHA_FOUNDER_WHATSAPP_URL", "")
     result = await classify_reply("Yes, interested. Let's book a demo.")
     assert result["intent"] == "interested"
     assert "Manish" in result["suggested_reply"]
@@ -102,6 +103,18 @@ def test_official_contact_email_is_available_as_safe_fallback(monkeypatch):
     from app.services.rekha_agent import founder_profile
 
     assert founder_profile()["contact_email"] == "mmeai.official@gmail.com"
+
+
+@pytest.mark.asyncio
+async def test_interested_lead_is_asked_for_preferred_demo_time(monkeypatch):
+    monkeypatch.delenv("REKHA_FOUNDER_PHONE", raising=False)
+    monkeypatch.delenv("REKHA_FOUNDER_WHATSAPP_URL", raising=False)
+    monkeypatch.delenv("REKHA_DEMO_HOURS", raising=False)
+    result = await classify_reply("Sounds good, I am interested in a demo")
+    reply = result["suggested_reply"]
+    assert "What date and time would suit you best" in reply
+    assert "10:00 AM–5:00 PM IST" in reply
+    assert "https://wa.me/918851144571" in reply
 
 
 def test_rekha_routes_are_registered():

@@ -138,3 +138,7 @@ browser bundle.
 - Backend: Render service `mme-ai-api`
 - Production database: Supabase project `rs-real-estate-production`
 - Official contact email: `mmeai.official@gmail.com`
+- Founder phone/WhatsApp: `+91 8851144571`
+- Public WhatsApp link: `https://wa.me/918851144571`
+- Demo scheduling rule: ask for the client's preferred date/time first; when
+  they have no preference, offer the official `10:00 AM–5:00 PM IST` window.

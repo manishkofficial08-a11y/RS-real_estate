@@ -34,9 +34,13 @@ def founder_profile() -> dict[str, str]:
     return {
         "name": _env("REKHA_FOUNDER_NAME", "Manish"),
         "company": _env("REKHA_COMPANY_NAME", "MMe-AI"),
-        "phone": _env("REKHA_FOUNDER_PHONE"),
-        "whatsapp_url": _env("REKHA_FOUNDER_WHATSAPP_URL"),
+        "phone": _env("REKHA_FOUNDER_PHONE", "+91 8851144571"),
+        "whatsapp_url": _env(
+            "REKHA_FOUNDER_WHATSAPP_URL",
+            "https://wa.me/918851144571",
+        ),
         "booking_url": _env("REKHA_BOOKING_URL"),
+        "demo_hours": _env("REKHA_DEMO_HOURS", "10:00 AM–5:00 PM IST"),
         "contact_email": _env(
             "REKHA_CONTACT_EMAIL",
             _env("SMTP_FROM_EMAIL", "mmeai.official@gmail.com"),
@@ -164,7 +168,10 @@ def calculate_fit(prospect: RekhaProspect) -> tuple[int, str]:
 
 def _handoff_lines() -> list[str]:
     profile = founder_profile()
-    lines: list[str] = []
+    lines: list[str] = [
+        "What date and time would suit you best for a short demo?",
+        f"If you don’t have a preference, our usual demo window is {profile['demo_hours']}.",
+    ]
     if profile["booking_url"]:
         lines.append(f"Demo: {profile['booking_url']}")
     if profile["whatsapp_url"]:
