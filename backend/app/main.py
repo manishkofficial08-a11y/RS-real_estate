@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.v1.router import api_router
 from app.config import settings
 from app.services.scheduled_publisher import register_scheduled_publisher_worker
+from app.services.rekha_automation import register_rekha_automation_worker
 
 
 def get_cors_origins() -> list[str]:
@@ -51,6 +52,7 @@ app.include_router(api_router)
 
 # Background workers
 register_scheduled_publisher_worker(app)
+register_rekha_automation_worker(app)
 
 
 @app.get("/")

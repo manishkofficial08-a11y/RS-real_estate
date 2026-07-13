@@ -630,3 +630,196 @@ export async function importFreeBusinessLeads(
   });
 }
 
+export type RekhaMessage = {
+  id: string;
+  prospect_id: string;
+  channel: 'email' | 'whatsapp' | 'call';
+  direction: 'inbound' | 'outbound';
+  status: 'draft' | 'approved' | 'sent' | 'failed' | 'received';
+  subject?: string | null;
+  body: string;
+  provider?: string | null;
+  provider_message_id?: string | null;
+  error_message?: string | null;
+  message_kind: string;
+  scheduled_at?: string | null;
+  auto_generated: boolean;
+  sent_at?: string | null;
+  created_at?: string | null;
+};
+
+export type RekhaProspect = {
+  id: string;
+  external_id?: string | null;
+  business_name: string;
+  category?: string | null;
+  location?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  source: string;
+  source_url?: string | null;
+  lead_score: number;
+  fit_score: number;
+  fit_reason?: string | null;
+  status: string;
+  preferred_channel?: string | null;
+  market_region: 'india' | 'international' | 'unknown';
+  language_preference: 'english' | 'hinglish' | 'hindi';
+  opted_out: boolean;
+  automation_paused: boolean;
+  requires_founder: boolean;
+  founder_note?: string | null;
+  last_intent?: string | null;
+  follow_up_stage: number;
+  last_contacted_at?: string | null;
+  next_follow_up_at?: string | null;
+  replied_at?: string | null;
+  demo_booked_at?: string | null;
+  created_at?: string | null;
+  messages: RekhaMessage[];
+};
+
+export type RekhaOverview = {
+  agent: {
+    agent_name: string;
+    ai_ready: boolean;
+    email_ready: boolean;
+    whatsapp_ready: boolean;
+    booking_ready: boolean;
+    founder_handoff_ready: boolean;
+    auto_send_enabled: boolean;
+    daily_send_limit: number;
+    call_enabled: boolean;
+    call_note: string;
+  };
+  pipeline: Record<string, number>;
+  total_prospects: number;
+  sent_today: number;
+  escalation_count: number;
+  campaign: RekhaCampaignSettings;
+};
+
+export type RekhaCampaignSettings = {
+  is_active: boolean;
+  auto_follow_ups: boolean;
+  auto_reply_safe: boolean;
+  working_hours_start: number;
+  working_hours_end: number;
+  timezone_name: string;
+};
+
+export type RekhaRunPayload = {
+  industry: string;
+  location: string;
+  radius_km: number;
+  limit: number;
+  minimum_score: number;
+  channel: 'email' | 'whatsapp';
+  auto_send: boolean;
+};
+
+export type RekhaRunResponse = {
+  agent: string;
+  discovered_count: number;
+  qualified_count: number;
+  imported_count: number;
+  duplicates_skipped: number;
+  drafted_count: number;
+  sent_count: number;
+  auto_send_requested: boolean;
+  auto_send_enabled: boolean;
+  send_errors: string[];
+  message: string;
+};
+
+export async function getRekhaOverview(): Promise<RekhaOverview> {
+  return adminFetch<RekhaOverview>('/admin/rekha/overview');
+}
+
+export async function getRekhaProspects(): Promise<RekhaProspect[]> {
+  return adminFetch<RekhaProspect[]>('/admin/rekha/prospects');
+}
+
+export async function importRekhaProspects(
+  candidates: FreeLeadCandidate[],
+  resolvedLocation?: string,
+): Promise<{ imported_count: number; skipped_count: number; prospect_ids: string[]; message: string }> {
+  return adminFetch('/admin/rekha/prospects/import', {
+    method: 'POST',
+    body: JSON.stringify({
+      resolved_location: resolvedLocation,
+      candidates: candidates.map((candidate) => ({
+        ...candidate,
+        location: resolvedLocation,
+      })),
+    }),
+  });
+}
+
+export async function runRekha(payload: RekhaRunPayload): Promise<RekhaRunResponse> {
+  return adminFetch<RekhaRunResponse>('/admin/rekha/run', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function createRekhaDraft(
+  prospectId: string,
+  channel: 'email' | 'whatsapp',
+): Promise<RekhaMessage> {
+  return adminFetch<RekhaMessage>(`/admin/rekha/prospects/${prospectId}/draft`, {
+    method: 'POST',
+    body: JSON.stringify({ channel }),
+  });
+}
+
+export async function sendRekhaMessage(
+  messageId: string,
+  payload: { subject?: string; body?: string },
+): Promise<{ message: RekhaMessage; delivery: Record<string, unknown> }> {
+  return adminFetch<{ message: RekhaMessage; delivery: Record<string, unknown> }>(`/admin/rekha/messages/${messageId}/send`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function recordRekhaReply(
+  prospectId: string,
+  payload: { channel: 'email' | 'whatsapp' | 'call'; body: string; demo_booked: boolean },
+): Promise<{ intent: string; suggested_reply: RekhaMessage; founder_handoff: boolean; requires_founder: boolean; confidence?: number; reason?: string; auto_replied: boolean }> {
+  return adminFetch(`/admin/rekha/prospects/${prospectId}/reply`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateRekhaCampaign(payload: RekhaCampaignSettings): Promise<RekhaCampaignSettings> {
+  return adminFetch<RekhaCampaignSettings>('/admin/rekha/campaign', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateRekhaProspectAutomation(prospectId: string, paused: boolean): Promise<RekhaProspect> {
+  return adminFetch<RekhaProspect>(`/admin/rekha/prospects/${prospectId}/automation`, {
+    method: 'PATCH',
+    body: JSON.stringify({ paused }),
+  });
+}
+
+export async function resolveRekhaFounderQuestion(
+  prospectId: string,
+  answer: string,
+): Promise<{ prospect: RekhaProspect; message: RekhaMessage }> {
+  return adminFetch(`/admin/rekha/prospects/${prospectId}/resolve`, {
+    method: 'POST',
+    body: JSON.stringify({ answer, send_now: false }),
+  });
+}
+
+export async function processDueRekhaFollowUps(): Promise<{ processed_count: number; reason?: string }> {
+  return adminFetch('/admin/rekha/process-due', { method: 'POST' });
+}
+

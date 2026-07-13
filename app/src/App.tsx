@@ -20,6 +20,7 @@ import SalesDashboard from '@/pages/SalesDashboard';
 import CustomInternalTools from '@/pages/CustomInternalTools';
 import ClientOnboarding from '@/pages/ClientOnboarding';
 import LeadGeneration from '@/pages/LeadGeneration';
+import Rekha from '@/pages/Rekha';
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="client-onboarding" element={<ClientOnboarding />} />
           <Route path="client-health" element={<ClientHealth />} />
           <Route path="lead-generation" element={<LeadGeneration />} />
+          <Route path="rekha" element={<Rekha />} />
           <Route path="leads" element={<Navigate to="/admin/client-health" replace />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="analytics" element={<Analytics />} />

@@ -2,3 +2,24 @@
 .cube-scene:hover .cube {
   transform: translateZ(-20px) rotateX(25deg) rotateY(-35deg) !important;
 }
+
+.field-dark {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  background: #121218;
+  color: #f0ede6;
+  padding: 0.72rem 0.85rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.field-dark::placeholder {
+  color: #55555e;
+}
+
+.field-dark:focus {
+  border-color: rgba(167, 139, 250, 0.48);
+  background: #15151c;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.08);
+}

@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, properties, leads, admin, admin_client_onboarding, upload, support, notifications, ai_jobs, content_assets, generated_posts, scheduled_posts, reports, team, billing, social_accounts, lead_generation
+from app.api.v1.endpoints import auth, properties, leads, admin, admin_client_onboarding, upload, support, notifications, ai_jobs, content_assets, generated_posts, scheduled_posts, reports, team, billing, social_accounts, lead_generation, rekha, rekha_webhooks
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -9,6 +9,8 @@ api_router.include_router(leads.router)
 api_router.include_router(admin.router)
 api_router.include_router(admin_client_onboarding.router)
 api_router.include_router(lead_generation.router)
+api_router.include_router(rekha.router)
+api_router.include_router(rekha_webhooks.router)
 api_router.include_router(upload.router)
 api_router.include_router(support.router)
 api_router.include_router(notifications.router)
