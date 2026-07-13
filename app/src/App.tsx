@@ -19,6 +19,7 @@ import EmailAutomation from '@/pages/EmailAutomation';
 import SalesDashboard from '@/pages/SalesDashboard';
 import CustomInternalTools from '@/pages/CustomInternalTools';
 import ClientOnboarding from '@/pages/ClientOnboarding';
+import LeadGeneration from '@/pages/LeadGeneration';
 
 export default function App() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="companies" element={<Companies />} />
           <Route path="client-onboarding" element={<ClientOnboarding />} />
           <Route path="client-health" element={<ClientHealth />} />
+          <Route path="lead-generation" element={<LeadGeneration />} />
           <Route path="leads" element={<Navigate to="/admin/client-health" replace />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="analytics" element={<Analytics />} />
