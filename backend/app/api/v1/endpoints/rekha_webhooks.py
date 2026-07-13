@@ -17,10 +17,11 @@ from app.database.session import get_db
 from app.models.rekha_outreach import (
     RekhaMessageStatus,
     RekhaOutreachMessage,
+    RekhaCampaignSettings,
     RekhaProspect,
     RekhaProspectStatus,
 )
-from app.services.rekha_agent import classify_reply
+from app.services.rekha_agent import classify_reply, integration_status, send_outreach
 
 
 router = APIRouter(prefix="/webhooks/rekha", tags=["Rekha Webhooks"])
@@ -115,6 +116,39 @@ async def _ingest(
     if classification["intent"] == "opted_out":
         prospect.opted_out = True
     prospect.automation_paused = prospect.requires_founder or prospect.opted_out
+    auto_replied = False
+    campaign = await db.get(RekhaCampaignSettings, "default")
+    recipient = prospect.email if channel == "email" else prospect.phone
+    if (
+        campaign
+        and campaign.is_active
+        and campaign.auto_reply_safe
+        and integration_status()["auto_send_enabled"]
+        and not prospect.opted_out
+        and recipient
+    ):
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        sent_today = int(
+            await db.scalar(
+                select(func.count(RekhaOutreachMessage.id)).where(
+                    RekhaOutreachMessage.status == RekhaMessageStatus.sent.value,
+                    RekhaOutreachMessage.sent_at >= start,
+                )
+            )
+            or 0
+        )
+        if sent_today < integration_status()["daily_send_limit"]:
+            delivery = await send_outreach(channel, recipient, suggested.subject or "", suggested.body)
+            suggested.approved_at = now
+            if delivery.get("sent"):
+                suggested.status = RekhaMessageStatus.sent.value
+                suggested.sent_at = now
+                suggested.provider = delivery.get("provider") or suggested.provider
+                suggested.provider_message_id = delivery.get("provider_message_id")
+                auto_replied = True
+            else:
+                suggested.status = RekhaMessageStatus.failed.value
+                suggested.error_message = delivery.get("message") or "Automatic reply delivery failed"
     await db.commit()
     return {
         "accepted": True,
@@ -122,6 +156,7 @@ async def _ingest(
         "prospect_id": prospect.id,
         "intent": classification["intent"],
         "requires_founder": prospect.requires_founder,
+        "auto_replied": auto_replied,
     }
 
 
