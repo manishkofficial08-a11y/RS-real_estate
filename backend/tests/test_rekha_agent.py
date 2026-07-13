@@ -96,6 +96,14 @@ def test_voice_calling_is_safety_gated(monkeypatch):
     assert state["auto_send_enabled"] is False
 
 
+def test_official_contact_email_is_available_as_safe_fallback(monkeypatch):
+    monkeypatch.delenv("REKHA_CONTACT_EMAIL", raising=False)
+    monkeypatch.delenv("SMTP_FROM_EMAIL", raising=False)
+    from app.services.rekha_agent import founder_profile
+
+    assert founder_profile()["contact_email"] == "mmeai.official@gmail.com"
+
+
 def test_rekha_routes_are_registered():
     from app.main import app
 

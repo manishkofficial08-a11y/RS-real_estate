@@ -37,7 +37,10 @@ def founder_profile() -> dict[str, str]:
         "phone": _env("REKHA_FOUNDER_PHONE"),
         "whatsapp_url": _env("REKHA_FOUNDER_WHATSAPP_URL"),
         "booking_url": _env("REKHA_BOOKING_URL"),
-        "contact_email": _env("REKHA_CONTACT_EMAIL", _env("SMTP_FROM_EMAIL")),
+        "contact_email": _env(
+            "REKHA_CONTACT_EMAIL",
+            _env("SMTP_FROM_EMAIL", "mmeai.official@gmail.com"),
+        ),
     }
 
 

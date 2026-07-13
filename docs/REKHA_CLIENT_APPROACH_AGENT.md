@@ -129,3 +129,12 @@ See `backend/.env.example` for:
 
 Secrets belong in the deployment environment, never in the repository or
 browser bundle.
+
+## Current production map
+
+- GitHub: `manishkofficial08-a11y/RS-real_estate`
+- Founder dashboard frontend: Vercel project `mme-ai-founder`
+- Client dashboard frontend: Vercel project `rs-real-estate`
+- Backend: Render service `mme-ai-api`
+- Production database: Supabase project `rs-real-estate-production`
+- Official contact email: `mmeai.official@gmail.com`
