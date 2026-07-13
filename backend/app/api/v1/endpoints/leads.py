@@ -11,6 +11,8 @@ import uuid
 
 router = APIRouter(prefix="/leads", tags=["Leads"])
 
+REMOVED_LEAD_NAME = "__removed_lead__"
+
 # Schemas
 class LeadCreate(BaseModel):
     name: str
@@ -72,7 +74,8 @@ async def get_archived_leads(
     result = await db.execute(
         select(Lead).where(
             Lead.tenant_id == tenant_id,
-            Lead.is_active == False
+            Lead.is_active == False,
+            Lead.name != REMOVED_LEAD_NAME
         )
     )
     return result.scalars().all()
@@ -87,7 +90,8 @@ async def restore_lead(
     result = await db.execute(
         select(Lead).where(
             Lead.id == lead_id,
-            Lead.tenant_id == tenant_id
+            Lead.tenant_id == tenant_id,
+            Lead.name != REMOVED_LEAD_NAME
         )
     )
     lead = result.scalar_one_or_none()
@@ -110,7 +114,8 @@ async def get_leads(
     result = await db.execute(
         select(Lead).where(
             Lead.tenant_id == tenant_id,
-            Lead.is_active == True
+            Lead.is_active == True,
+            Lead.name != REMOVED_LEAD_NAME
         )
     )
     return result.scalars().all()
@@ -155,7 +160,8 @@ async def get_lead(
         select(Lead).where(
             Lead.id == lead_id,
             Lead.tenant_id == tenant_id,
-            Lead.is_active == True
+            Lead.is_active == True,
+            Lead.name != REMOVED_LEAD_NAME
         )
     )
     lead = result.scalar_one_or_none()
@@ -175,7 +181,8 @@ async def update_lead(
     result = await db.execute(
         select(Lead).where(
             Lead.id == lead_id,
-            Lead.tenant_id == tenant_id
+            Lead.tenant_id == tenant_id,
+            Lead.name != REMOVED_LEAD_NAME
         )
     )
     lead = result.scalar_one_or_none()
@@ -208,13 +215,42 @@ async def delete_lead(
     result = await db.execute(
         select(Lead).where(
             Lead.id == lead_id,
-            Lead.tenant_id == tenant_id
+            Lead.tenant_id == tenant_id,
+            Lead.name != REMOVED_LEAD_NAME
         )
     )
     lead = result.scalar_one_or_none()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
 
+    lead.is_active = False
+    await db.commit()
+
+
+@router.delete("/{lead_id}/remove", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_lead_from_workspace(
+    lead_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    result = await db.execute(
+        select(Lead).where(
+            Lead.id == lead_id,
+            Lead.tenant_id == tenant_id,
+            Lead.name != REMOVED_LEAD_NAME
+        )
+    )
+    lead = result.scalar_one_or_none()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    lead.name = REMOVED_LEAD_NAME
+    lead.email = None
+    lead.phone = None
+    lead.notes = None
+    lead.assigned_to = None
+    lead.property_interest_id = None
+    lead.score = 0
     lead.is_active = False
     await db.commit()
 
@@ -230,7 +266,8 @@ async def add_activity(
     result = await db.execute(
         select(Lead).where(
             Lead.id == lead_id,
-            Lead.tenant_id == tenant_id
+            Lead.tenant_id == tenant_id,
+            Lead.name != REMOVED_LEAD_NAME
         )
     )
     lead = result.scalar_one_or_none()
