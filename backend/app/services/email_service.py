@@ -4,6 +4,8 @@ import smtplib
 from email.message import EmailMessage
 from pathlib import Path
 
+from app.services.gmail_api import gmail_api_configured, send_gmail_message
+
 logger = logging.getLogger(__name__)
 
 
@@ -56,6 +58,12 @@ This link will expire in 30 minutes.
 If you did not request this, you can ignore this email.
 """
 
+    if gmail_api_configured():
+        result = await send_gmail_message([email], subject, body)
+        if not result.get("sent"):
+            logger.warning("Gmail API password reset delivery failed for %s: %s", email, result.get("message"))
+        return
+
     if not _smtp_configured():
         logger.warning("PASSWORD RESET LINK for %s: %s", email, reset_link)
         print(f"PASSWORD RESET LINK for {email}: {reset_link}")
@@ -104,6 +112,9 @@ async def send_email_message(
             "recipients": [],
             "message": "No valid email recipients provided.",
         }
+
+    if gmail_api_configured():
+        return await send_gmail_message(clean_recipients, subject, body, html_body)
 
     if not _smtp_configured():
         logger.warning(

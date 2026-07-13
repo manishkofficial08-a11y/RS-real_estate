@@ -445,8 +445,9 @@ export default function Rekha() {
           <div className="mt-5 space-y-3">
             {[
               ['AI personalization', overview?.agent.ai_ready, 'Template fallback works without key'],
-              ['Email sender', overview?.agent.email_ready, 'SMTP credentials required'],
-              ['Email reply listener', overview?.agent.email_inbound_ready, 'Enable secure IMAP polling'],
+              ['Email sender', overview?.agent.email_ready, overview?.agent.email_provider === 'gmail_api' ? 'Free Gmail API connected' : 'Connect Gmail API or SMTP'],
+              ['Email reply listener', overview?.agent.email_inbound_ready, overview?.agent.email_provider === 'gmail_api' ? 'Gmail API reply sync connected' : 'Enable Gmail API or secure IMAP'],
+              ['Free runtime scheduler', overview?.agent.scheduler_ready, 'GitHub Actions wakes Render every 10 minutes'],
               ['WhatsApp Business', overview?.agent.whatsapp_ready, 'Approved template required'],
               ['Demo booking', overview?.agent.booking_ready, 'Calendar/booking URL required'],
               ['Outreach compliance', overview?.agent.compliance_ready, 'Postal address required for automated email'],

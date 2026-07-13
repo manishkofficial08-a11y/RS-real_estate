@@ -5,6 +5,7 @@ import email
 import imaplib
 import os
 import uuid
+import base64
 from datetime import datetime, timezone
 from email.header import decode_header
 from email.utils import parseaddr
@@ -19,6 +20,11 @@ from app.models.rekha_outreach import (
     RekhaProspect,
 )
 from app.services.rekha_agent import classify_reply, integration_status, send_outreach
+from app.services.gmail_api import (
+    fetch_unread_raw_messages,
+    gmail_api_configured,
+    mark_gmail_message_read,
+)
 
 
 def _env(key: str, default: str = "") -> str:
@@ -75,6 +81,22 @@ def _fetch_unread() -> list[dict[str, str]]:
     return inbox
 
 
+async def _fetch_unread_gmail_api() -> list[dict[str, str]]:
+    inbox: list[dict[str, str]] = []
+    for item in await fetch_unread_raw_messages(limit=50):
+        raw = item["raw"]
+        decoded = base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4))
+        message = email.message_from_bytes(decoded)
+        inbox.append({
+            "uid": item["id"],
+            "sender": parseaddr(_decode(message.get("From")))[1].lower(),
+            "message_id": str(message.get("Message-ID") or f"gmail-{item['id']}").strip(),
+            "subject": _decode(message.get("Subject")),
+            "body": _plain_body(message),
+        })
+    return inbox
+
+
 def _mark_seen(uids: list[str]) -> None:
     if not uids:
         return
@@ -90,9 +112,10 @@ def _mark_seen(uids: list[str]) -> None:
 
 
 async def poll_rekha_email_replies(db: AsyncSession) -> dict:
-    if _env("REKHA_IMAP_ENABLED", "false").lower() not in {"1", "true", "yes"}:
-        return {"processed_count": 0, "reason": "imap_disabled"}
-    messages = await asyncio.to_thread(_fetch_unread)
+    use_gmail_api = gmail_api_configured()
+    if not use_gmail_api and _env("REKHA_IMAP_ENABLED", "false").lower() not in {"1", "true", "yes"}:
+        return {"processed_count": 0, "reason": "email_inbound_disabled"}
+    messages = await _fetch_unread_gmail_api() if use_gmail_api else await asyncio.to_thread(_fetch_unread)
     campaign = await db.get(RekhaCampaignSettings, "default")
     status_info = integration_status()
     now = datetime.now(timezone.utc)
@@ -173,7 +196,11 @@ async def poll_rekha_email_replies(db: AsyncSession) -> dict:
         results.append({"prospect_id": prospect.id, "intent": classification["intent"], "auto_replied": auto_replied})
     await db.commit()
     try:
-        await asyncio.to_thread(_mark_seen, matched_uids)
+        if use_gmail_api:
+            for message_id in matched_uids:
+                await mark_gmail_message_read(message_id)
+        else:
+            await asyncio.to_thread(_mark_seen, matched_uids)
     except Exception:
         # Database deduplication prevents a duplicate reply if IMAP flagging
         # temporarily fails; the next poll can safely retry marking it read.
