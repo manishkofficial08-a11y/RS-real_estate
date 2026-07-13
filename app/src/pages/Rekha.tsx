@@ -25,6 +25,7 @@ import {
   getRekhaProspects,
   recordRekhaReply,
   processDueRekhaFollowUps,
+  processRekhaAutonomousCycle,
   resolveRekhaFounderQuestion,
   runRekha,
   sendRekhaMessage,
@@ -84,6 +85,12 @@ function latestDraft(prospect: RekhaProspect): RekhaMessage | undefined {
 }
 
 
+function formatDate(value?: string | null) {
+  if (!value) return 'Not run yet';
+  return new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+}
+
+
 export default function Rekha() {
   const [overview, setOverview] = useState<RekhaOverview | null>(null);
   const [prospects, setProspects] = useState<RekhaProspect[]>([]);
@@ -131,6 +138,11 @@ export default function Rekha() {
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => void load(), 30_000);
+    return () => window.clearInterval(timer);
   }, [load]);
 
   useEffect(() => {
@@ -265,6 +277,22 @@ export default function Rekha() {
     }
   }
 
+  async function handleAutonomousCycle() {
+    setActionId('autonomous-cycle');
+    setError('');
+    try {
+      const result = await processRekhaAutonomousCycle();
+      setNotice(result.processed
+        ? `Cycle complete: ${result.imported_count || 0} new, ${result.drafted_count || 0} drafted, ${result.sent_count || 0} sent.`
+        : `Cycle not started: ${(result.reason || 'not ready').replaceAll('_', ' ')}.`);
+      await load();
+    } catch (cycleError) {
+      setError(readError(cycleError));
+    } finally {
+      setActionId('');
+    }
+  }
+
   async function handlePauseProspect() {
     if (!selected) return;
     setActionId('pause-prospect');
@@ -339,6 +367,42 @@ export default function Rekha() {
         ))}
       </section>
 
+      <section className="surface-card overflow-hidden">
+        <div className="flex flex-col gap-4 border-b px-5 py-5 lg:flex-row lg:items-center lg:justify-between" style={{ borderColor: 'rgba(255,255,255,.06)' }}>
+          <div>
+            <div className="flex items-center gap-2"><Bot size={17} style={{ color: '#63E494' }} /><p className="text-sm font-medium" style={{ color: '#F4F1EA' }}>Autonomous operator</p></div>
+            <p className="mt-1 text-xs" style={{ color: '#777780' }}>Rekha rotates markets, finds new businesses, qualifies them, prepares outreach, sends only through compliant ready channels and keeps the conversation moving.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full px-3 py-1.5 text-xs" style={{ color: overview?.campaign.is_active && overview?.campaign.autonomous_discovery ? '#63E494' : '#FFCB70', background: overview?.campaign.is_active && overview?.campaign.autonomous_discovery ? 'rgba(74,222,128,.09)' : 'rgba(255,184,77,.09)' }}>{overview?.campaign.is_active && overview?.campaign.autonomous_discovery ? 'Autopilot running' : 'Autopilot paused'}</span>
+            <button type="button" disabled={actionId === 'autonomous-cycle' || !overview?.campaign.is_active || !overview?.campaign.autonomous_discovery} onClick={() => void handleAutonomousCycle()} className="rounded-lg px-3 py-2 text-xs disabled:opacity-40" style={{ color: '#C4B5FD', background: 'rgba(167,139,250,.1)' }}>{actionId === 'autonomous-cycle' ? 'Running…' : 'Run cycle now'}</button>
+          </div>
+        </div>
+        <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,.8fr)]">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex items-center justify-between rounded-xl p-3 text-xs" style={{ background: 'rgba(255,255,255,.025)', color: '#BDB9B1' }}><span>Discover new leads continuously</span><input type="checkbox" checked={overview?.campaign.autonomous_discovery || false} onChange={(event) => void handleCampaignChange({ autonomous_discovery: event.target.checked })} /></label>
+            <label className="flex items-center justify-between rounded-xl p-3 text-xs" style={{ background: 'rgba(255,255,255,.025)', color: '#BDB9B1' }}><span>Send initial outreach automatically</span><input type="checkbox" checked={overview?.campaign.auto_initial_outreach || false} onChange={(event) => void handleCampaignChange({ auto_initial_outreach: event.target.checked })} /></label>
+            <label className="space-y-2 md:col-span-2"><span className="text-xs" style={{ color: '#8A8A93' }}>Markets to rotate (comma-separated)</span><input key={`locations-${overview?.campaign.discovery_locations}`} defaultValue={overview?.campaign.discovery_locations || 'Gurgaon, Haryana'} onBlur={(event) => void handleCampaignChange({ discovery_locations: event.target.value })} className="field-dark w-full" /></label>
+            <label className="space-y-2 md:col-span-2"><span className="text-xs" style={{ color: '#8A8A93' }}>Industries to rotate (comma-separated)</span><input key={`industries-${overview?.campaign.discovery_industries}`} defaultValue={overview?.campaign.discovery_industries || 'Local Businesses'} onBlur={(event) => void handleCampaignChange({ discovery_industries: event.target.value })} className="field-dark w-full" /></label>
+            <label className="space-y-2"><span className="text-xs" style={{ color: '#8A8A93' }}>Best available channel</span><select value={overview?.campaign.discovery_channel || 'auto'} onChange={(event) => void handleCampaignChange({ discovery_channel: event.target.value as 'auto' | 'email' | 'whatsapp' })} className="field-dark w-full"><option value="auto">Auto (email first)</option><option value="email">Email only</option><option value="whatsapp">WhatsApp opted-in only</option></select></label>
+            <label className="space-y-2"><span className="text-xs" style={{ color: '#8A8A93' }}>Cycle cadence</span><select value={overview?.campaign.discovery_interval_minutes || 180} onChange={(event) => void handleCampaignChange({ discovery_interval_minutes: Number(event.target.value) })} className="field-dark w-full"><option value={60}>Every hour</option><option value={180}>Every 3 hours</option><option value={360}>Every 6 hours</option><option value={720}>Every 12 hours</option></select></label>
+            <label className="space-y-2"><span className="text-xs" style={{ color: '#8A8A93' }}>Minimum score</span><select value={overview?.campaign.minimum_score || 60} onChange={(event) => void handleCampaignChange({ minimum_score: Number(event.target.value) })} className="field-dark w-full">{[60, 70, 80, 90].map((value) => <option key={value} value={value}>{value}+</option>)}</select></label>
+            <label className="space-y-2"><span className="text-xs" style={{ color: '#8A8A93' }}>Leads per cycle</span><select value={overview?.campaign.discovery_batch_size || 10} onChange={(event) => void handleCampaignChange({ discovery_batch_size: Number(event.target.value) })} className="field-dark w-full">{[5, 10, 20, 30, 50].map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+          </div>
+          <div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,.025)' }}><p className="text-[11px]" style={{ color: '#66666F' }}>Last cycle</p><p className="mt-1 text-xs" style={{ color: '#D6D2CA' }}>{formatDate(overview?.campaign.last_discovery_at)}</p></div>
+              <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,.025)' }}><p className="text-[11px]" style={{ color: '#66666F' }}>Next cycle</p><p className="mt-1 text-xs" style={{ color: '#D6D2CA' }}>{formatDate(overview?.campaign.next_discovery_at)}</p></div>
+            </div>
+            <p className="mt-5 text-xs font-medium uppercase tracking-[.14em]" style={{ color: '#64646D' }}>Recent autonomous activity</p>
+            <div className="mt-3 max-h-64 space-y-2 overflow-y-auto">
+              {(overview?.automation_runs || []).map((run) => <div key={run.id} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.05)' }}><div className="flex items-center justify-between gap-3"><p className="truncate text-xs" style={{ color: '#D6D2CA' }}>{run.industry} · {run.location}</p><span className="text-[10px] uppercase" style={{ color: run.status === 'failed' ? '#FF8A8A' : run.status === 'running' ? '#FFCB70' : '#63E494' }}>{run.status}</span></div><p className="mt-2 text-[11px]" style={{ color: '#6F6F78' }}>{run.discovered_count} found · {run.qualified_count} qualified · {run.sent_count} sent · {run.failed_count} failed</p>{run.error_message && <p className="mt-1 line-clamp-2 text-[11px]" style={{ color: '#FF8A8A' }}>{run.error_message}</p>}</div>)}
+              {!overview?.automation_runs?.length && <div className="rounded-xl px-4 py-8 text-center text-xs" style={{ color: '#55555E', background: 'rgba(255,255,255,.02)' }}>Autopilot activate karne ke baad every cycle yahan visible hoga.</div>}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(340px,.8fr)]">
         <form onSubmit={handleRun} className="surface-card overflow-hidden">
           <div className="border-b px-5 py-4" style={{ borderColor: 'rgba(255,255,255,.06)' }}>
@@ -382,8 +446,10 @@ export default function Rekha() {
             {[
               ['AI personalization', overview?.agent.ai_ready, 'Template fallback works without key'],
               ['Email sender', overview?.agent.email_ready, 'SMTP credentials required'],
+              ['Email reply listener', overview?.agent.email_inbound_ready, 'Enable secure IMAP polling'],
               ['WhatsApp Business', overview?.agent.whatsapp_ready, 'Approved template required'],
               ['Demo booking', overview?.agent.booking_ready, 'Calendar/booking URL required'],
+              ['Outreach compliance', overview?.agent.compliance_ready, 'Postal address required for automated email'],
               ['Founder handoff', overview?.agent.founder_handoff_ready, 'Phone, WhatsApp or email required'],
             ].map(([label, ready, note]) => (
               <div key={String(label)} className="flex items-center gap-3 rounded-xl p-3" style={{ background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.05)' }}>

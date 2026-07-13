@@ -5,6 +5,7 @@ from app.services.free_lead_generation import (
     element_matches_industry,
     element_to_candidate,
     normalize_category,
+    valid_public_phone,
 )
 
 
@@ -82,6 +83,15 @@ def test_duplicate_candidates_are_removed():
         "longitude": 81.63,
     }
     assert len(deduplicate_candidates([candidate, dict(candidate)])) == 1
+
+
+def test_short_service_numbers_and_information_points_are_rejected():
+    assert valid_public_phone("139") is None
+    assert valid_public_phone("+91 98765 43210") == "+919876543210"
+    assert not element_matches_industry(
+        {"tags": {"name": "Gurgaon", "tourism": "information", "phone": "139"}},
+        "Local Businesses",
+    )
 
 
 def test_admin_lead_generation_routes_are_registered(monkeypatch, tmp_path):

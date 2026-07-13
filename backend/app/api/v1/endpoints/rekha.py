@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 from app.core.dependencies import get_current_admin
 from app.database.session import get_db
 from app.models.rekha_outreach import (
+    RekhaAutomationRun,
     RekhaMessageStatus,
     RekhaOutreachMessage,
     RekhaCampaignSettings,
@@ -33,7 +34,10 @@ from app.services.rekha_agent import (
     integration_status,
     send_outreach,
 )
-from app.services.rekha_automation import process_due_rekha_follow_ups
+from app.services.rekha_automation import (
+    process_autonomous_rekha_cycle,
+    process_due_rekha_follow_ups,
+)
 
 
 router = APIRouter(prefix="/admin/rekha", tags=["Admin Rekha Outreach"])
@@ -87,6 +91,15 @@ class RekhaCampaignUpdate(BaseModel):
     is_active: bool
     auto_follow_ups: bool = True
     auto_reply_safe: bool = False
+    autonomous_discovery: bool = False
+    auto_initial_outreach: bool = False
+    discovery_locations: str = Field(default="Gurgaon, Haryana", min_length=2, max_length=1000)
+    discovery_industries: str = Field(default="Local Businesses", min_length=2, max_length=1000)
+    discovery_channel: str = Field(default="auto", pattern="^(auto|email|whatsapp)$")
+    minimum_score: int = Field(default=60, ge=40, le=100)
+    discovery_radius_km: int = Field(default=5, ge=1, le=25)
+    discovery_batch_size: int = Field(default=10, ge=5, le=50)
+    discovery_interval_minutes: int = Field(default=180, ge=30, le=1440)
     working_hours_start: int = Field(default=9, ge=0, le=23)
     working_hours_end: int = Field(default=18, ge=1, le=24)
     timezone_name: str = Field(default="Asia/Kolkata", min_length=3, max_length=80)
@@ -142,6 +155,8 @@ def _prospect_payload(prospect: RekhaProspect) -> dict[str, Any]:
         "market_region": prospect.market_region,
         "language_preference": prospect.language_preference,
         "opted_out": prospect.opted_out,
+        "whatsapp_opt_in": prospect.whatsapp_opt_in,
+        "whatsapp_opted_in_at": prospect.whatsapp_opted_in_at.isoformat() if prospect.whatsapp_opted_in_at else None,
         "automation_paused": prospect.automation_paused,
         "requires_founder": prospect.requires_founder,
         "founder_note": prospect.founder_note,
@@ -272,6 +287,18 @@ def _campaign_payload(settings: RekhaCampaignSettings) -> dict[str, Any]:
         "is_active": settings.is_active,
         "auto_follow_ups": settings.auto_follow_ups,
         "auto_reply_safe": settings.auto_reply_safe,
+        "autonomous_discovery": settings.autonomous_discovery,
+        "auto_initial_outreach": settings.auto_initial_outreach,
+        "discovery_locations": settings.discovery_locations,
+        "discovery_industries": settings.discovery_industries,
+        "discovery_channel": settings.discovery_channel,
+        "minimum_score": settings.minimum_score,
+        "discovery_radius_km": settings.discovery_radius_km,
+        "discovery_batch_size": settings.discovery_batch_size,
+        "discovery_interval_minutes": settings.discovery_interval_minutes,
+        "last_discovery_at": settings.last_discovery_at.isoformat() if settings.last_discovery_at else None,
+        "next_discovery_at": settings.next_discovery_at.isoformat() if settings.next_discovery_at else None,
+        "consecutive_failures": settings.consecutive_failures,
         "working_hours_start": settings.working_hours_start,
         "working_hours_end": settings.working_hours_end,
         "timezone_name": settings.timezone_name,
@@ -289,6 +316,11 @@ async def _send_message(
     recipient = prospect.email if message.channel == "email" else prospect.phone
     if not recipient:
         raise HTTPException(status_code=400, detail=f"Prospect has no {message.channel} destination")
+    if message.channel == "whatsapp" and not prospect.whatsapp_opt_in:
+        raise HTTPException(
+            status_code=400,
+            detail="WhatsApp outreach requires recorded opt-in or an inbound conversation",
+        )
     result = await send_outreach(message.channel, recipient, message.subject or "", message.body)
     message.approved_at = datetime.now(timezone.utc)
     if result.get("sent"):
@@ -329,6 +361,29 @@ async def get_rekha_overview(
     escalation_count = await db.scalar(
         select(func.count(RekhaProspect.id)).where(RekhaProspect.requires_founder == True)
     )
+    run_rows = await db.execute(
+        select(RekhaAutomationRun).order_by(desc(RekhaAutomationRun.started_at)).limit(12)
+    )
+    automation_runs = [
+        {
+            "id": item.id,
+            "status": item.status,
+            "industry": item.industry,
+            "location": item.location,
+            "channel": item.channel,
+            "discovered_count": item.discovered_count,
+            "qualified_count": item.qualified_count,
+            "imported_count": item.imported_count,
+            "drafted_count": item.drafted_count,
+            "sent_count": item.sent_count,
+            "duplicates_skipped": item.duplicates_skipped,
+            "failed_count": item.failed_count,
+            "error_message": item.error_message,
+            "started_at": item.started_at.isoformat() if item.started_at else None,
+            "finished_at": item.finished_at.isoformat() if item.finished_at else None,
+        }
+        for item in run_rows.scalars().all()
+    ]
     return {
         "agent": integration_status(),
         "pipeline": counts,
@@ -336,6 +391,7 @@ async def get_rekha_overview(
         "sent_today": await _sent_today(db),
         "campaign": _campaign_payload(settings),
         "escalation_count": int(escalation_count or 0),
+        "automation_runs": automation_runs,
     }
 
 
@@ -510,6 +566,9 @@ async def record_rekha_reply(
     )
     db.add(inbound)
     prospect.replied_at = datetime.now(timezone.utc)
+    if data.channel == "whatsapp":
+        prospect.whatsapp_opt_in = True
+        prospect.whatsapp_opted_in_at = prospect.replied_at
     prospect.next_follow_up_at = None
     intent = classification["intent"]
     prospect.status = intent
@@ -567,6 +626,15 @@ async def process_due_rekha_messages(
 ):
     del current_user
     return await process_due_rekha_follow_ups(db, limit=limit)
+
+
+@router.post("/process-cycle")
+async def process_rekha_cycle_now(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    del current_user
+    return await process_autonomous_rekha_cycle(db, force=True)
 
 
 @router.post("/run")

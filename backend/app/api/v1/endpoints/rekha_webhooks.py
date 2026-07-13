@@ -107,6 +107,9 @@ async def _ingest(
     )
     db.add_all([inbound, suggested])
     prospect.replied_at = now
+    if channel == "whatsapp":
+        prospect.whatsapp_opt_in = True
+        prospect.whatsapp_opted_in_at = now
     prospect.next_follow_up_at = None
     prospect.last_intent = classification["intent"]
     prospect.status = classification["intent"]
@@ -119,12 +122,20 @@ async def _ingest(
     auto_replied = False
     campaign = await db.get(RekhaCampaignSettings, "default")
     recipient = prospect.email if channel == "email" else prospect.phone
+    status_info = integration_status()
+    channel_ready = (
+        channel == "email" and status_info["email_ready"] and status_info["compliance_ready"]
+    ) or (
+        channel == "whatsapp" and status_info["whatsapp_ready"] and prospect.whatsapp_opt_in
+    )
     if (
         campaign
         and campaign.is_active
         and campaign.auto_reply_safe
-        and integration_status()["auto_send_enabled"]
+        and status_info["auto_send_enabled"]
+        and channel_ready
         and not prospect.opted_out
+        and not prospect.requires_founder
         and recipient
     ):
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -137,7 +148,7 @@ async def _ingest(
             )
             or 0
         )
-        if sent_today < integration_status()["daily_send_limit"]:
+        if sent_today < status_info["daily_send_limit"]:
             delivery = await send_outreach(channel, recipient, suggested.subject or "", suggested.body)
             suggested.approved_at = now
             if delivery.get("sent"):

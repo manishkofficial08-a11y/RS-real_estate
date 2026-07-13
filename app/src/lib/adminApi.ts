@@ -668,6 +668,8 @@ export type RekhaProspect = {
   market_region: 'india' | 'international' | 'unknown';
   language_preference: 'english' | 'hinglish' | 'hindi';
   opted_out: boolean;
+  whatsapp_opt_in: boolean;
+  whatsapp_opted_in_at?: string | null;
   automation_paused: boolean;
   requires_founder: boolean;
   founder_note?: string | null;
@@ -686,8 +688,10 @@ export type RekhaOverview = {
     agent_name: string;
     ai_ready: boolean;
     email_ready: boolean;
+    email_inbound_ready: boolean;
     whatsapp_ready: boolean;
     booking_ready: boolean;
+    compliance_ready: boolean;
     founder_handoff_ready: boolean;
     auto_send_enabled: boolean;
     daily_send_limit: number;
@@ -699,12 +703,43 @@ export type RekhaOverview = {
   sent_today: number;
   escalation_count: number;
   campaign: RekhaCampaignSettings;
+  automation_runs: RekhaAutomationRun[];
+};
+
+export type RekhaAutomationRun = {
+  id: string;
+  status: 'running' | 'completed' | 'failed';
+  industry?: string | null;
+  location?: string | null;
+  channel?: string | null;
+  discovered_count: number;
+  qualified_count: number;
+  imported_count: number;
+  drafted_count: number;
+  sent_count: number;
+  duplicates_skipped: number;
+  failed_count: number;
+  error_message?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
 };
 
 export type RekhaCampaignSettings = {
   is_active: boolean;
   auto_follow_ups: boolean;
   auto_reply_safe: boolean;
+  autonomous_discovery: boolean;
+  auto_initial_outreach: boolean;
+  discovery_locations: string;
+  discovery_industries: string;
+  discovery_channel: 'auto' | 'email' | 'whatsapp';
+  minimum_score: number;
+  discovery_radius_km: number;
+  discovery_batch_size: number;
+  discovery_interval_minutes: number;
+  last_discovery_at?: string | null;
+  next_discovery_at?: string | null;
+  consecutive_failures: number;
   working_hours_start: number;
   working_hours_end: number;
   timezone_name: string;
@@ -821,5 +856,19 @@ export async function resolveRekhaFounderQuestion(
 
 export async function processDueRekhaFollowUps(): Promise<{ processed_count: number; reason?: string }> {
   return adminFetch('/admin/rekha/process-due', { method: 'POST' });
+}
+
+export async function processRekhaAutonomousCycle(): Promise<{
+  processed: boolean;
+  status?: string;
+  reason?: string;
+  discovered_count?: number;
+  qualified_count?: number;
+  imported_count?: number;
+  drafted_count?: number;
+  sent_count?: number;
+  next_discovery_at?: string | null;
+}> {
+  return adminFetch('/admin/rekha/process-cycle', { method: 'POST' });
 }
 
