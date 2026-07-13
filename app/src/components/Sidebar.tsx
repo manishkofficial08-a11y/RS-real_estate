@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Search,
 } from 'lucide-react';
 import FounderLogo from './FounderLogo';
 import { FOUNDER_BRANDING } from '../lib/founderBranding';
@@ -30,6 +31,7 @@ const navItems = [
   { label: 'Companies', icon: Building2, path: '/admin/companies' },
   { label: 'Client Onboarding', icon: Users, path: '/admin/client-onboarding' },
   { label: 'Client Health', icon: Activity, path: '/admin/client-health' },
+  { label: 'Lead Generation', icon: Search, path: '/admin/lead-generation' },
   { label: 'Users', icon: Users, path: '/admin/users' },
   { label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
   { label: 'AI Jobs', icon: Bot, path: '/admin/ai-jobs' },

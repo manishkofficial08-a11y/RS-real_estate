@@ -490,3 +490,63 @@ export async function createAdminClientOnboardingWorkspace(
   });
 }
 
+export type FreeLeadCandidate = {
+  id: string;
+  name: string;
+  category: string;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  score: number;
+  source: string;
+  source_url: string;
+};
+
+export type FreeLeadSearchPayload = {
+  industry: string;
+  location: string;
+  radius_km: number;
+  limit: number;
+};
+
+export type FreeLeadSearchResponse = {
+  industry: string;
+  location: string;
+  resolved_location: string;
+  radius_km: number;
+  provider: string;
+  attribution_url: string;
+  result_count: number;
+  candidates: FreeLeadCandidate[];
+};
+
+export type FreeLeadImportResponse = {
+  imported_count: number;
+  skipped_count: number;
+  imported_lead_ids: string[];
+  skipped_candidate_ids: string[];
+  message: string;
+};
+
+export async function searchFreeBusinessLeads(
+  payload: FreeLeadSearchPayload,
+): Promise<FreeLeadSearchResponse> {
+  return adminFetch<FreeLeadSearchResponse>("/admin/lead-generation/search", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function importFreeBusinessLeads(
+  tenantId: string,
+  candidates: FreeLeadCandidate[],
+): Promise<FreeLeadImportResponse> {
+  return adminFetch<FreeLeadImportResponse>("/admin/lead-generation/import", {
+    method: "POST",
+    body: JSON.stringify({ tenant_id: tenantId, candidates }),
+  });
+}
+
