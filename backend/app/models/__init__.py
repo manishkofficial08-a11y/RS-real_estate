@@ -30,6 +30,7 @@ from app.models.social_account import SocialAccount, SocialAccountStatus, Social
 from app.models.rekha_outreach import (
     RekhaMessageStatus,
     RekhaOutreachMessage,
+    RekhaCampaignSettings,
     RekhaProspect,
     RekhaProspectStatus,
 )

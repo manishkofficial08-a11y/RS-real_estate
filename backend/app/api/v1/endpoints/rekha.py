@@ -15,6 +15,7 @@ from app.database.session import get_db
 from app.models.rekha_outreach import (
     RekhaMessageStatus,
     RekhaOutreachMessage,
+    RekhaCampaignSettings,
     RekhaProspect,
     RekhaProspectStatus,
 )
@@ -27,10 +28,12 @@ from app.services.free_lead_generation import (
 from app.services.rekha_agent import (
     calculate_fit,
     classify_reply,
+    infer_market_region,
     draft_outreach,
     integration_status,
     send_outreach,
 )
+from app.services.rekha_automation import process_due_rekha_follow_ups
 
 
 router = APIRouter(prefix="/admin/rekha", tags=["Admin Rekha Outreach"])
@@ -80,6 +83,24 @@ class RekhaRunRequest(BaseModel):
     auto_send: bool = False
 
 
+class RekhaCampaignUpdate(BaseModel):
+    is_active: bool
+    auto_follow_ups: bool = True
+    auto_reply_safe: bool = False
+    working_hours_start: int = Field(default=9, ge=0, le=23)
+    working_hours_end: int = Field(default=18, ge=1, le=24)
+    timezone_name: str = Field(default="Asia/Kolkata", min_length=3, max_length=80)
+
+
+class RekhaProspectAutomationUpdate(BaseModel):
+    paused: bool
+
+
+class RekhaFounderResolution(BaseModel):
+    answer: str = Field(min_length=2, max_length=5000)
+    send_now: bool = False
+
+
 def _message_payload(message: RekhaOutreachMessage) -> dict[str, Any]:
     return {
         "id": message.id,
@@ -92,6 +113,9 @@ def _message_payload(message: RekhaOutreachMessage) -> dict[str, Any]:
         "provider": message.provider,
         "provider_message_id": message.provider_message_id,
         "error_message": message.error_message,
+        "message_kind": message.message_kind,
+        "scheduled_at": message.scheduled_at.isoformat() if message.scheduled_at else None,
+        "auto_generated": message.auto_generated,
         "sent_at": message.sent_at.isoformat() if message.sent_at else None,
         "created_at": message.created_at.isoformat() if message.created_at else None,
     }
@@ -115,7 +139,14 @@ def _prospect_payload(prospect: RekhaProspect) -> dict[str, Any]:
         "fit_reason": prospect.fit_reason,
         "status": prospect.status,
         "preferred_channel": prospect.preferred_channel,
+        "market_region": prospect.market_region,
+        "language_preference": prospect.language_preference,
         "opted_out": prospect.opted_out,
+        "automation_paused": prospect.automation_paused,
+        "requires_founder": prospect.requires_founder,
+        "founder_note": prospect.founder_note,
+        "last_intent": prospect.last_intent,
+        "follow_up_stage": prospect.follow_up_stage,
         "last_contacted_at": prospect.last_contacted_at.isoformat() if prospect.last_contacted_at else None,
         "next_follow_up_at": prospect.next_follow_up_at.isoformat() if prospect.next_follow_up_at else None,
         "replied_at": prospect.replied_at.isoformat() if prospect.replied_at else None,
@@ -172,6 +203,7 @@ async def _import_candidates(
             source_url=candidate.source_url,
             lead_score=candidate.score,
             preferred_channel="email" if candidate.email else ("whatsapp" if candidate.phone else None),
+            market_region=infer_market_region(candidate.location or resolved_location, candidate.phone),
         )
         prospect.fit_score, prospect.fit_reason = calculate_fit(prospect)
         prospect.status = RekhaProspectStatus.researched.value
@@ -205,6 +237,7 @@ async def _draft_message(
         body=copy["body"],
         provider=copy.get("provider"),
         created_by=current_user.id,
+        message_kind="initial",
     )
     db.add(message)
     prospect.status = RekhaProspectStatus.drafted.value
@@ -223,6 +256,26 @@ async def _sent_today(db: AsyncSession) -> int:
         )
     )
     return int(result.scalar() or 0)
+
+
+async def _campaign_settings(db: AsyncSession) -> RekhaCampaignSettings:
+    settings = await db.get(RekhaCampaignSettings, "default")
+    if settings is None:
+        settings = RekhaCampaignSettings(id="default")
+        db.add(settings)
+        await db.flush()
+    return settings
+
+
+def _campaign_payload(settings: RekhaCampaignSettings) -> dict[str, Any]:
+    return {
+        "is_active": settings.is_active,
+        "auto_follow_ups": settings.auto_follow_ups,
+        "auto_reply_safe": settings.auto_reply_safe,
+        "working_hours_start": settings.working_hours_start,
+        "working_hours_end": settings.working_hours_end,
+        "timezone_name": settings.timezone_name,
+    }
 
 
 async def _send_message(
@@ -244,9 +297,17 @@ async def _send_message(
         message.provider = result.get("provider") or message.provider
         message.provider_message_id = result.get("provider_message_id")
         message.error_message = None
-        prospect.status = RekhaProspectStatus.contacted.value
+        if message.message_kind in {"initial", "follow_up"}:
+            prospect.status = RekhaProspectStatus.contacted.value
         prospect.last_contacted_at = message.sent_at
-        prospect.next_follow_up_at = message.sent_at + timedelta(days=4)
+        if message.message_kind in {"initial", "follow_up"}:
+            if message.message_kind == "follow_up":
+                prospect.follow_up_stage += 1
+            else:
+                prospect.follow_up_stage = max(prospect.follow_up_stage, 1)
+            follow_up_delays = {1: 3, 2: 4, 3: 5}
+            delay = follow_up_delays.get(prospect.follow_up_stage)
+            prospect.next_follow_up_at = message.sent_at + timedelta(days=delay) if delay else None
     else:
         message.status = RekhaMessageStatus.failed.value
         message.error_message = result.get("message") or "Message was not sent"
@@ -264,11 +325,17 @@ async def get_rekha_overview(
         select(RekhaProspect.status, func.count(RekhaProspect.id)).group_by(RekhaProspect.status)
     )
     counts = {row[0]: int(row[1]) for row in status_rows.all()}
+    settings = await _campaign_settings(db)
+    escalation_count = await db.scalar(
+        select(func.count(RekhaProspect.id)).where(RekhaProspect.requires_founder == True)
+    )
     return {
         "agent": integration_status(),
         "pipeline": counts,
         "total_prospects": sum(counts.values()),
         "sent_today": await _sent_today(db),
+        "campaign": _campaign_payload(settings),
+        "escalation_count": int(escalation_count or 0),
     }
 
 
@@ -290,6 +357,72 @@ async def list_rekha_prospects(
         query = query.where(RekhaProspect.status == prospect_status)
     result = await db.execute(query)
     return [_prospect_payload(item) for item in result.scalars().unique().all()]
+
+
+@router.put("/campaign")
+async def update_rekha_campaign(
+    data: RekhaCampaignUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    del current_user
+    if data.working_hours_start >= data.working_hours_end:
+        raise HTTPException(status_code=400, detail="Campaign end hour must be after start hour")
+    settings = await _campaign_settings(db)
+    for key, value in data.model_dump().items():
+        setattr(settings, key, value)
+    await db.commit()
+    return _campaign_payload(settings)
+
+
+@router.patch("/prospects/{prospect_id}/automation")
+async def update_prospect_automation(
+    prospect_id: str,
+    data: RekhaProspectAutomationUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    del current_user
+    prospect = await _get_prospect(db, prospect_id)
+    prospect.automation_paused = data.paused
+    await db.commit()
+    return _prospect_payload(prospect)
+
+
+@router.post("/prospects/{prospect_id}/resolve")
+async def resolve_founder_question(
+    prospect_id: str,
+    data: RekhaFounderResolution,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    prospect = await _get_prospect(db, prospect_id)
+    if not prospect.requires_founder:
+        raise HTTPException(status_code=409, detail="This prospect has no unresolved founder question")
+    channel = prospect.preferred_channel or ("email" if prospect.email else "whatsapp")
+    message = RekhaOutreachMessage(
+        id=str(uuid.uuid4()),
+        prospect_id=prospect.id,
+        channel=channel,
+        direction="outbound",
+        status=RekhaMessageStatus.draft.value,
+        subject=f"Re: your question for {prospect.business_name}" if channel == "email" else None,
+        body=data.answer.strip(),
+        provider="founder_verified",
+        created_by=current_user.id,
+        message_kind="founder_answer",
+    )
+    db.add(message)
+    prospect.requires_founder = False
+    prospect.founder_note = None
+    prospect.automation_paused = False
+    prospect.status = RekhaProspectStatus.replied.value
+    if data.send_now:
+        if not integration_status()["auto_send_enabled"]:
+            raise HTTPException(status_code=400, detail="Production auto-send switch is disabled")
+        await _send_message(db, message, prospect)
+    await db.commit()
+    return {"prospect": _prospect_payload(prospect), "message": _message_payload(message)}
 
 
 @router.post("/prospects/import", status_code=status.HTTP_201_CREATED)
@@ -373,14 +506,20 @@ async def record_rekha_reply(
         body=data.body.strip(),
         provider="manual_or_webhook",
         created_by=current_user.id,
+        message_kind="inbound",
     )
     db.add(inbound)
     prospect.replied_at = datetime.now(timezone.utc)
     prospect.next_follow_up_at = None
     intent = classification["intent"]
     prospect.status = intent
+    prospect.last_intent = intent
+    prospect.language_preference = classification.get("language") or prospect.language_preference
+    prospect.requires_founder = bool(classification.get("requires_founder"))
+    prospect.founder_note = classification.get("reason") if prospect.requires_founder else None
     if intent == "opted_out":
         prospect.opted_out = True
+    prospect.automation_paused = prospect.requires_founder or prospect.opted_out
     if data.demo_booked:
         prospect.status = RekhaProspectStatus.demo_booked.value
         prospect.demo_booked_at = datetime.now(timezone.utc)
@@ -393,14 +532,41 @@ async def record_rekha_reply(
         body=classification["suggested_reply"],
         provider="rekha_reply_classifier",
         created_by=current_user.id,
+        message_kind="hold" if prospect.requires_founder else "reply",
+        auto_generated=True,
     )
     db.add(suggested)
+    settings = await _campaign_settings(db)
+    auto_replied = False
+    if (
+        settings.is_active
+        and settings.auto_reply_safe
+        and integration_status()["auto_send_enabled"]
+        and not prospect.opted_out
+        and ((suggested.channel == "email" and prospect.email) or (suggested.channel == "whatsapp" and prospect.phone))
+    ):
+        delivery = await _send_message(db, suggested, prospect)
+        auto_replied = bool(delivery.get("sent"))
     await db.commit()
     return {
         "intent": prospect.status,
         "suggested_reply": _message_payload(suggested),
         "founder_handoff": prospect.status in {"interested", "demo_booked"},
+        "requires_founder": prospect.requires_founder,
+        "confidence": classification.get("confidence"),
+        "reason": classification.get("reason"),
+        "auto_replied": auto_replied,
     }
+
+
+@router.post("/process-due")
+async def process_due_rekha_messages(
+    limit: int = 25,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    del current_user
+    return await process_due_rekha_follow_ups(db, limit=limit)
 
 
 @router.post("/run")

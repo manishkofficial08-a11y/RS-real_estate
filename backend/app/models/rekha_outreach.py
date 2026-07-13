@@ -19,6 +19,7 @@ class RekhaProspectStatus(str, enum.Enum):
     not_now = "not_now"
     not_interested = "not_interested"
     opted_out = "opted_out"
+    needs_founder = "needs_founder"
 
 
 class RekhaMessageStatus(str, enum.Enum):
@@ -27,6 +28,19 @@ class RekhaMessageStatus(str, enum.Enum):
     sent = "sent"
     failed = "failed"
     received = "received"
+
+
+class RekhaCampaignSettings(Base):
+    __tablename__ = "rekha_campaign_settings"
+
+    id = Column(String, primary_key=True, default="default")
+    is_active = Column(Boolean, nullable=False, default=False)
+    auto_follow_ups = Column(Boolean, nullable=False, default=True)
+    auto_reply_safe = Column(Boolean, nullable=False, default=False)
+    working_hours_start = Column(Integer, nullable=False, default=9)
+    working_hours_end = Column(Integer, nullable=False, default=18)
+    timezone_name = Column(String, nullable=False, default="Asia/Kolkata")
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class RekhaProspect(Base):
@@ -48,7 +62,14 @@ class RekhaProspect(Base):
     fit_reason = Column(Text, nullable=True)
     status = Column(String, nullable=False, default=RekhaProspectStatus.new.value, index=True)
     preferred_channel = Column(String, nullable=True)
+    market_region = Column(String, nullable=False, default="unknown", index=True)
+    language_preference = Column(String, nullable=False, default="english")
     opted_out = Column(Boolean, nullable=False, default=False)
+    automation_paused = Column(Boolean, nullable=False, default=False)
+    requires_founder = Column(Boolean, nullable=False, default=False, index=True)
+    founder_note = Column(Text, nullable=True)
+    last_intent = Column(String, nullable=True)
+    follow_up_stage = Column(Integer, nullable=False, default=0)
     last_contacted_at = Column(DateTime(timezone=True), nullable=True)
     next_follow_up_at = Column(DateTime(timezone=True), nullable=True)
     replied_at = Column(DateTime(timezone=True), nullable=True)
@@ -82,6 +103,9 @@ class RekhaOutreachMessage(Base):
     provider = Column(String, nullable=True)
     provider_message_id = Column(String, nullable=True)
     error_message = Column(Text, nullable=True)
+    message_kind = Column(String, nullable=False, default="initial", index=True)
+    scheduled_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    auto_generated = Column(Boolean, nullable=False, default=False)
     created_by = Column(String, ForeignKey("users.id"), nullable=True)
     approved_at = Column(DateTime(timezone=True), nullable=True)
     sent_at = Column(DateTime(timezone=True), nullable=True)

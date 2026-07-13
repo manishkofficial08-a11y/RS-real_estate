@@ -641,6 +641,9 @@ export type RekhaMessage = {
   provider?: string | null;
   provider_message_id?: string | null;
   error_message?: string | null;
+  message_kind: string;
+  scheduled_at?: string | null;
+  auto_generated: boolean;
   sent_at?: string | null;
   created_at?: string | null;
 };
@@ -662,7 +665,14 @@ export type RekhaProspect = {
   fit_reason?: string | null;
   status: string;
   preferred_channel?: string | null;
+  market_region: 'india' | 'international' | 'unknown';
+  language_preference: 'english' | 'hinglish' | 'hindi';
   opted_out: boolean;
+  automation_paused: boolean;
+  requires_founder: boolean;
+  founder_note?: string | null;
+  last_intent?: string | null;
+  follow_up_stage: number;
   last_contacted_at?: string | null;
   next_follow_up_at?: string | null;
   replied_at?: string | null;
@@ -687,6 +697,17 @@ export type RekhaOverview = {
   pipeline: Record<string, number>;
   total_prospects: number;
   sent_today: number;
+  escalation_count: number;
+  campaign: RekhaCampaignSettings;
+};
+
+export type RekhaCampaignSettings = {
+  is_active: boolean;
+  auto_follow_ups: boolean;
+  auto_reply_safe: boolean;
+  working_hours_start: number;
+  working_hours_end: number;
+  timezone_name: string;
 };
 
 export type RekhaRunPayload = {
@@ -767,10 +788,38 @@ export async function sendRekhaMessage(
 export async function recordRekhaReply(
   prospectId: string,
   payload: { channel: 'email' | 'whatsapp' | 'call'; body: string; demo_booked: boolean },
-): Promise<{ intent: string; suggested_reply: RekhaMessage; founder_handoff: boolean }> {
-  return adminFetch<{ intent: string; suggested_reply: RekhaMessage; founder_handoff: boolean }>(`/admin/rekha/prospects/${prospectId}/reply`, {
+): Promise<{ intent: string; suggested_reply: RekhaMessage; founder_handoff: boolean; requires_founder: boolean; confidence?: number; reason?: string; auto_replied: boolean }> {
+  return adminFetch(`/admin/rekha/prospects/${prospectId}/reply`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export async function updateRekhaCampaign(payload: RekhaCampaignSettings): Promise<RekhaCampaignSettings> {
+  return adminFetch<RekhaCampaignSettings>('/admin/rekha/campaign', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateRekhaProspectAutomation(prospectId: string, paused: boolean): Promise<RekhaProspect> {
+  return adminFetch<RekhaProspect>(`/admin/rekha/prospects/${prospectId}/automation`, {
+    method: 'PATCH',
+    body: JSON.stringify({ paused }),
+  });
+}
+
+export async function resolveRekhaFounderQuestion(
+  prospectId: string,
+  answer: string,
+): Promise<{ prospect: RekhaProspect; message: RekhaMessage }> {
+  return adminFetch(`/admin/rekha/prospects/${prospectId}/resolve`, {
+    method: 'POST',
+    body: JSON.stringify({ answer, send_now: false }),
+  });
+}
+
+export async function processDueRekhaFollowUps(): Promise<{ processed_count: number; reason?: string }> {
+  return adminFetch('/admin/rekha/process-due', { method: 'POST' });
 }
 

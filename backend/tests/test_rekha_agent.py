@@ -4,7 +4,10 @@ from app.models.rekha_outreach import RekhaProspect
 from app.services.rekha_agent import (
     calculate_fit,
     classify_reply,
+    detect_language,
+    draft_follow_up,
     draft_outreach,
+    infer_market_region,
     integration_status,
 )
 
@@ -58,6 +61,34 @@ async def test_opt_out_stops_outreach():
     assert result["intent"] == "opted_out"
 
 
+@pytest.mark.asyncio
+async def test_unknown_question_is_held_for_founder_instead_of_guessed():
+    result = await classify_reply("Can you guarantee the result and what will it cost?")
+    assert result["intent"] == "needs_founder"
+    assert result["requires_founder"] is True
+    assert "verify" in result["suggested_reply"].lower()
+
+
+@pytest.mark.asyncio
+async def test_hinglish_question_gets_natural_hinglish_hold_reply():
+    result = await classify_reply("Ye kitna cost karega aur kaise karna hai?")
+    assert result["language"] == "hinglish"
+    assert "properly verify" in result["suggested_reply"]
+
+
+def test_market_and_language_detection_are_region_aware():
+    assert infer_market_region("Gurgaon, Haryana") == "india"
+    assert infer_market_region("London, United Kingdom") == "international"
+    assert detect_language("क्या आप बता सकते हैं?") == "hindi"
+    assert detect_language("How does this work?") == "english"
+
+
+def test_follow_up_sequence_closes_politely_without_pressure():
+    copy = draft_follow_up(prospect(preferred_channel="email"), 3)
+    assert "close the loop" in copy["body"]
+    assert "AI assistant" in copy["body"]
+
+
 def test_voice_calling_is_safety_gated(monkeypatch):
     monkeypatch.delenv("REKHA_AUTO_SEND_ENABLED", raising=False)
     state = integration_status()
@@ -73,3 +104,8 @@ def test_rekha_routes_are_registered():
     assert "/api/v1/admin/rekha/overview" in paths
     assert "/api/v1/admin/rekha/prospects/{prospect_id}/draft" in paths
     assert "/api/v1/admin/rekha/messages/{message_id}/send" in paths
+    assert "/api/v1/admin/rekha/campaign" in paths
+    assert "/api/v1/admin/rekha/process-due" in paths
+    assert "/api/v1/admin/rekha/prospects/{prospect_id}/resolve" in paths
+    assert "/api/v1/webhooks/rekha/inbound" in paths
+    assert "/api/v1/webhooks/rekha/whatsapp" in paths

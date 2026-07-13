@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Phone,
   Play,
+  Pause,
   RefreshCw,
   Send,
   ShieldCheck,
@@ -23,8 +24,12 @@ import {
   getRekhaOverview,
   getRekhaProspects,
   recordRekhaReply,
+  processDueRekhaFollowUps,
+  resolveRekhaFounderQuestion,
   runRekha,
   sendRekhaMessage,
+  updateRekhaCampaign,
+  updateRekhaProspectAutomation,
   type RekhaMessage,
   type RekhaOverview,
   type RekhaProspect,
@@ -57,6 +62,7 @@ const statusStyle: Record<string, { label: string; color: string; background: st
   not_now: { label: 'Not now', color: '#A2A2AA', background: 'rgba(255,255,255,.06)' },
   not_interested: { label: 'Not interested', color: '#FF8A8A', background: 'rgba(255,90,90,.10)' },
   opted_out: { label: 'Opted out', color: '#FF8A8A', background: 'rgba(255,90,90,.10)' },
+  needs_founder: { label: 'Needs you', color: '#FFCB70', background: 'rgba(255,184,77,.12)' },
 };
 
 
@@ -72,7 +78,9 @@ function readError(error: unknown) {
 
 
 function latestDraft(prospect: RekhaProspect): RekhaMessage | undefined {
-  return [...prospect.messages].reverse().find((message) => message.direction === 'outbound');
+  return [...prospect.messages].reverse().find(
+    (message) => message.direction === 'outbound' && ['draft', 'failed'].includes(message.status),
+  );
 }
 
 
@@ -97,6 +105,7 @@ export default function Rekha() {
   const [replyBody, setReplyBody] = useState('');
   const [replyChannel, setReplyChannel] = useState<'email' | 'whatsapp' | 'call'>('email');
   const [demoBooked, setDemoBooked] = useState(false);
+  const [founderAnswer, setFounderAnswer] = useState('');
 
   const selected = useMemo(
     () => prospects.find((prospect) => prospect.id === selectedId) || prospects[0],
@@ -131,6 +140,7 @@ export default function Rekha() {
     setReplyChannel((selected?.preferred_channel as 'email' | 'whatsapp') || 'email');
     setReplyBody('');
     setDemoBooked(false);
+    setFounderAnswer('');
   }, [selected]);
 
   async function handleRun(event: React.FormEvent) {
@@ -212,13 +222,72 @@ export default function Rekha() {
         demo_booked: demoBooked,
       });
       setNotice(
-        result.founder_handoff
+        result.requires_founder
+          ? 'Rekha paused automation and escalated this question to you.'
+          : result.founder_handoff
           ? 'Interested lead detected. Rekha prepared the founder handoff.'
           : `Reply classified as ${result.intent.replaceAll('_', ' ')}.`,
       );
       await load();
     } catch (replyError) {
       setError(readError(replyError));
+    } finally {
+      setActionId('');
+    }
+  }
+
+  async function handleCampaignChange(changes: Partial<NonNullable<RekhaOverview['campaign']>>) {
+    if (!overview) return;
+    setActionId('campaign');
+    setError('');
+    try {
+      await updateRekhaCampaign({ ...overview.campaign, ...changes });
+      setNotice(changes.is_active === false ? 'Rekha campaign paused safely.' : 'Rekha automation settings updated.');
+      await load();
+    } catch (campaignError) {
+      setError(readError(campaignError));
+    } finally {
+      setActionId('');
+    }
+  }
+
+  async function handleProcessDue() {
+    setActionId('process-due');
+    setError('');
+    try {
+      const result = await processDueRekhaFollowUps();
+      setNotice(result.processed_count ? `Rekha prepared ${result.processed_count} due follow-up(s).` : `No follow-ups processed${result.reason ? `: ${result.reason.replaceAll('_', ' ')}` : '.'}`);
+      await load();
+    } catch (processError) {
+      setError(readError(processError));
+    } finally {
+      setActionId('');
+    }
+  }
+
+  async function handlePauseProspect() {
+    if (!selected) return;
+    setActionId('pause-prospect');
+    try {
+      await updateRekhaProspectAutomation(selected.id, !selected.automation_paused);
+      setNotice(selected.automation_paused ? 'Prospect automation resumed.' : 'Prospect automation paused.');
+      await load();
+    } catch (pauseError) {
+      setError(readError(pauseError));
+    } finally {
+      setActionId('');
+    }
+  }
+
+  async function handleFounderResolve() {
+    if (!selected || !founderAnswer.trim()) return;
+    setActionId('founder-resolve');
+    try {
+      await resolveRekhaFounderQuestion(selected.id, founderAnswer.trim());
+      setNotice('Verified founder answer saved as a reviewable draft.');
+      await load();
+    } catch (resolveError) {
+      setError(readError(resolveError));
     } finally {
       setActionId('');
     }
@@ -301,7 +370,14 @@ export default function Rekha() {
         </form>
 
         <div className="surface-card p-5">
-          <div className="flex items-center justify-between"><div><p className="text-sm font-medium" style={{ color: '#F4F1EA' }}>Integrations</p><p className="mt-1 text-xs" style={{ color: '#777780' }}>Production readiness</p></div><button type="button" onClick={() => void load()} className="rounded-lg p-2" style={{ color: '#8A8A93', background: 'rgba(255,255,255,.04)' }}><RefreshCw size={15} /></button></div>
+          <div className="flex items-center justify-between"><div><p className="text-sm font-medium" style={{ color: '#F4F1EA' }}>Automation control</p><p className="mt-1 text-xs" style={{ color: '#777780' }}>{overview?.escalation_count || 0} question(s) need founder input</p></div><button type="button" disabled={actionId === 'campaign'} onClick={() => void handleCampaignChange({ is_active: !overview?.campaign.is_active })} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs" style={{ color: overview?.campaign.is_active ? '#FFCB70' : '#63E494', background: overview?.campaign.is_active ? 'rgba(255,184,77,.08)' : 'rgba(74,222,128,.08)' }}>{overview?.campaign.is_active ? <Pause size={13} /> : <Play size={13} />}{overview?.campaign.is_active ? 'Pause' : 'Activate'}</button></div>
+          <div className="mt-4 rounded-xl p-3" style={{ background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.05)' }}>
+            <label className="flex items-center justify-between gap-3 text-xs" style={{ color: '#BDB9B1' }}><span>Automatic follow-ups</span><input type="checkbox" checked={overview?.campaign.auto_follow_ups || false} onChange={(event) => void handleCampaignChange({ auto_follow_ups: event.target.checked })} /></label>
+            <label className="mt-3 flex items-center justify-between gap-3 text-xs" style={{ color: '#BDB9B1' }}><span>Safe replies auto-send</span><input type="checkbox" checked={overview?.campaign.auto_reply_safe || false} onChange={(event) => void handleCampaignChange({ auto_reply_safe: event.target.checked })} /></label>
+            <div className="mt-3 flex items-center justify-between text-[11px]" style={{ color: '#676770' }}><span>Working window</span><span>{overview?.campaign.working_hours_start || 9}:00–{overview?.campaign.working_hours_end || 18}:00 · IST</span></div>
+            <button type="button" disabled={actionId === 'process-due'} onClick={() => void handleProcessDue()} className="mt-3 w-full rounded-lg px-3 py-2 text-xs disabled:opacity-50" style={{ color: '#C4B5FD', background: 'rgba(167,139,250,.09)' }}>{actionId === 'process-due' ? 'Checking…' : 'Process due follow-ups now'}</button>
+          </div>
+          <div className="mt-5 flex items-center justify-between"><div><p className="text-sm font-medium" style={{ color: '#F4F1EA' }}>Integrations</p><p className="mt-1 text-xs" style={{ color: '#777780' }}>Production readiness</p></div><button type="button" onClick={() => void load()} className="rounded-lg p-2" style={{ color: '#8A8A93', background: 'rgba(255,255,255,.04)' }}><RefreshCw size={15} /></button></div>
           <div className="mt-5 space-y-3">
             {[
               ['AI personalization', overview?.agent.ai_ready, 'Template fallback works without key'],
@@ -342,8 +418,12 @@ export default function Rekha() {
             <div>
               <div className="flex flex-col gap-4 border-b px-5 py-5 lg:flex-row lg:items-start lg:justify-between" style={{ borderColor: 'rgba(255,255,255,.06)' }}>
                 <div><div className="flex flex-wrap items-center gap-3"><h2 className="text-xl font-semibold" style={{ color: '#F4F1EA' }}>{selected.business_name}</h2><span className="rounded-full px-2.5 py-1 text-xs" style={{ color: (statusStyle[selected.status] || statusStyle.new).color, background: (statusStyle[selected.status] || statusStyle.new).background }}>{(statusStyle[selected.status] || statusStyle.new).label}</span></div><p className="mt-2 text-xs leading-5" style={{ color: '#777780' }}>{selected.fit_reason}</p></div>
-                <div className="flex flex-wrap gap-2">{selected.website && <a href={selected.website} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs" style={{ color: '#9BAEFF', background: 'rgba(107,138,255,.08)' }}>Website <ExternalLink size={12} /></a>}{selected.email && <span className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs" style={{ color: '#BDB9B1', background: 'rgba(255,255,255,.04)' }}><Mail size={12} /> {selected.email}</span>}{selected.phone && <span className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs" style={{ color: '#BDB9B1', background: 'rgba(255,255,255,.04)' }}><Phone size={12} /> {selected.phone}</span>}</div>
+                <div className="flex flex-wrap gap-2">{selected.website && <a href={selected.website} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs" style={{ color: '#9BAEFF', background: 'rgba(107,138,255,.08)' }}>Website <ExternalLink size={12} /></a>}{selected.email && <span className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs" style={{ color: '#BDB9B1', background: 'rgba(255,255,255,.04)' }}><Mail size={12} /> {selected.email}</span>}{selected.phone && <span className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs" style={{ color: '#BDB9B1', background: 'rgba(255,255,255,.04)' }}><Phone size={12} /> {selected.phone}</span>}<span className="rounded-lg px-3 py-2 text-xs capitalize" style={{ color: '#75D8FF', background: 'rgba(76,194,255,.07)' }}>{selected.market_region} · {selected.language_preference}</span><button type="button" disabled={actionId === 'pause-prospect'} onClick={() => void handlePauseProspect()} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs" style={{ color: selected.automation_paused ? '#63E494' : '#A2A2AA', background: 'rgba(255,255,255,.04)' }}>{selected.automation_paused ? <Play size={12} /> : <Pause size={12} />}{selected.automation_paused ? 'Resume' : 'Pause'}</button></div>
               </div>
+
+              {selected.requires_founder && <div className="m-5 rounded-2xl p-4" style={{ background: 'rgba(255,184,77,.07)', border: '1px solid rgba(255,184,77,.18)' }}>
+                <div className="flex items-start gap-3"><CircleAlert className="mt-0.5 shrink-0" size={18} style={{ color: '#FFCB70' }} /><div className="min-w-0 flex-1"><p className="text-sm font-medium" style={{ color: '#FFE0A6' }}>Rekha needs your verified answer</p><p className="mt-1 text-xs leading-5" style={{ color: '#9B8C72' }}>{selected.founder_note || 'The reply is uncertain or needs a commercial/technical commitment.'} Automation is paused for this prospect.</p><div className="mt-3 rounded-xl p-3 text-xs leading-5" style={{ color: '#D6D2CA', background: 'rgba(0,0,0,.16)' }}>{[...selected.messages].reverse().find((message) => message.direction === 'inbound')?.body || 'Open the conversation history to review the question.'}</div><textarea value={founderAnswer} onChange={(event) => setFounderAnswer(event.target.value)} rows={4} placeholder="Type the accurate answer. Rekha will save it as a reviewable reply draft…" className="field-dark mt-3 w-full resize-none" /><button type="button" disabled={!founderAnswer.trim() || actionId === 'founder-resolve'} onClick={() => void handleFounderResolve()} className="mt-3 rounded-xl px-4 py-2.5 text-xs font-medium disabled:opacity-40" style={{ background: '#FFE0A6', color: '#21180A' }}>{actionId === 'founder-resolve' ? 'Saving…' : 'Create verified Rekha reply'}</button></div></div>
+              </div>}
 
               <div className="grid gap-0 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,.75fr)]">
                 <div className="border-b p-5 lg:border-b-0 lg:border-r" style={{ borderColor: 'rgba(255,255,255,.06)' }}>

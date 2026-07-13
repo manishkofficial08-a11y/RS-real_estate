@@ -14,6 +14,16 @@ from app.services.email_service import send_email_message
 
 
 REKHA_NAME = "Rekha"
+INDIA_MARKERS = {
+    "india", "bharat", "delhi", "gurgaon", "gurugram", "noida", "mumbai", "bombay",
+    "bengaluru", "bangalore", "pune", "hyderabad", "chennai", "kolkata", "jaipur",
+    "ahmedabad", "surat", "lucknow", "indore", "chandigarh", "haryana", "punjab",
+    "rajasthan", "uttar pradesh", "maharashtra", "karnataka", "gujarat",
+}
+HINGLISH_MARKERS = {
+    "kya", "kaise", "haan", "nahi", "nhi", "batao", "chahiye", "karna", "kar sakte",
+    "kitna", "abhi", "baad", "theek", "acha", "accha", "samjha", "bhai",
+}
 
 
 def _env(key: str, default: str = "") -> str:
@@ -57,6 +67,72 @@ def integration_status() -> dict[str, Any]:
         "call_enabled": False,
         "call_note": "Voice calling is intentionally gated until consent, provider, voice and transfer safeguards are approved.",
     }
+
+
+def infer_market_region(location: str | None, phone: str | None = None) -> str:
+    normalized = (location or "").lower()
+    digits = re.sub(r"\D", "", phone or "")
+    if any(marker in normalized for marker in INDIA_MARKERS) or digits.startswith("91"):
+        return "india"
+    return "international" if normalized or phone else "unknown"
+
+
+def detect_language(text: str) -> str:
+    lowered = text.lower()
+    if re.search(r"[\u0900-\u097f]", text):
+        return "hindi"
+    if sum(1 for marker in HINGLISH_MARKERS if marker in lowered) >= 2:
+        return "hinglish"
+    return "english"
+
+
+def _localized_hold(language: str) -> str:
+    if language == "hindi":
+        return "अच्छा सवाल है। गलत जानकारी देने के बजाय मैं इसे मनीष से ठीक से verify करके आपको जल्द बताती हूँ।"
+    if language == "hinglish":
+        return "Achha sawaal hai. Galat information dene ke bajay main Manish se properly verify karke aapko jaldi batati hoon."
+    return "That’s a good question. Rather than give you an inaccurate answer, I’ll verify it properly with Manish and get back to you shortly."
+
+
+def _localized_capability_reply(language: str) -> str:
+    if language in {"hindi", "hinglish"}:
+        return (
+            "Bilkul. MMe-AI repetitive workflows—jaise lead follow-ups, support, reporting aur "
+            "internal handoffs—ko automate karta hai. Agar aap ek time-consuming process batayein, "
+            "main uske liye suitable demo suggest kar sakti hoon."
+        )
+    return (
+        "Absolutely. MMe-AI automates repetitive workflows such as lead follow-ups, support, "
+        "reporting and internal handoffs. If you share one time-consuming process, I can suggest "
+        "a suitable demo."
+    )
+
+
+def _localized_known_reply(kind: str, language: str, handoff: str = "") -> str:
+    replies = {
+        "opted_out": {
+            "english": "Understood. I won’t contact you again.",
+            "hinglish": "Samajh gayi. Main aapko dobara contact nahi karungi.",
+            "hindi": "समझ गई। मैं आपसे दोबारा संपर्क नहीं करूँगी।",
+        },
+        "interested": {
+            "english": "Great — I’ll connect you directly with Manish for the workflow discussion.",
+            "hinglish": "Perfect — workflow discussion ke liye main aapko directly Manish se connect kar deti hoon.",
+            "hindi": "बहुत अच्छा — workflow discussion के लिए मैं आपको सीधे मनीष से connect कर देती हूँ।",
+        },
+        "not_interested": {
+            "english": "Thanks for letting me know. I won’t follow up further.",
+            "hinglish": "Batane ke liye thank you. Main iske baad follow-up nahi karungi.",
+            "hindi": "बताने के लिए धन्यवाद। मैं इसके बाद follow-up नहीं करूँगी।",
+        },
+        "not_now": {
+            "english": "No problem. I’ll pause here and won’t crowd your inbox.",
+            "hinglish": "Koi problem nahi. Main yahin pause kar deti hoon aur aapko unnecessary messages nahi bhejungi.",
+            "hindi": "कोई समस्या नहीं। मैं यहीं रुकती हूँ और आपको अनावश्यक संदेश नहीं भेजूँगी।",
+        },
+    }
+    text = replies[kind].get(language, replies[kind]["english"])
+    return (text + ("\n" + handoff if handoff else "")).strip()
 
 
 def calculate_fit(prospect: RekhaProspect) -> tuple[int, str]:
@@ -204,27 +280,72 @@ Rules:
         return {**fallback, "provider": "rekha_template_fallback"}
 
 
-async def classify_reply(reply: str) -> dict[str, str]:
+async def classify_reply(reply: str) -> dict[str, Any]:
     clean = reply.strip()
     lowered = clean.lower()
+    language = detect_language(clean)
     if any(term in lowered for term in ("unsubscribe", "remove me", "stop messaging", "do not contact")):
-        return {"intent": "opted_out", "suggested_reply": "Understood. I won’t contact you again."}
+        return {"intent": "opted_out", "suggested_reply": _localized_known_reply("opted_out", language), "confidence": 1.0, "requires_founder": False, "language": language, "reason": "Explicit opt-out"}
     if any(term in lowered for term in ("interested", "demo", "call me", "let's talk", "lets talk", "sounds good")):
         handoff = "\n".join(_handoff_lines())
         return {
             "intent": "interested",
-            "suggested_reply": (
-                "Great — I’ll connect you directly with Manish for the workflow discussion.\n" + handoff
-            ).strip(),
+            "suggested_reply": _localized_known_reply("interested", language, handoff),
+            "confidence": 0.96,
+            "requires_founder": False,
+            "language": language,
+            "reason": "Clear positive/demo intent",
         }
     if any(term in lowered for term in ("not interested", "no thanks", "no thank")):
-        return {"intent": "not_interested", "suggested_reply": "Thanks for letting me know. I won’t follow up further."}
+        return {"intent": "not_interested", "suggested_reply": _localized_known_reply("not_interested", language), "confidence": 0.98, "requires_founder": False, "language": language, "reason": "Clear rejection"}
     if any(term in lowered for term in ("later", "next month", "not now", "busy")):
-        return {"intent": "not_now", "suggested_reply": "No problem. I’ll pause here and check back later."}
+        return {"intent": "not_now", "suggested_reply": _localized_known_reply("not_now", language), "confidence": 0.92, "requires_founder": False, "language": language, "reason": "Asked to defer"}
+    if any(term in lowered for term in ("what do you do", "what can you", "kya karte", "kya automate", "how can you help")):
+        return {"intent": "replied", "suggested_reply": _localized_capability_reply(language), "confidence": 0.9, "requires_founder": False, "language": language, "reason": "General capability question"}
+    sensitive_topics = (
+        "price", "pricing", "cost", "quote", "guarantee", "contract", "legal", "security",
+        "privacy", "gdpr", "hipaa", "data", "integration", "api", "refund", "timeline",
+        "kitna", "charges", "fees",
+    )
+    if any(term in lowered for term in sensitive_topics) or "?" in clean:
+        return {"intent": "needs_founder", "suggested_reply": _localized_hold(language), "confidence": 0.55, "requires_founder": True, "language": language, "reason": "Needs verified commercial or technical answer"}
     return {
-        "intent": "replied",
-        "suggested_reply": "Thanks for replying. Could you share which repetitive task currently takes the most team time?",
+        "intent": "needs_founder",
+        "suggested_reply": _localized_hold(language),
+        "confidence": 0.45,
+        "requires_founder": True,
+        "language": language,
+        "reason": "Intent is not clear enough for a reliable automatic answer",
     }
+
+
+def draft_follow_up(prospect: RekhaProspect, stage: int) -> dict[str, str]:
+    profile = founder_profile()
+    name = prospect.business_name
+    if stage <= 1:
+        body = (
+            f"Hi {name} team — Rekha here, {profile['name']}'s AI assistant at {profile['company']}. "
+            "Just following up on my earlier note. If reducing repetitive work is relevant, I can "
+            "suggest one small workflow to test without any commitment. Should I send two quick questions?"
+        )
+        subject = f"Re: workflow demo for {name}"
+    elif stage == 2:
+        body = (
+            f"Hi {name} team — one practical starting point is usually a repetitive follow-up, support, "
+            "reporting or handoff process. Rekha here from MMe-AI; if you share the most time-consuming "
+            "one, we can outline a limited working demo around it."
+        )
+        subject = f"One practical automation idea for {name}"
+    else:
+        body = (
+            f"Hi {name} team — I’ll close the loop after this note so I don’t crowd your inbox. "
+            "If workflow automation becomes relevant later, you can reply here and I’ll connect you "
+            f"with {profile['name']}. — Rekha, AI assistant at {profile['company']}"
+        )
+        subject = f"Closing the loop — {name}"
+    if prospect.preferred_channel == "whatsapp":
+        subject = ""
+    return {"subject": subject, "body": body, "provider": "rekha_follow_up_template"}
 
 
 async def send_outreach(channel: str, recipient: str, subject: str, body: str) -> dict[str, Any]:

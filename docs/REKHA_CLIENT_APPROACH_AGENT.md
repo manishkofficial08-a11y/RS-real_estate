@@ -55,6 +55,35 @@ problem, contact name, result, relationship, or website observation.
 8. On interest/demo intent, prepare a founder handoff containing the configured
    booking URL and Manish's WhatsApp/phone/email.
 
+## Automation and reply safety
+
+- A campaign-level pause switch gates every scheduled follow-up.
+- Follow-ups use a three-touch sequence at approximately day 3, day 7 and day
+  12. The last touch closes the loop politely; no further message is scheduled.
+- A per-prospect pause, opt-out flag, founder escalation or incoming reply stops
+  the active sequence.
+- The background worker respects the configured timezone, working-hour window,
+  environment auto-send kill switch and daily send cap.
+- Indian location/phone signals are stored separately from international
+  prospects. Incoming English, Hinglish and Hindi are detected so acknowledgements
+  can mirror the prospect's language without using stereotypes or fake familiarity.
+- Clear opt-outs, demo intent, rejection, deferral and general capability questions
+  are handled deterministically. Pricing, contracts, guarantees, security, privacy,
+  integrations and unclear questions are never guessed.
+- For an uncertain question Rekha says she will verify it with Manish, pauses that
+  prospect and creates a founder-dashboard escalation. Manish's answer becomes a
+  reviewable `founder_verified` reply draft.
+
+Inbound provider support is available at:
+
+- `POST /api/v1/webhooks/rekha/inbound` for an email provider or integration
+  using `X-Rekha-Webhook-Secret`.
+- `GET/POST /api/v1/webhooks/rekha/whatsapp` for Meta verification and signed
+  WhatsApp Cloud webhook payloads.
+
+Webhook payloads are deduplicated using provider message IDs. Unknown senders are
+acknowledged but are not inserted into the founder pipeline automatically.
+
 ## Why calls are not enabled yet
 
 Voice is a separate production surface, not just another message button. The
@@ -95,6 +124,8 @@ See `backend/.env.example` for:
 - founder contact and booking links
 - the auto-send kill switch and daily cap
 - official WhatsApp Business template credentials
+- inbound webhook secret and WhatsApp verification/app secrets
+- automation worker interval and batch-size controls
 
 Secrets belong in the deployment environment, never in the repository or
 browser bundle.
