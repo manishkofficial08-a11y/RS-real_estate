@@ -9,6 +9,7 @@ from app.services.rekha_agent import (
     draft_outreach,
     infer_market_region,
     integration_status,
+    send_outreach,
 )
 
 
@@ -125,8 +126,86 @@ def test_rekha_routes_are_registered():
     assert "/api/v1/admin/rekha/overview" in paths
     assert "/api/v1/admin/rekha/prospects/{prospect_id}/draft" in paths
     assert "/api/v1/admin/rekha/messages/{message_id}/send" in paths
+    assert "/api/v1/admin/rekha/prospects/{prospect_id}/whatsapp/send" in paths
     assert "/api/v1/admin/rekha/campaign" in paths
     assert "/api/v1/admin/rekha/process-due" in paths
     assert "/api/v1/admin/rekha/prospects/{prospect_id}/resolve" in paths
     assert "/api/v1/webhooks/rekha/inbound" in paths
     assert "/api/v1/webhooks/rekha/whatsapp" in paths
+
+
+@pytest.mark.asyncio
+async def test_whatsapp_reply_uses_session_text_inside_customer_window(monkeypatch):
+    captured = {}
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"messages": [{"id": "wamid.reply"}]}
+
+    class Client:
+        def __init__(self, **kwargs):
+            del kwargs
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            del args
+
+        async def post(self, url, headers, json):
+            captured.update(url=url, headers=headers, payload=json)
+            return Response()
+
+    monkeypatch.setenv("REKHA_WHATSAPP_PHONE_NUMBER_ID", "123")
+    monkeypatch.setenv("REKHA_WHATSAPP_ACCESS_TOKEN", "token")
+    monkeypatch.setenv("REKHA_WHATSAPP_TEMPLATE_NAME", "rekha_intro")
+    monkeypatch.setattr("app.services.rekha_agent.httpx.AsyncClient", Client)
+    result = await send_outreach(
+        "whatsapp",
+        "+91 99999 99999",
+        "",
+        "Yes, kal 11 baje works.",
+        message_kind="reply",
+        within_customer_window=True,
+    )
+    assert result["sent"] is True
+    assert captured["payload"]["type"] == "text"
+    assert captured["payload"]["text"]["body"] == "Yes, kal 11 baje works."
+
+
+@pytest.mark.asyncio
+async def test_whatsapp_initial_message_uses_approved_template(monkeypatch):
+    captured = {}
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"messages": [{"id": "wamid.initial"}]}
+
+    class Client:
+        def __init__(self, **kwargs):
+            del kwargs
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            del args
+
+        async def post(self, url, headers, json):
+            captured.update(url=url, headers=headers, payload=json)
+            return Response()
+
+    monkeypatch.setenv("REKHA_WHATSAPP_PHONE_NUMBER_ID", "123")
+    monkeypatch.setenv("REKHA_WHATSAPP_ACCESS_TOKEN", "token")
+    monkeypatch.setenv("REKHA_WHATSAPP_TEMPLATE_NAME", "rekha_intro")
+    monkeypatch.setattr("app.services.rekha_agent.httpx.AsyncClient", Client)
+    result = await send_outreach("whatsapp", "+91 99999 99999", "", "Intro copy")
+    assert result["sent"] is True
+    assert captured["payload"]["type"] == "template"
+    assert captured["payload"]["template"]["name"] == "rekha_intro"

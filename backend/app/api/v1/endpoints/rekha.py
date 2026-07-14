@@ -77,6 +77,10 @@ class RekhaReplyRequest(BaseModel):
     demo_booked: bool = False
 
 
+class RekhaWhatsAppSendRequest(BaseModel):
+    body: str = Field(min_length=1, max_length=4096)
+
+
 class RekhaRunRequest(BaseModel):
     industry: str = Field(min_length=2, max_length=80)
     location: str = Field(min_length=2, max_length=160)
@@ -130,6 +134,8 @@ def _message_payload(message: RekhaOutreachMessage) -> dict[str, Any]:
         "scheduled_at": message.scheduled_at.isoformat() if message.scheduled_at else None,
         "auto_generated": message.auto_generated,
         "sent_at": message.sent_at.isoformat() if message.sent_at else None,
+        "delivered_at": message.delivered_at.isoformat() if message.delivered_at else None,
+        "read_at": message.read_at.isoformat() if message.read_at else None,
         "created_at": message.created_at.isoformat() if message.created_at else None,
     }
 
@@ -305,6 +311,13 @@ def _campaign_payload(settings: RekhaCampaignSettings) -> dict[str, Any]:
     }
 
 
+def _within_whatsapp_customer_window(prospect: RekhaProspect, now: datetime) -> bool:
+    return bool(
+        prospect.replied_at
+        and prospect.replied_at >= now - timedelta(hours=24)
+    )
+
+
 async def _send_message(
     db: AsyncSession,
     message: RekhaOutreachMessage,
@@ -321,11 +334,19 @@ async def _send_message(
             status_code=400,
             detail="WhatsApp outreach requires recorded opt-in or an inbound conversation",
         )
-    result = await send_outreach(message.channel, recipient, message.subject or "", message.body)
-    message.approved_at = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
+    result = await send_outreach(
+        message.channel,
+        recipient,
+        message.subject or "",
+        message.body,
+        message_kind=message.message_kind,
+        within_customer_window=_within_whatsapp_customer_window(prospect, now),
+    )
+    message.approved_at = now
     if result.get("sent"):
         message.status = RekhaMessageStatus.sent.value
-        message.sent_at = datetime.now(timezone.utc)
+        message.sent_at = now
         message.provider = result.get("provider") or message.provider
         message.provider_message_id = result.get("provider_message_id")
         message.error_message = None
@@ -542,6 +563,39 @@ async def send_rekha_message(
     await db.commit()
     await db.refresh(message)
     return {"message": _message_payload(message), "delivery": send_result}
+
+
+@router.post("/prospects/{prospect_id}/whatsapp/send")
+async def send_rekha_whatsapp_message(
+    prospect_id: str,
+    data: RekhaWhatsAppSendRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    prospect = await _get_prospect(db, prospect_id)
+    if not prospect.phone:
+        raise HTTPException(status_code=400, detail="Prospect has no WhatsApp number")
+    if prospect.opted_out:
+        raise HTTPException(status_code=400, detail="Prospect has opted out")
+    now = datetime.now(timezone.utc)
+    message = RekhaOutreachMessage(
+        id=str(uuid.uuid4()),
+        prospect_id=prospect.id,
+        channel="whatsapp",
+        direction="outbound",
+        status=RekhaMessageStatus.draft.value,
+        body=data.body.strip(),
+        provider="founder_whatsapp_inbox",
+        created_by=current_user.id,
+        message_kind="reply" if _within_whatsapp_customer_window(prospect, now) else "initial",
+        auto_generated=False,
+    )
+    db.add(message)
+    await db.flush()
+    delivery = await _send_message(db, message, prospect)
+    await db.commit()
+    await db.refresh(message)
+    return {"message": _message_payload(message), "delivery": delivery}
 
 
 @router.post("/prospects/{prospect_id}/reply")

@@ -162,7 +162,14 @@ async def _ingest(
             or 0
         )
         if sent_today < status_info["daily_send_limit"]:
-            delivery = await send_outreach(channel, recipient, suggested.subject or "", suggested.body)
+            delivery = await send_outreach(
+                channel,
+                recipient,
+                suggested.subject or "",
+                suggested.body,
+                message_kind=suggested.message_kind,
+                within_customer_window=channel == "whatsapp",
+            )
             suggested.approved_at = now
             if delivery.get("sent"):
                 suggested.status = RekhaMessageStatus.sent.value
@@ -182,6 +189,40 @@ async def _ingest(
         "requires_founder": prospect.requires_founder,
         "auto_replied": auto_replied,
     }
+
+
+async def _apply_whatsapp_status(db: AsyncSession, status_event: dict) -> dict:
+    provider_message_id = str(status_event.get("id") or "")
+    provider_status = str(status_event.get("status") or "").lower()
+    if not provider_message_id or provider_status not in {"sent", "delivered", "read", "failed"}:
+        return {"matched": False, "status": provider_status or "unknown"}
+    message = await db.scalar(
+        select(RekhaOutreachMessage).where(
+            RekhaOutreachMessage.provider_message_id == provider_message_id
+        )
+    )
+    if not message:
+        return {"matched": False, "status": provider_status}
+    try:
+        event_at = datetime.fromtimestamp(int(status_event.get("timestamp")), tz=timezone.utc)
+    except (TypeError, ValueError, OSError):
+        event_at = datetime.now(timezone.utc)
+    rank = {"draft": 0, "approved": 1, "sent": 2, "delivered": 3, "read": 4, "failed": 5}
+    if provider_status == "failed":
+        message.status = RekhaMessageStatus.failed.value
+        errors = status_event.get("errors") or []
+        message.error_message = "; ".join(
+            str(item.get("title") or item.get("message") or item.get("code") or "WhatsApp delivery failed")
+            for item in errors
+        )[:2000]
+    elif rank.get(provider_status, 0) >= rank.get(message.status, 0):
+        message.status = provider_status
+        message.error_message = None
+        if provider_status in {"delivered", "read"} and not message.delivered_at:
+            message.delivered_at = event_at
+        if provider_status == "read":
+            message.read_at = event_at
+    return {"matched": True, "message_id": message.id, "status": provider_status}
 
 
 @router.post("/inbound")
@@ -240,11 +281,17 @@ async def receive_whatsapp_reply(
         raise HTTPException(status_code=401, detail="Invalid WhatsApp webhook signature")
     payload = await request.json()
     accepted = []
+    statuses = []
     for entry in payload.get("entry", []):
         for change in entry.get("changes", []):
-            for message in (change.get("value", {}) or {}).get("messages", []):
+            value = change.get("value", {}) or {}
+            for message in value.get("messages", []):
                 body = ((message.get("text") or {}).get("body") or "").strip()
                 sender = str(message.get("from") or "")
                 if body and sender:
                     accepted.append(await _ingest(db, "whatsapp", sender, body, message.get("id")))
-    return {"accepted": True, "messages": accepted}
+            for status_event in value.get("statuses", []):
+                statuses.append(await _apply_whatsapp_status(db, status_event))
+    if statuses:
+        await db.commit()
+    return {"accepted": True, "messages": accepted, "statuses": statuses}

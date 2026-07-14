@@ -635,7 +635,7 @@ export type RekhaMessage = {
   prospect_id: string;
   channel: 'email' | 'whatsapp' | 'call';
   direction: 'inbound' | 'outbound';
-  status: 'draft' | 'approved' | 'sent' | 'failed' | 'received';
+  status: 'draft' | 'approved' | 'sent' | 'delivered' | 'read' | 'failed' | 'received';
   subject?: string | null;
   body: string;
   provider?: string | null;
@@ -645,6 +645,8 @@ export type RekhaMessage = {
   scheduled_at?: string | null;
   auto_generated: boolean;
   sent_at?: string | null;
+  delivered_at?: string | null;
+  read_at?: string | null;
   created_at?: string | null;
 };
 
@@ -820,6 +822,19 @@ export async function sendRekhaMessage(
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export async function sendRekhaWhatsAppMessage(
+  prospectId: string,
+  body: string,
+): Promise<{ message: RekhaMessage; delivery: Record<string, unknown> }> {
+  return adminFetch<{ message: RekhaMessage; delivery: Record<string, unknown> }>(
+    `/admin/rekha/prospects/${prospectId}/whatsapp/send`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    },
+  );
 }
 
 export async function recordRekhaReply(
