@@ -1,7 +1,7 @@
 import enum
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -151,3 +151,17 @@ class RekhaAutomationRun(Base):
     error_message = Column(Text, nullable=True)
     started_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
     finished_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class RekhaAssistantMessage(Base):
+    __tablename__ = "rekha_assistant_messages"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    role = Column(String, nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    intent = Column(String, nullable=True, index=True)
+    action_name = Column(String, nullable=True, index=True)
+    action_status = Column(String, nullable=True)
+    metadata_json = Column(JSON, nullable=False, default=dict)
+    created_by = Column(String, ForeignKey("users.id"), nullable=True, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)

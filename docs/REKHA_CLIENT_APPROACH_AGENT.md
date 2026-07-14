@@ -137,6 +137,21 @@ See `backend/.env.example` for:
 Secrets belong in the deployment environment, never in the repository or
 browser bundle.
 
+## Founder-wide digital operations assistant
+
+Rekha is available from every founder dashboard route through the global
+`Ask Rekha` command drawer. It reads aggregate live state from the sales
+pipeline, WhatsApp outreach, support desk, subscriptions and AI jobs, then
+returns a concise Hinglish founder brief. Conversation history is stored in the
+production database for the signed-in founder.
+
+Supported controlled actions include running a due lead-discovery cycle,
+processing due follow-ups and enabling/disabling safe reply automation. These
+actions still inherit the campaign pause switch, working hours, opt-in/opt-out,
+daily send limits and integration readiness checks. Rekha does not silently
+change billing, resolve support tickets, promise pricing/results or bypass a
+founder escalation.
+
 ## Current production map
 
 - GitHub: `manishkofficial08-a11y/RS-real_estate`

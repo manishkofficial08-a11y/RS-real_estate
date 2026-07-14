@@ -34,4 +34,5 @@ from app.models.rekha_outreach import (
     RekhaCampaignSettings,
     RekhaProspect,
     RekhaProspectStatus,
+    RekhaAssistantMessage,
 )
