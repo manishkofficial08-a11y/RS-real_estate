@@ -391,7 +391,15 @@ def draft_follow_up(prospect: RekhaProspect, stage: int) -> dict[str, str]:
     return {"subject": subject, "body": _ensure_compliance_copy(body, prospect.preferred_channel or "email"), "provider": "rekha_follow_up_template"}
 
 
-async def send_outreach(channel: str, recipient: str, subject: str, body: str) -> dict[str, Any]:
+async def send_outreach(
+    channel: str,
+    recipient: str,
+    subject: str,
+    body: str,
+    *,
+    message_kind: str = "initial",
+    within_customer_window: bool = False,
+) -> dict[str, Any]:
     if channel == "email":
         result = await send_email_message([recipient], subject, body)
         return {**result, "provider": result.get("provider") or "smtp"}
@@ -402,34 +410,44 @@ async def send_outreach(channel: str, recipient: str, subject: str, body: str) -
     phone_number_id = _env("REKHA_WHATSAPP_PHONE_NUMBER_ID")
     access_token = _env("REKHA_WHATSAPP_ACCESS_TOKEN")
     template_name = _env("REKHA_WHATSAPP_TEMPLATE_NAME")
-    if not (phone_number_id and access_token and template_name):
+    session_message = message_kind in {"reply", "hold"} and within_customer_window
+    if not (phone_number_id and access_token and (template_name or session_message)):
         digits = re.sub(r"\D", "", recipient)
         return {
             "sent": False,
             "provider": "whatsapp_manual",
             "manual_url": f"https://wa.me/{digits}?text={quote(body)}" if digits else "",
-            "message": "Official WhatsApp template credentials are not configured. Open the manual review link instead.",
+            "message": "Official WhatsApp Cloud API credentials are not configured. Open the manual review link instead.",
         }
 
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": re.sub(r"\D", "", recipient),
-        "type": "template",
-        "template": {
-            "name": template_name,
-            "language": {"code": _env("REKHA_WHATSAPP_TEMPLATE_LANGUAGE", "en")},
-            "components": [
-                {
-                    "type": "body",
-                    "parameters": [{"type": "text", "text": body[:1024]}],
-                }
-            ],
-        },
-    }
+    if session_message:
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": re.sub(r"\D", "", recipient),
+            "type": "text",
+            "text": {"preview_url": False, "body": body[:4096]},
+        }
+    else:
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": re.sub(r"\D", "", recipient),
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": _env("REKHA_WHATSAPP_TEMPLATE_LANGUAGE", "en")},
+                "components": [
+                    {
+                        "type": "body",
+                        "parameters": [{"type": "text", "text": body[:1024]}],
+                    }
+                ],
+            },
+        }
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(
-                f"https://graph.facebook.com/{_env('META_GRAPH_VERSION', 'v20.0')}/{phone_number_id}/messages",
+                f"https://graph.facebook.com/{_env('META_GRAPH_VERSION', 'v25.0')}/{phone_number_id}/messages",
                 headers={"Authorization": f"Bearer {access_token}"},
                 json=payload,
             )
@@ -440,7 +458,17 @@ async def send_outreach(channel: str, recipient: str, subject: str, body: str) -
             "sent": True,
             "provider": "whatsapp_cloud_api",
             "provider_message_id": message_id,
-            "message": "WhatsApp template sent.",
+            "message": "WhatsApp reply sent." if session_message else "WhatsApp template sent.",
+        }
+    except httpx.HTTPStatusError as exc:
+        try:
+            detail = (exc.response.json().get("error") or {}).get("message")
+        except (ValueError, AttributeError):
+            detail = None
+        return {
+            "sent": False,
+            "provider": "whatsapp_cloud_api",
+            "message": detail or str(exc),
         }
     except httpx.HTTPError as exc:
         return {"sent": False, "provider": "whatsapp_cloud_api", "message": str(exc)}

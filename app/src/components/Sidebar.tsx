@@ -15,6 +15,7 @@ import {
   LogOut,
   Search,
   Sparkles,
+  Smartphone,
 } from 'lucide-react';
 import FounderLogo from './FounderLogo';
 import { FOUNDER_BRANDING } from '../lib/founderBranding';
@@ -34,6 +35,7 @@ const navItems = [
   { label: 'Client Health', icon: Activity, path: '/admin/client-health' },
   { label: 'Lead Generation', icon: Search, path: '/admin/lead-generation' },
   { label: 'Rekha · Outreach', icon: Sparkles, path: '/admin/rekha' },
+  { label: 'WhatsApp Inbox', icon: Smartphone, path: '/admin/whatsapp-automation' },
   { label: 'Users', icon: Users, path: '/admin/users' },
   { label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
   { label: 'AI Jobs', icon: Bot, path: '/admin/ai-jobs' },

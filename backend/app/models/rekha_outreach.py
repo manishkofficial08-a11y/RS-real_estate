@@ -26,6 +26,8 @@ class RekhaMessageStatus(str, enum.Enum):
     draft = "draft"
     approved = "approved"
     sent = "sent"
+    delivered = "delivered"
+    read = "read"
     failed = "failed"
     received = "received"
 
@@ -123,6 +125,8 @@ class RekhaOutreachMessage(Base):
     created_by = Column(String, ForeignKey("users.id"), nullable=True)
     approved_at = Column(DateTime(timezone=True), nullable=True)
     sent_at = Column(DateTime(timezone=True), nullable=True)
+    delivered_at = Column(DateTime(timezone=True), nullable=True)
+    read_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

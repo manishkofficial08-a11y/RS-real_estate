@@ -84,6 +84,13 @@ Inbound provider support is available at:
 Webhook payloads are deduplicated using provider message IDs. Unknown senders are
 acknowledged but are not inserted into the founder pipeline automatically.
 
+The founder `WhatsApp Inbox` is backed by these same prospect/message records.
+It refreshes live provider state, shows sent/delivered/read receipts, and allows
+founder replies from the selected conversation. Rekha uses an approved template
+for eligible first/out-of-window messages and free-form text only inside Meta's
+24-hour customer-service window. Safe replies can auto-send when the campaign,
+production kill switch, Cloud API integration and recorded consent are all active.
+
 ## Why calls are not enabled yet
 
 Voice is a separate production surface, not just another message button. The

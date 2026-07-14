@@ -80,7 +80,16 @@ async def _deliver(
     recipient = prospect.email if message.channel == "email" else prospect.phone
     if not recipient:
         return {"sent": False, "message": "missing_recipient"}
-    result = await send_outreach(message.channel, recipient, message.subject or "", message.body)
+    result = await send_outreach(
+        message.channel,
+        recipient,
+        message.subject or "",
+        message.body,
+        message_kind=message.message_kind,
+        within_customer_window=bool(
+            prospect.replied_at and prospect.replied_at >= now - timedelta(hours=24)
+        ),
+    )
     message.approved_at = now
     if result.get("sent"):
         message.status = RekhaMessageStatus.sent.value
