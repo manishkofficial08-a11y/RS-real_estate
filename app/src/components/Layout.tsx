@@ -9,6 +9,7 @@ import {
 } from "@/lib/adminApi";
 import Sidebar from "./Sidebar";
 import ParticleOverlay from "./ParticleOverlay";
+import RekhaCommandCenter from "./RekhaCommandCenter";
 
 export default function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -242,6 +243,7 @@ export default function Layout() {
 
         <Outlet />
       </main>
+      <RekhaCommandCenter />
     </div>
   );
 }

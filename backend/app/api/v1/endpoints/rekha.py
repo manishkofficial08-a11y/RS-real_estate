@@ -14,6 +14,7 @@ from app.core.dependencies import get_current_admin
 from app.database.session import get_db
 from app.models.rekha_outreach import (
     RekhaAutomationRun,
+    RekhaAssistantMessage,
     RekhaMessageStatus,
     RekhaOutreachMessage,
     RekhaCampaignSettings,
@@ -38,6 +39,7 @@ from app.services.rekha_automation import (
     process_autonomous_rekha_cycle,
     process_due_rekha_follow_ups,
 )
+from app.services.rekha_command_center import handle_founder_command, operations_snapshot
 
 
 router = APIRouter(prefix="/admin/rekha", tags=["Admin Rekha Outreach"])
@@ -79,6 +81,10 @@ class RekhaReplyRequest(BaseModel):
 
 class RekhaWhatsAppSendRequest(BaseModel):
     body: str = Field(min_length=1, max_length=4096)
+
+
+class RekhaAssistantRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
 
 
 class RekhaRunRequest(BaseModel):
@@ -311,6 +317,19 @@ def _campaign_payload(settings: RekhaCampaignSettings) -> dict[str, Any]:
     }
 
 
+def _assistant_message_payload(message: RekhaAssistantMessage) -> dict[str, Any]:
+    return {
+        "id": message.id,
+        "role": message.role,
+        "content": message.content,
+        "intent": message.intent,
+        "action_name": message.action_name,
+        "action_status": message.action_status,
+        "metadata": message.metadata_json or {},
+        "created_at": message.created_at.isoformat() if message.created_at else None,
+    }
+
+
 def _within_whatsapp_customer_window(prospect: RekhaProspect, now: datetime) -> bool:
     return bool(
         prospect.replied_at
@@ -413,6 +432,71 @@ async def get_rekha_overview(
         "campaign": _campaign_payload(settings),
         "escalation_count": int(escalation_count or 0),
         "automation_runs": automation_runs,
+    }
+
+
+@router.get("/assistant/history")
+async def get_rekha_assistant_history(
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    result = await db.execute(
+        select(RekhaAssistantMessage)
+        .where(RekhaAssistantMessage.created_by == current_user.id)
+        .order_by(desc(RekhaAssistantMessage.created_at))
+        .limit(min(max(limit, 1), 100))
+    )
+    return [_assistant_message_payload(item) for item in reversed(result.scalars().all())]
+
+
+@router.get("/assistant/snapshot")
+async def get_rekha_assistant_snapshot(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    del current_user
+    return await operations_snapshot(db)
+
+
+@router.post("/assistant")
+async def talk_to_rekha_assistant(
+    data: RekhaAssistantRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    user_message = RekhaAssistantMessage(
+        id=str(uuid.uuid4()),
+        role="user",
+        content=data.message.strip(),
+        created_by=current_user.id,
+    )
+    db.add(user_message)
+    await db.flush()
+    result = await handle_founder_command(db, data.message)
+    assistant_message = RekhaAssistantMessage(
+        id=str(uuid.uuid4()),
+        role="assistant",
+        content=result["reply"],
+        intent=result["intent"],
+        action_name=result.get("action_name"),
+        action_status=result.get("action_status"),
+        metadata_json={
+            "snapshot": result["snapshot"],
+            "action_result": result.get("action_result"),
+        },
+        created_by=current_user.id,
+    )
+    db.add(assistant_message)
+    await db.commit()
+    await db.refresh(user_message)
+    await db.refresh(assistant_message)
+    return {
+        **result,
+        "messages": [
+            _assistant_message_payload(user_message),
+            _assistant_message_payload(assistant_message),
+        ],
     }
 
 

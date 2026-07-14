@@ -127,6 +127,9 @@ def test_rekha_routes_are_registered():
     assert "/api/v1/admin/rekha/prospects/{prospect_id}/draft" in paths
     assert "/api/v1/admin/rekha/messages/{message_id}/send" in paths
     assert "/api/v1/admin/rekha/prospects/{prospect_id}/whatsapp/send" in paths
+    assert "/api/v1/admin/rekha/assistant" in paths
+    assert "/api/v1/admin/rekha/assistant/history" in paths
+    assert "/api/v1/admin/rekha/assistant/snapshot" in paths
     assert "/api/v1/admin/rekha/campaign" in paths
     assert "/api/v1/admin/rekha/process-due" in paths
     assert "/api/v1/admin/rekha/prospects/{prospect_id}/resolve" in paths

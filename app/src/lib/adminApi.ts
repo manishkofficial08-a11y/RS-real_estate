@@ -728,6 +728,49 @@ export type RekhaAutomationRun = {
   finished_at?: string | null;
 };
 
+export type RekhaAssistantMessage = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  intent?: string | null;
+  action_name?: string | null;
+  action_status?: string | null;
+  metadata: Record<string, unknown>;
+  created_at?: string | null;
+};
+
+export type RekhaOperationsSnapshot = {
+  sales: {
+    total_prospects: number;
+    pipeline: Record<string, number>;
+    needs_founder: number;
+    sent_today: number;
+    replies_today: number;
+  };
+  support: { open: number; in_progress: number; urgent: number };
+  subscriptions: { active: number; trialing: number; past_due: number };
+  ai_jobs: { queued: number; running: number; failed: number };
+  automation: {
+    campaign_active: boolean;
+    autonomous_discovery: boolean;
+    auto_initial_outreach: boolean;
+    auto_follow_ups: boolean;
+    auto_reply_safe: boolean;
+    next_discovery_at?: string | null;
+  };
+};
+
+export type RekhaAssistantResponse = {
+  reply: string;
+  intent: string;
+  action_name?: string | null;
+  action_status?: string | null;
+  action_result?: Record<string, unknown> | null;
+  snapshot: RekhaOperationsSnapshot;
+  quick_actions: string[];
+  messages: RekhaAssistantMessage[];
+};
+
 export type RekhaCampaignSettings = {
   is_active: boolean;
   auto_follow_ups: boolean;
@@ -821,6 +864,21 @@ export async function sendRekhaMessage(
   return adminFetch<{ message: RekhaMessage; delivery: Record<string, unknown> }>(`/admin/rekha/messages/${messageId}/send`, {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function getRekhaAssistantHistory(): Promise<RekhaAssistantMessage[]> {
+  return adminFetch<RekhaAssistantMessage[]>('/admin/rekha/assistant/history');
+}
+
+export async function getRekhaAssistantSnapshot(): Promise<RekhaOperationsSnapshot> {
+  return adminFetch<RekhaOperationsSnapshot>('/admin/rekha/assistant/snapshot');
+}
+
+export async function sendRekhaAssistantCommand(message: string): Promise<RekhaAssistantResponse> {
+  return adminFetch<RekhaAssistantResponse>('/admin/rekha/assistant', {
+    method: 'POST',
+    body: JSON.stringify({ message }),
   });
 }
 
